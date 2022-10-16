@@ -1,4 +1,4 @@
-import { zbencode } from "./encoding.mjs";
+import {zbencode, zbdecode} from "./encoding.mjs";
 
 function makeid(length) {
   var result           = '';
@@ -325,10 +325,10 @@ export class DataClient extends EventTarget {
         
         let array = this.crdt.get(arrayId);
         if (!array) {
-          array = new Set();
+          array = {};
           this.crdt.set(arrayId, array);
         }
-        array.add(arrayIndexId);
+        array[arrayIndexId] = true;
 
         update = new MessageEvent('add.' + arrayId, {
           data: {
@@ -337,16 +337,17 @@ export class DataClient extends EventTarget {
             // val,
           },
         });
+        // console.log('add event', update);
         break;
       }
       case DataClient.UPDATE_METHODS.REMOVE: {
         const [arrayId, arrayIndexId] = args;
         let array = this.crdt.get(arrayId);
         if (!array) {
-          array = new Set();
+          array = {};
           this.crdt.set(arrayId, array);
         }
-        array.delete(arrayIndexId);
+        delete array[arrayIndexId];
 
         update = new MessageEvent('remove.' + arrayId, {
           data: {
@@ -443,7 +444,7 @@ export class DataClient extends EventTarget {
     }
   }
   emitUpdate(messageEvent) {
-    console.log('emit', messageEvent);
+    // console.log('emit', messageEvent);
     this.dispatchEvent(messageEvent);
   }
   
@@ -467,10 +468,10 @@ export class DataClient extends EventTarget {
     
     let array = this.crdt.get(arrayId);
     if (!array) {
-      array = new Set();
+      array = {};
       this.crdt.set(arrayId, array);
     }
-    array.add(arrayIndexId);
+    array[arrayIndexId] = true;
 
     const map = new DCMap(arrayId, arrayIndexId, this);
     map.listen();
@@ -487,13 +488,13 @@ export class DataClient extends EventTarget {
   removeArrayMapElement(arrayId, arrayIndexId) {
     let array = this.crdt.get(arrayId);
     if (!array) {
-      array = new Set();
+      array = {};
       this.crdt.set(arrayId, array);
     }
-    if (array.has(arrayId)) {
+    if (array[arrayIndexId]) {
       if (this.crdt.has(arrayIndexId)) {
         this.crdt.delete(arrayIndexId);
-        array.delete(arrayIndexId);
+        delete array[arrayIndexId];
 
         this.dispatchEvent(new MessageEvent('remove.' + arrayId, {
           data: {
@@ -502,10 +503,10 @@ export class DataClient extends EventTarget {
           },
         }));
       } else {
-        throw new Error('array index id not found');
+        throw new Error('array index id not found in crdt');
       }
     } else {
-      throw new Error('array index not found');
+      throw new Error('array index not found in array');
     }
   }
   readBinding(arrayNames) {
