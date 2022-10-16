@@ -223,7 +223,7 @@ p:last-of-type {
 <script type="module">
 import WSRTC from '/public/wsrtc/wsrtc.js';
 import {zbencode, zbdecode} from '/public/encoding.mjs';
-import {DataClient, DCMap, DCArray} from "/public/data-client.mjs";
+import {DataClient, NetworkedDataClient, DCMap, DCArray} from "/public/data-client.mjs";
 
 window.zbencode = zbencode;
 window.zbdecode = zbdecode;
@@ -696,6 +696,43 @@ const testImportExport = () => {
   console.assert(player2.getKey('position')); // has been imported
   console.assert(arrayEquals(player2.getKey('position'), position));
 };
+const testMultiplayer = async () => {
+  // player 1
+
+  const dc1 = new DataClient({
+    crdt: _makeEmptyCrdt(),
+  });
+  const wss = document.location.protocol === "http:" ? "ws://" : "wss://";
+  let ws1 = new WebSocket(wss + hostname + "/api/room/" + roomname + "/websocket");
+  ws1.binaryType = 'arraybuffer';
+  const ndc1 = new NetworkedDataClient(dc1, ws1);
+  // player 2
+
+  const dc2 = new DataClient({
+    crdt: _makeEmptyCrdt(),
+  });
+  let ws2 = new WebSocket(wss + hostname + "/api/room/" + roomname + "/websocket");
+  ws2.binaryType = 'arraybuffer';
+  const ndc2 = new NetworkedDataClient(dc2, ws2);
+
+  // wait for connection
+
+  await Promise.all([
+    ndc1.connect(),
+    ndc2.connect(),
+  ]);
+
+  // set position on first player
+  const players = dc1.getArray('players');
+  const {map, update} = players.add({
+    name: 'Weebo',
+    position: Float32Array.from([1, 2, 3]),
+  });
+  const updateBuffer = dc1.serializeMessage(update);
+  dc1.emitUpdate(update);
+  // console.log('send ipdate buffer', updateBuffer);
+  ndc1.send(updateBuffer);
+};
 // const testInitialBind = () => {
 
 // };
@@ -710,12 +747,13 @@ const tests = [
   testConclict,
   testBinary,
   testImportExport,
+  testMultiplayer,
   // testInitialBind,
   // testDeadHand,
 ];
-const test = () => {
+const test = async () => {
   for (const fn of tests) {
-    fn();
+    await fn();
   }
   console.log(`completed ${tests.length} tests`);
 };
@@ -946,6 +984,7 @@ function join() {
   // If we are running via wrangler dev, use ws:
   const wss = document.location.protocol === "http:" ? "ws://" : "wss://";
   let ws = new WebSocket(wss + hostname + "/api/room/" + roomname + "/websocket");
+  ws.binaryType = 'arraybuffer';
   let rejoined = false;
   let startTime = Date.now();
 
@@ -979,11 +1018,14 @@ function join() {
   });
 
   ws.addEventListener("message", event => {
+    console.log('got event', event.data);
+    if (event.data instanceof ArrayBuffer) {
+      console.log('client got binary data', event.data);
+      return;
+    }
+    
     let data = JSON.parse(event.data);
-
-    if (data instanceof ArrayBuffer) {
-      console.log('client got binary data', data);
-    } else if (data.method) {
+    if (data.method) {
       const {method} = data;
       switch (method) {
         case 'chat': {
