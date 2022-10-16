@@ -685,3 +685,52 @@ export class DataClient extends EventTarget {
     }
   }
 }
+
+//
+
+export class NetworkedDataClient {
+  constructor(dataClient, ws) {
+    this.dataClient = dataClient;
+    this.ws = ws;
+    this.playerId = makeId();
+  }
+  async connect() {
+    await new Promise((resolve, reject) => {
+      resolve = (resolve => () => {
+        resolve();
+        _cleanup();
+      })(resolve);
+      reject = (reject => () => {
+        reject();
+        _cleanup();
+      })(reject);
+      
+      this.ws.addEventListener('open', resolve);
+      this.ws.addEventListener('error', reject);
+
+      const _cleanup = () => {
+        this.ws.removeEventListener('open', resolve);
+        this.ws.removeEventListener('error', reject);
+      };
+    });
+    console.log('connect');
+
+    this.ws.addEventListener('message', e => {
+      if (e.data instanceof ArrayBuffer) {
+        const updateBuffer = e.data;
+        const uint8Array = new Uint8Array(updateBuffer);
+        const {
+          rollback,
+          update,
+        } = this.dataClient.applyUint8Array(uint8Array, {force: true}); // force since coming from the server
+        console.log('applied data locally', {rollback, update, updateBuffer}, this.dataClient.getArray('players').toArray());
+      }
+    });
+  }
+  send(msg) {
+    // const buffer = msg.slice().buffer;
+    // console.log('send', buffer);
+    // this.ws.send(buffer);
+    this.ws.send(msg);
+  }
+}
