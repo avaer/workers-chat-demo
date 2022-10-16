@@ -160,6 +160,7 @@ export class DCMap extends EventTarget {
     const setKey = 'set.' + this.arrayId + '.' + this.arrayIndexId;
     // console.log('dc map listen', setKey);
     const setFn = e => {
+      console.log('map set fn', setKey, e.data);
       const {key, epoch, val} = e.data;
       // console.log('capture set data 1', e.data);
       this.dispatchEvent(new MessageEvent('set', {
@@ -221,7 +222,7 @@ export class DCArray extends EventTarget {
         arrayIndexId,
         val,
       } = e.data;
-      const map = new DCMap(arrayId, arrayIndexId, this.dataClient);
+      const map = new DCMap(this.arrayId, arrayIndexId, this.dataClient);
       this.dispatchEvent(new MessageEvent('add', {
         data: {
           arrayIndexId,
@@ -495,7 +496,7 @@ export class DataClient extends EventTarget {
     }
   }
   emitUpdate(messageEvent) {
-    // console.log('emit', messageEvent);
+    console.log('emit update', messageEvent.type);
     this.dispatchEvent(messageEvent);
   }
   
