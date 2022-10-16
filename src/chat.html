@@ -439,18 +439,40 @@ const testDoubleAdd = () => {
     }
   }
 };
-const testInitialBind = () => {
+const testRemove = () => {
+  const dc = new DataClient({
+    crdt: _makeSimpleCrdt(),
+  });
+  const binding = dc.readBinding(['players']);
+  const {players} = binding.arrays;
+  const player = players.getMap('1');
+  // console.assert(player);
+  // console.assert(player.toObject().name === 'Alice');
+  // const updateMessage = player.setKeyValueUpdate('name', 'Lola');
+  // console.assert(player.toObject().name === 'Lola');
+  // const updateBuffer = dc.serializeMessage(updateMessage);
+  const updateMessage = player.removeUpdate();
+  const updateBuffer = dc.serializeMessage(updateMessage);
+
+  console.assert(players.toArray().length === 0);
+};
+const testConclict = () => {
 
 };
-const testDeadHand = () => {
+// const testInitialBind = () => {
 
-};
+// };
+// const testDeadHand = () => {
+
+// };
 const tests = [
   testSet,
   testAdd,
   testDoubleAdd,
-  testInitialBind,
-  testDeadHand,
+  testRemove,
+  testConclict,
+  // testInitialBind,
+  // testDeadHand,
 ];
 const test = () => {
   for (const fn of tests) {
