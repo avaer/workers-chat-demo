@@ -1,3 +1,5 @@
+import { zbencode } from "./encoding.mjs";
+
 function makeid(length) {
   var result           = '';
   var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -153,8 +155,10 @@ export class DCMap extends EventTarget {
   }
   listen() {
     const setKey = 'set.' + this.arrayId + '.' + this.arrayIndexId;
+    // console.log('dc map listen', setKey);
     const setFn = e => {
       const {key, epoch, val} = e.data;
+      // console.log('capture set data 1', e.data);
       this.dispatchEvent(new MessageEvent('set', {
         data: {
           key,
@@ -162,6 +166,7 @@ export class DCMap extends EventTarget {
           val,
         },
       }));
+      // console.log('capture set data 2', e.data);
     };
     this.dataClient.addEventListener(setKey, setFn);
     this.cleanupFn = () => {
@@ -184,7 +189,9 @@ export class DCArray extends EventTarget {
     this.cleanupFn = null;
   }
   getMap(arrayIndexId) {
-    return new DCMap(this.arrayId, arrayIndexId, this.dataClient);
+    const map = new DCMap(this.arrayId, arrayIndexId, this.dataClient);
+    map.listen();
+    return map;
   }
   add(val) {
     return this.dataClient.createArrayMapElement(this.arrayId, val);
@@ -249,6 +256,33 @@ export class DataClient extends EventTarget {
   };
 
   // for both client and server
+  serializeMessage(m) {
+    const parsedMessage = this.parseMessage(m);
+    const {type, arrayId, arrayIndexId} = parsedMessage;
+    switch (type) {
+      case 'set': {
+        const {key, epoch, val} = m.data;
+        return zbencode({
+          method: DataClient.UPDATE_METHODS.SET,
+          args: [
+            arrayId,
+            arrayIndexId,
+            key,
+            epoch,
+            val,
+          ],
+        });
+      }
+      case 'add': {
+        // XXX
+        break;
+      }
+      case 'remove': {
+        // XXX
+        break;
+      }
+    }
+  }
   applyUint8Array(uint8Array, {
     force = false, // force if it's coming from the server
   } = {}) {
@@ -258,8 +292,8 @@ export class DataClient extends EventTarget {
     const {method, args} = zbdecode(uint8Array);
     switch (method) {
       case DataClient.UPDATE_METHODS.SET: {
-        const [arrayName, arrayIndexId, key, epoch, val] = args;
-        const arrayMap = new DCMap(arrayName, arrayIndexId, this);
+        const [arrayId, arrayIndexId, key, epoch, val] = args;
+        const arrayMap = new DCMap(arrayId, arrayIndexId, this);
         let oldObject;
         if (force) {
           arrayMap.setKeyEpochValue(key, epoch, val);
@@ -268,7 +302,7 @@ export class DataClient extends EventTarget {
         }
         if (oldObject === undefined) {
           // accept update
-          update = new MessageEvent('set.' + arrayName + '.' + arrayIndexId, {
+          update = new MessageEvent('set.' + arrayId + '.' + arrayIndexId, {
             data: {
               key,
               epoch,
@@ -356,34 +390,74 @@ export class DataClient extends EventTarget {
   }
 
   // for server
-  triggerSave(m, saveKeyFn) {
+  parseMessage(m) {
     const match = m.type.match(/^set\.(.+?)\.(.+?)$/);
     if (match) {
-      const arrayName = match[1];
+      const arrayId = match[1];
       const arrayIndexId = match[2];
-      saveKeyFn(arrayIndexId);
+      const {key, epoch, val} = m.data;
+      return {
+        type: 'set',
+        arrayId,
+        arrayIndexId,
+        key,
+        epoch,
+        val,
+      };
     } else {
       const match = m.type.match(/^add\.(.+?)$/);
       if (match) {
-        const arrayName = match[1];
+        const arrayId = match[1];
         const {arrayIndexId} = m.data;
-        saveKeyFn(arrayIndexId);
-        saveKeyFn(arrayName);
+        return {
+          type: 'add',
+          arrayId,
+          arrayIndexId,
+        };
       } else {
         const match = m.type.match(/^remove\.(.+?)$/);
         if (match) {
-          const arrayName = match[1];
+          const arrayId = match[1];
           const {arrayIndexId} = m.data;
-          saveKeyFn(arrayIndexId);
-          saveKeyFn(arrayName);
+          return {
+            type: 'remove',
+            arrayId,
+            arrayIndexId,
+          };
         } else {
           throw new Error('unrecognized message type: ' + m.type);
         }
       }
     }
   }
+  triggerSave(m) {
+    const {type, arrayId, arrayIndexId} = this.parseMessage(m);
+
+    if (type === 'set') {
+      saveKeyFn(arrayIndexId);
+    } else if (type === 'add' || type === 'remove') {
+      saveKeyFn(arrayIndexId);
+      saveKeyFn(arrayId);
+    } else {
+      throw new Error('unrecognized message type: ' + m.type);
+    }
+  }
+  emitUpdate(messageEvent) {
+    console.log('emit', messageEvent);
+    this.dispatchEvent(messageEvent);
+  }
   
   // for client
+  getArray(arrayId) {
+    const array = new DCArray(arrayId, this);
+    array.listen();
+    return array;
+  }
+  getArrayMap(arrayId, arrayIndexId) {
+    const map = new DCMap(arrayId, arrayIndexId, this);
+    map.listen();
+    return map;
+  }
   createArrayMapElement(arrayId, val = {}) {
     const arrayIndexId = makeId();
     return this.addArrayMapElement(arrayId, arrayIndexId, val);
@@ -399,6 +473,7 @@ export class DataClient extends EventTarget {
     array.add(arrayIndexId);
 
     const map = new DCMap(arrayId, arrayIndexId, this);
+    map.listen();
 
     this.dispatchEvent(new MessageEvent('add.' + arrayId, {
       data: {
