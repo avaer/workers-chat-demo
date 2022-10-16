@@ -239,11 +239,11 @@ const _makeCrdt = () => {
     }],
   ]);
 };
-const test = () => {
+const testTransfer = () => {
   const dc = new DataClient({
     crdt: _makeCrdt(),
   });
-  window.dc = dc;
+  // window.dc = dc;
   const binding = dc.readBinding(['players']);
   const {players} = binding.arrays;
   const player = players.getMap('1');
@@ -295,8 +295,15 @@ const test = () => {
   }
 
   console.assert(player2.toObject().name === 'Lola');
-
-  console.log('done');
+};
+const tests = [
+  testTransfer,
+];
+const test = () => {
+  for (const fn of tests) {
+    fn();
+  }
+  console.log(`completed ${tests.length} tests`);
 };
 globalThis.test = test;
 
