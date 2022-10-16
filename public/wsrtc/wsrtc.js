@@ -2,6 +2,7 @@ import {channelCount, sampleRate, bitrate, MESSAGE} from './ws-constants.js';
 import {WsEncodedAudioChunk, WsMediaStreamAudioReader, WsAudioEncoder, WsAudioDecoder} from './ws-codec.js';
 import {ensureAudioContext, getAudioContext} from './ws-audio-context.js';
 import {encodeMessage, encodeAudioMessage, encodePoseMessage, encodeTypedMessage, decodeTypedMessage, getEncodedAudioChunkBuffer, getAudioDataBuffer/*, loadState*/} from './ws-util.js';
+import { zbdecode } from '../encoding.mjs';
 // import * as Z from 'zjs';
 
 function formatWorldUrl(u, localPlayer) {
@@ -11,9 +12,8 @@ function formatWorldUrl(u, localPlayer) {
   return url.toString();
 }
 class WSRTC extends EventTarget {
-  constructor(u = '', {
+  constructor(ws, {
     localPlayer = null,
-    ws = null,
     // crdtState = new Z.Doc(),
   } = {}) {
     super();
@@ -25,7 +25,7 @@ class WSRTC extends EventTarget {
     this.audioEncoder = null;
     
     this.localPlayer = localPlayer;
-    this.crdtState = crdtState;
+    this.crdtState = {clientInit: 'woot'};
     
     /* this.addEventListener('join', e => {
       const player = e.data;
@@ -39,7 +39,7 @@ class WSRTC extends EventTarget {
     // const ws = new WebSocket(u2);
     this.ws = ws;
     ws.binaryType = 'arraybuffer';
-    ws.addEventListener('open', () => {
+    {
       const initialMessage = e => {
         const uint32Array = new Uint32Array(e.data, 0, Math.floor(e.data.byteLength/Uint32Array.BYTES_PER_ELEMENT));
         const method = uint32Array[0];
@@ -64,9 +64,7 @@ class WSRTC extends EventTarget {
             index += Uint32Array.BYTES_PER_ELEMENT;
             const data = new Uint8Array(e.data, index, roomDataByteLength);
             // console.log('crdt load');
-            this.crdtState.transact(() => {
-              Z.applyUpdate(this.crdtState, data);
-            });
+            this.crdtState = zbdecode(data);
             
             // log
             // console.log('init wsrtc 1', this.crdtState.toJSON());
@@ -137,7 +135,7 @@ class WSRTC extends EventTarget {
         ]);
       };
       this.crdtState.on('update', handleStateUpdate);
-    });
+    }
     ws.addEventListener('error', err => {
       this.dispatchEvent(new MessageEvent('error', {
         data: err,
