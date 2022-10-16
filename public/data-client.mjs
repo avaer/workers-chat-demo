@@ -10,6 +10,9 @@ function makeid(length) {
  return result;
 }
 const makeId = () => makeid(5);
+
+//
+
 const convertValToCrdtVal = val => {
   const startEpoch = 0;
   const crdtVal = {};
@@ -27,6 +30,22 @@ const convertCrdtValToVal = crdtVal => {
   }
   return val;
 }
+
+const convertMapToObject = map => {
+  const o = {};
+  for (const [key, val] of map) {
+    o[key] = val;
+  }
+  return o;
+};
+const convertObjectToMap = map => {
+  const o = new Map();
+  for (const key in map) {
+    const val = map[key];
+    o.set(key, val);
+  }
+  return o;
+};
 
 //
 
@@ -286,16 +305,14 @@ export class DataClient extends EventTarget {
   } = {}) {
     super();
 
-    // this.storage = storage;
-    // this.websocket = websocket;
-
     this.crdt = crdt;
   }
   static UPDATE_METHODS = {
-    SET: 1,
-    ADD: 2,
-    REMOVE: 3,
-    ROLLBACK: 4,
+    IMPORT: 1,
+    SET: 2,
+    ADD: 3,
+    REMOVE: 4,
+    ROLLBACK: 5,
   };
 
   // for both client and server
@@ -303,6 +320,15 @@ export class DataClient extends EventTarget {
     const parsedMessage = this.parseMessage(m);
     const {type, arrayId, arrayIndexId} = parsedMessage;
     switch (type) {
+      case 'import': {
+        const {crdtExport} = parsedMessage;
+        return zbencode({
+          method: DataClient.UPDATE_METHODS.IMPORT,
+          args: [
+            crdtExport,
+          ],
+        });
+      }
       case 'set': {
         const {key, epoch, val} = m.data;
         return zbencode({
@@ -351,6 +377,15 @@ export class DataClient extends EventTarget {
       }
     }
   }
+  getImportMessage() {
+    const crtdObject = convertMapToObject(this.crdt);
+    const crdtExport = zbencode(crtdObject);
+    return new MessageEvent('import', {
+      data: {
+        crdtExport,
+      },
+    });
+  }
   applyUint8Array(uint8Array, {
     force = false, // force if it's coming from the server
   } = {}) {
@@ -359,6 +394,17 @@ export class DataClient extends EventTarget {
 
     const {method, args} = zbdecode(uint8Array);
     switch (method) {
+      case DataClient.UPDATE_METHODS.IMPORT: {
+        const [crdtExport] = args;
+        // console.log('importing export', crdtExport, zbdecode(crdtExport));
+        this.crdt = convertObjectToMap(zbdecode(crdtExport));
+        update = new MessageEvent('import', {
+          data: {
+            crdtExport,
+          },
+        });
+        break;
+      }
       case DataClient.UPDATE_METHODS.SET: {
         const [arrayId, arrayIndexId, key, epoch, val] = args;
         const arrayMap = new DCMap(arrayId, arrayIndexId, this);
@@ -510,6 +556,11 @@ export class DataClient extends EventTarget {
               oldEpoch,
               oldVal,
             };
+          } else if (m.type === 'import') {
+            return {
+              type: 'import',
+              crdtExport: m.data.crdtExport,
+            };
           } else {
             throw new Error('unrecognized message type: ' + m.type);
           } 
@@ -527,6 +578,9 @@ export class DataClient extends EventTarget {
       saveKeyFn(arrayId);
     } else if (type === 'rollback') {
       saveKeyFn(arrayIndexId);
+    } else if (type === 'import') {
+      console.warn('should find out how to save all keys...');
+      // saveKeyFn('crdt');
     } else {
       throw new Error('unrecognized message type: ' + m.type);
     }
