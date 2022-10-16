@@ -223,9 +223,36 @@ p:last-of-type {
 <script type="module">
 import WSRTC from '/public/wsrtc/wsrtc.js';
 import {zbencode, zbdecode} from '/public/encoding.mjs';
+import {DataClient, DCMap, DCArray} from "/public/data-client.mjs";
 
 window.zbencode = zbencode;
 window.zbdecode = zbdecode;
+window.DataClient = DataClient;
+window.DCMap = DCMap;
+window.DCArray = DCArray;
+
+const _makeCrdt = () => {
+  return new Map([
+    ['players', new Set(['1'])],
+    ['1', {
+      name: [2, 'Alice'],
+    }],
+  ]);
+};
+const test = () => {
+  const dc = new DataClient({
+    crdt: _makeCrdt(),
+  });
+  window.dc = dc;
+  const binding = dc.readBinding(['players']);
+  const {players} = binding.arrays;
+  const player = players.getMap('1');
+  console.assert(player);
+  console.assert(player.toObject().name === 'Alice');
+  const updateMessage = player.setKeyValueUpdate('name', 'Lola');
+  console.assert(player.toObject().name === 'Lola');
+};
+globalThis.test = test;
 
 let currentWebSocket = null;
 
@@ -481,7 +508,7 @@ function join() {
     currentWebSocket = ws;
 
     // Send user info message.
-    ws.send(JSON.stringify({name: username}));
+    // ws.send(JSON.stringify({name: username}));
   });
 
   ws.addEventListener("message", event => {
