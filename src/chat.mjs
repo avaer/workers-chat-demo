@@ -63,6 +63,7 @@ import HTML from "./chat.html";
 import { getAssetFromKV, mapRequestToAsset } from '@cloudflare/kv-asset-handler'
 import manifestJSON from '__STATIC_CONTENT_MANIFEST'
 const assetManifest = JSON.parse(manifestJSON)
+import {zbencode, zbdecode} from "../public/encoding.mjs";
 
 // `handleErrors()` is a little utility function that can wrap an HTTP request handler in a
 // try/catch and return errors to the client. You probably wouldn't want to use this in production
@@ -121,37 +122,44 @@ export default {
 }
 
 async function handlePublicRequest(path, request, env, ctx) {
-  const event = {
-    request,
-    waitUntil(promise) {
-      return ctx.waitUntil(promise)
-    },
-  }
-  const options = {};
-  function handlePrefix(prefix) {
-    return request => {
-      // compute the default (e.g. / -> index.html)
-      let defaultAssetKey = mapRequestToAsset(request)
-      let url = new URL(defaultAssetKey.url)
-  
-      // strip the prefix from the path for lookup
-      url.pathname = url.pathname.replace(prefix, '/')
-  
-      // inherit all other props from the default request
-      return new Request(url.toString(), defaultAssetKey)
+  try {
+    const event = {
+      request,
+      waitUntil(promise) {
+        return ctx.waitUntil(promise)
+      },
     }
+    const options = {};
+    function handlePrefix(prefix) {
+      return request => {
+        // compute the default (e.g. / -> index.html)
+        let defaultAssetKey = mapRequestToAsset(request)
+        let url = new URL(defaultAssetKey.url)
+    
+        // strip the prefix from the path for lookup
+        url.pathname = url.pathname.replace(prefix, '/')
+    
+        // inherit all other props from the default request
+        return new Request(url.toString(), defaultAssetKey)
+      }
+    }
+    options.mapRequestToAsset = handlePrefix(/^\/public/);
+    options.ASSET_NAMESPACE = env.__STATIC_CONTENT;
+    options.ASSET_MANIFEST = assetManifest;
+    const page = await getAssetFromKV(event, options)
+
+    // allow headers to be altered
+    const response = new Response(page.body, page);
+
+    console.log('got response', response);
+
+    return response;
+  } catch(err) {
+    console.log('error', err);
+    return new Response(err.stack, {
+      status: 500,
+    })
   }
-  options.mapRequestToAsset = handlePrefix(/^\/public/);
-  options.ASSET_NAMESPACE = env.__STATIC_CONTENT;
-  options.ASSET_MANIFEST = assetManifest;
-  const page = await getAssetFromKV(event, options)
-
-  // allow headers to be altered
-  const response = new Response(page.body, page);
-
-  console.log('got response', response);
-
-  return response;
 }
 
 async function handleApiRequest(path, request, env) {
@@ -237,6 +245,462 @@ async function handleApiRequest(path, request, env) {
   }
 }
 
+//
+
+function makeid(length) {
+  var result           = '';
+  var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  var charactersLength = characters.length;
+  for ( var i = 0; i < length; i++ ) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+ }
+ return result;
+}
+const makeId = () => makeid(5);
+
+//
+
+class DCMap extends EventTarget {
+  constructor(arrayId, arrayIndexId, dataClient) {
+    super();
+
+    this.arrayId = arrayId;
+    this.arrayIndexId = arrayIndexId;
+    this.dataClient = dataClient;
+
+    this.cleanupFn = null;
+  }
+  getObject() {
+    return this.dataClient.crdt.get(this.arrayIndexId);
+  }
+  getKey(key) {
+    const object = this.getObject();
+    if (object) {
+      const valSpec = object[key];
+      if (valSpec !== undefined) {
+        const [epoch, val] = valSpec;
+        return val;
+      } else {
+        return undefined;
+      }
+    } else {
+      return undefined;
+    }
+  }
+  getEpoch(key) {
+    const object = this.getObject();
+    if (object) {
+      const valSpec = object[key];
+      if (valSpec !== undefined) {
+        const [epoch, val] = valSpec;
+        return epoch;
+      } else {
+        return 0;
+      }
+    } else {
+      return 0;
+    }
+  }
+
+  // client
+  setKeyValue(key, value) {
+    let object = this.getObject();
+    if (!object) {
+      object = {};
+      this.dataClient.crdt.set(this.arrayIndexId, object);
+    }
+    const oldEpoch = object[key] ? object[key][0] : 0;
+    object[key] = [oldEpoch + 1, value];
+  }
+  setKeyEpochValue(key, epoch, val) {
+    let object = this.getObject();
+    if (!object) {
+      object = {};
+      this.dataClient.crdt.set(this.arrayIndexId, object);
+    }
+    if (object[key]) {
+      object[key][0] = epoch;
+      object[key][1] = val;
+    } else {
+      object[key] = [epoch, val];
+    }
+  }
+
+  setKeyEpochValueUpdate(key, epoch, val) {
+    this.setKeyEpochValue(key, epoch, val);
+
+    return new MessageEvent('set.' + this.arrayId + '.' + this.arrayIndexId, {
+      data: {
+        key,
+        epoch,
+        val,
+      }
+    });
+  }
+  removeUpdate() {
+    this.dataClient.crdt.delete(this.arrayIndexId);
+    
+    return new MessageEvent('remove.' + this.arrayId, {
+      data: {
+        arrayIndexId: this.arrayIndexId,
+      },
+    });
+  }
+
+  // server
+  trySetKeyEpochValue(key, epoch, val) {
+    let object = this.getObject();
+    if (!object) {
+      object = {};
+      this.dataClient.crdt.set(this.arrayIndexId, object);
+    }
+
+    const oldEpoch = object[key] ? object[key][0] : 0;
+    if (epoch > oldEpoch) {
+      if (object[key]) {
+        object[key][0] = epoch;
+        object[key][1] = val;
+      } else {
+        object[key] = [epoch, val];
+      }
+      return undefined;
+    } else {
+      return object[key];
+    }
+  }
+  listen() {
+    const setKey = 'set.' + this.arrayId + '.' + this.arrayIndexId;
+    const setFn = e => {
+      const {key, epoch, val} = e.data;
+      this.dispatchEvent(new MessageEvent('set', {
+        data: {
+          key,
+          epoch,
+          val,
+        },
+      }));
+    };
+    this.dataClient.addEventListener(setKey, setFn);
+    this.cleanupFn = () => {
+      this.dataClient.removeEventListener(setKey, setFn);
+    };
+  }
+  destroy() {
+    if (this.cleanupFn) {
+      this.cleanupFn();
+      this.cleanupFn = null;
+    }
+  }
+}
+class DCArray extends EventTarget {
+  constructor(arrayId, dataClient) {
+    super();
+    this.arrayId = arrayId;
+    this.dataClient = dataClient;
+
+    this.cleanupFn = null;
+  }
+  add(val) {
+    return this.dataClient.createArrayMapElement(this.arrayId, val);
+  }
+  listen() {
+    const addKey = 'add.' + this.arrayId;
+    const addFn = e => {
+      const {
+        arrayIndexId,
+      } = e.data;
+      const map = new DCMap(arrayId, arrayIndexId, this.dataClient);
+      map.listen();
+      this.dispatchEvent(new MessageEvent('add', {
+        data: {
+          map,
+        },
+      }));
+    };
+    this.dataClient.addEventListener(addKey, addFn);
+
+    const removeKey = 'remove.' + this.arrayId;
+    const removeFn = e => {
+      const {
+        arrayIndexId,
+      } = e.data;
+      this.dispatchEvent(new MessageEvent('remove', {
+        data: {
+          arrayIndexId,
+        },
+      }));
+    };
+    this.dataClient.addEventListener(removeKey, removeFn);
+
+    this.cleanupFn = () => {
+      this.dataClient.removeEventListener(addKey, addFn);
+      this.dataClient.removeEventListener(removeKey, removeFn);
+    };
+  }
+  destroy() {
+    if (this.cleanupFn) {
+      this.cleanupFn();
+      this.cleanupFn = null;
+    }
+  }
+}
+class DataClient extends EventTarget {
+  constructor({
+    crdt = null,
+  } = {}) {
+    super();
+
+    // this.storage = storage;
+    // this.websocket = websocket;
+
+    this.crdt = crdt;
+  }
+  static UPDATE_METHODS = {
+    SET: 1,
+    ADD: 2,
+    REMOVE: 3,
+    ROLLBACK: 4,
+  };
+
+  // for both client and server
+  applyUint8Array(uint8Array, {
+    force = false, // force if it's coming from the server
+  } = {}) {
+    let rollback = null;
+    let update = null;
+
+    const {method, args} = zbdecode(uint8Array);
+    switch (method) {
+      case DataClient.UPDATE_METHODS.SET: {
+        const [arrayName, arrayIndexId, key, epoch, val] = args;
+        const arrayMap = new DCMap(arrayName, arrayIndexId, this);
+        let oldObject;
+        if (force) {
+          arrayMap.setKeyEpochValue(key, epoch, val);
+        } else {
+          oldObject = arrayMap.trySetKeyEpochValue(key, epoch, val);
+        }
+        if (oldObject === undefined) {
+          // accept update
+          update = new MessageEvent('set.' + arrayName + '.' + arrayIndexId, {
+            data: {
+              key,
+              epoch,
+              val,
+            },
+          });
+        } else {
+          const [oldEpoch, oldVal] = oldObject;
+          // reject update and roll back
+          rollback = zbencode({
+            method: DataClient.UPDATE_METHODS.ROLLBACK,
+            args: [arrayIndexId, key, oldEpoch, oldVal],
+          });
+        }
+        break;
+      }
+      case DataClient.UPDATE_METHODS.ADD: {
+        const [arrayId, arrayIndexId, val] = args;
+        this.crdt.set(arrayIndexId, val);
+        
+        let array = this.crdt.get(arrayId);
+        if (!array) {
+          array = new Set();
+          this.crdt.set(arrayId, array);
+        }
+        array.add(arrayIndexId);
+
+        update = new MessageEvent('add.' + arrayId, {
+          data: {
+            // arrayId,
+            arrayIndexId,
+            // val,
+          },
+        });
+        break;
+      }
+      case DataClient.UPDATE_METHODS.REMOVE: {
+        const [arrayId, arrayIndexId] = args;
+        let array = this.crdt.get(arrayId);
+        if (!array) {
+          array = new Set();
+          this.crdt.set(arrayId, array);
+        }
+        array.delete(arrayIndexId);
+
+        update = new MessageEvent('remove.' + arrayId, {
+          data: {
+            // arrayId,
+            arrayIndexId,
+          },
+        });
+        break;
+      }
+      case DataClient.UPDATE_METHODS.ROLLBACK: {
+        const [arrayIndexId, key, epoch, val] = args;
+        const object = this.crdt.get(arrayIndexId);
+        if (object) {
+          if (object[key]) {
+            object[key][0] = epoch;
+            object[key][1] = val;
+          } else {
+            object[key] = [epoch, val];
+          }
+
+          update = new MessageEvent('set.' + arrayIndexId, {
+            data: {
+              key,
+              epoch,
+              val,
+            },
+          });
+        } else {
+          throw new Error('got rollback for nonexistent object');
+        }
+
+        break;
+      }
+    }
+    // this.storage = zbdecode(new Uint8Array(arrayBuffer));
+    // const rollbackUint8Array = new Uint8Array(0);
+    return {
+      rollback,
+      update,
+    };
+  }
+
+  // for server
+  triggerSave(m, saveKeyFn) {
+    const match = m.type.match(/^set\.(.+?)\.(.+?)$/);
+    if (match) {
+      const arrayName = match[1];
+      const arrayIndexId = match[2];
+      saveKeyFn(arrayIndexId);
+    } else {
+      const match = m.type.match(/^add\.(.+?)$/);
+      if (match) {
+        const arrayName = match[1];
+        const {arrayIndexId} = m.data;
+        saveKeyFn(arrayIndexId);
+        saveKeyFn(arrayName);
+      } else {
+        const match = m.type.match(/^remove\.(.+?)$/);
+        if (match) {
+          const arrayName = match[1];
+          const {arrayIndexId} = m.data;
+          saveKeyFn(arrayIndexId);
+          saveKeyFn(arrayName);
+        } else {
+          throw new Error('unrecognized message type: ' + m.type);
+        }
+      }
+    }
+  }
+  
+  // for client
+  createArrayMapElement(arrayId, val = {}) {
+    const arrayIndexId = makeId();
+    return this.addArrayMapElement(arrayId, arrayIndexId, val);
+  }
+  addArrayMapElement(arrayId, arrayIndexId, val = {}) {
+    this.crdt.set(arrayIndexId, val);
+    
+    let array = this.crdt.get(arrayId);
+    if (!array) {
+      array = new Set();
+      this.crdt.set(arrayId, array);
+    }
+    array.add(arrayIndexId);
+
+    const map = new DCMap(arrayId, arrayIndexId, this);
+
+    this.dispatchEvent(new MessageEvent('add.' + arrayId, {
+      data: {
+        // arrayId,
+        arrayIndexId,
+        // val,
+      },
+    }));
+    return map;
+  }
+  removeArrayMapElement(arrayId, arrayIndexId) {
+    let array = this.crdt.get(arrayId);
+    if (!array) {
+      array = new Set();
+      this.crdt.set(arrayId, array);
+    }
+    if (array.has(arrayId)) {
+      if (this.crdt.has(arrayIndexId)) {
+        this.crdt.delete(arrayIndexId);
+        array.delete(arrayIndexId);
+
+        this.dispatchEvent(new MessageEvent('remove.' + arrayId, {
+          data: {
+            // arrayId,
+            arrayIndexId,
+          },
+        }));
+      } else {
+        throw new Error('array index id not found');
+      }
+    } else {
+      throw new Error('array index not found');
+    }
+  }
+  readBinding(arrayNames) {
+    let arrays = {};
+    let arrayMaps = {};
+    if (this.crdt) {
+      arrayNames.forEach(arrayId => {
+        const array = this.crdt.get(arrayId);
+        const localArrayMaps = [];
+        if (array) {
+          for (const arrayIndexId of array) {
+            const arrayMap = new DCMap(arrayId, arrayIndexId, this);
+            arrayMap.listen();
+            localArrayMaps.push(arrayMap);
+          }
+        }
+
+        arrays[arrayId] = new DCArray(arrayId, this);
+        arrays[arrayId].listen();
+        arrayMaps[arrayId] = localArrayMaps;
+      });
+      return {
+        arrays,
+        arrayMaps,
+      };
+    } else {
+      throw new Error('crdt was not initialized; it has not gotten its first message');
+    }
+  }
+}
+const readCrdtFromStorage = async (storage, arrayNames) => {
+  const crdt = new Map();
+  for (const arrayId of arrayNames) {
+    const array = await storage.get(arrayId) ?? new Set();
+    crdt.set(arrayId, array);
+
+    for (const arrayIndexId of array) {
+      const val = await storage.get(arrayIndexId) ?? {};
+      crdt.set(arrayIndexId, val);
+    }
+  }
+  return crdt;
+};
+let dataClientPromise = null;
+
+//
+
+const MESSAGE_TYPES = {
+  AUDIO: 1,
+  DATA: 2,
+};
+const schemaArrayNames = [
+  'players',
+  'objects',
+];
+
 // =======================================================================================
 // The ChatRoom Durable Object Class
 
@@ -308,6 +772,18 @@ export class ChatRoom {
     // WebSocket in JavaScript, not sending it elsewhere.
     webSocket.accept();
 
+    const _resumeWebsocket = _pauseWebSocket(webSocket);
+
+    if (!dataClientPromise) {
+      dataClientPromise = (async () => {
+        const crdt = await readCrdtFromStorage(this.storage, schemaArrayNames);
+        return new DataClient({
+          crdt,
+        });
+      })();
+    }
+    const dataClient = await dataClientPromise;
+
     // Set up our rate limiter client.
     // let limiterId = this.env.limiters.idFromName(ip);
     // let limiter = new RateLimiterClient(
@@ -327,6 +803,13 @@ export class ChatRoom {
       }
     });
 
+    // respond back to the client
+    const respondToSelf = messages => {
+      for (const message of messages) {
+        session.webSocket.send(message);
+      }
+    };
+
     // send a message to everyone on the list except us
     const proxyMessageToPeers = m => {
       for (const s of this.sessions) {
@@ -338,15 +821,48 @@ export class ChatRoom {
 
     // Load the last 100 messages from the chat history stored on disk, and send them to the
     // client.
-    let storage = await this.storage.list({reverse: true, limit: 100});
-    let backlog = [...storage.values()];
+    // let storage = await this.storage.list({reverse: true, limit: 100});
+    /* let backlog = [...storage.values()];
     backlog.reverse();
     backlog.forEach(value => {
       session.blockedMessages.push(value);
-    });
+    }); */
+
+    const handleBinaryMessage = (arrayBuffer) => {
+      let result = null;
+    
+      const dataView = new DataView(arrayBuffer);
+      // const byteLength = dataView.getUint32(Uint32Array.BYTES_PER_ELEMENT, true);
+      const messageType = dataView.getUint32(Uint32Array.BYTES_PER_ELEMENT, true);
+      switch (messageType) {
+        case MESSAGE_TYPES.AUDIO: {
+          // proxy
+          break;
+        }
+        case MESSAGE_TYPES.DATA: {
+          const uint8Array = new Uint8Array(arrayBuffer, Uint32Array.BYTES_PER_ELEMENT);
+          const {rollback, update} = dataClient.applyUint8Array(uint8Array);
+          if (rollback) {
+            result = [rollback];
+          }
+          if (update) {
+            dataClient.triggerSave(update, key => {
+              this.storage.put(key, this.crdt.get(key));
+            });
+          }
+          break;
+        }
+      }
+      if (result) {
+        respondToSelf(result);
+      } else {
+        // console.log('got arraybuffer', arrayBuffer);
+        proxyMessageToPeers(arrayBuffer);
+      }
+    };
 
     // Set event handlers to receive messages.
-    let receivedUserInfo = false;
+    // let receivedUserInfo = false;
     webSocket.addEventListener("message", async msg => {
       try {
         if (session.quit) {
@@ -367,33 +883,38 @@ export class ChatRoom {
           return;
         } */
 
-        // I guess we'll use JSON.
-        let data = JSON.parse(msg.data);
-
-        const {method} = data;
-        if (method) {
-          switch (method) {
-            case 'ping': {
-              // console.log('ping');
-              break;
+        if (msg.data instanceof ArrayBuffer) {
+          const arrayBuffer = msg.data;
+          handleBinaryMessage(arrayBuffer);
+        } else {
+          // I guess we'll use JSON.
+          const data = JSON.parse(msg.data);
+          const {method} = data;
+          if (method) {
+            switch (method) {
+              case 'ping': {
+                // console.log('ping');
+                break;
+              }
+              case 'chat': {
+                const {playerId, message} = data.args;
+                // console.log('replicate', playerId, message);
+                const m = JSON.stringify({
+                  method: 'chat',
+                  args: {
+                    playerId,
+                    message,
+                  },
+                });
+                proxyMessageToPeers(m);
+              }
             }
-            case 'chat': {
-              const {playerId, message} = data.args;
-              console.log('replicate', playerId, message);
-              const m = JSON.stringify({
-                method: 'chat',
-                args: {
-                  playerId,
-                  message,
-                },
-              });
-              proxyMessageToPeers(m);
-            }
+          } else {
+            console.warn('could not handle message', data);
           }
-          return;
         }
 
-        if (!receivedUserInfo) {
+        /* if (!receivedUserInfo) {
           // The first message the client sends is the user info message with their name. Save it
           // into their session object.
           session.name = "" + (data.name || "anonymous");
@@ -445,10 +966,11 @@ export class ChatRoom {
 
         // Save message.
         let key = new Date(data.timestamp).toISOString();
-        await this.storage.put(key, dataStr);
+        await this.storage.put(key, dataStr); (*/
       } catch (err) {
         // Report any exceptions directly back to the client. As with our handleErrors() this
         // probably isn't what you'd want to do in production, but it's convenient when testing.
+        console.warn(err);
         webSocket.send(JSON.stringify({error: err.stack}));
       }
     });
@@ -464,6 +986,8 @@ export class ChatRoom {
     };
     webSocket.addEventListener("close", closeOrErrorHandler);
     webSocket.addEventListener("error", closeOrErrorHandler);
+
+    _resumeWebsocket();
   }
 
   // broadcast() broadcasts a message to all clients.
