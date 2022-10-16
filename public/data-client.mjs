@@ -166,7 +166,7 @@ export class DCMap extends EventTarget {
     const setKey = 'set.' + this.arrayId + '.' + this.arrayIndexId;
     // console.log('dc map listen', setKey);
     const setFn = e => {
-      console.log('map set fn', setKey, e.data);
+      // console.log('map set fn', setKey, e.data);
       const {key, epoch, val} = e.data;
       // console.log('capture set data 1', e.data);
       this.dispatchEvent(new MessageEvent('set', {
@@ -179,8 +179,24 @@ export class DCMap extends EventTarget {
       // console.log('capture set data 2', e.data);
     };
     this.dataClient.addEventListener(setKey, setFn);
+
+    const removeKey = 'remove.' + this.arrayId;
+    const removeFn = e => {
+      const {arrayIndexId} = e.data;
+      // console.log('player check remove', arrayIndexId, this.arrayIndexId);
+      if (arrayIndexId === this.arrayIndexId) {
+        this.dispatchEvent(new MessageEvent('remove', {
+          data: {
+            arrayIndexId,
+          },
+        }));
+      }
+    };
+    this.dataClient.addEventListener(removeKey, removeFn);
+    
     this.cleanupFn = () => {
       this.dataClient.removeEventListener(setKey, setFn);
+      this.dataClient.removeEventListener(removeKey, removeFn);
     };
   }
   destroy() {
