@@ -253,25 +253,49 @@ const test = () => {
   console.assert(player.toObject().name === 'Lola');
   const updateBuffer = dc.serializeMessage(updateMessage);
 
-  let updated = 0;
-  player.addEventListener('set', e => {
-    const {key, epoch, val} = e.data;
-    console.assert(key === 'name');
-    console.assert(epoch === 3);
-    console.assert(val === 'Lola');
-    updated++;
-  });
-  console.assert(updated === 0);
-  dc.emitUpdate(updateMessage);
-  console.assert(updated === 1);
+  let updated;
+  {
+    updated = 0;
+    player.addEventListener('set', e => {
+      const {key, epoch, val} = e.data;
+      console.assert(key === 'name');
+      console.assert(epoch === 3);
+      console.assert(val === 'Lola');
+      updated++;
+    });
+    console.assert(updated === 0);
+    dc.emitUpdate(updateMessage);
+    console.assert(updated === 1);
+  }
 
   const dc2 = new DataClient({
     crdt: _makeCrdt(),
   });
   const player2 = dc2.getArrayMap('players', '1');
   console.assert(player2.toObject().name === 'Alice');
-  dc2.applyUint8Array(updateBuffer);
+  {
+    updated = 0;
+    player2.addEventListener('set', e => {
+      const {key, epoch, val} = e.data;
+      console.assert(key === 'name');
+      console.assert(epoch === 3);
+      console.assert(val === 'Lola');
+      updated++;
+    });
+    console.assert(updated === 0);
+    const {
+      rollback,
+      update,
+    } = dc2.applyUint8Array(updateBuffer, {force: true});
+    console.assert(!rollback);
+    console.assert(!!update);
+    console.assert(updated === 0);
+    dc2.emitUpdate(update);
+    console.assert(updated === 1);
+  }
+
   console.assert(player2.toObject().name === 'Lola');
+
   console.log('done');
 };
 globalThis.test = test;
