@@ -231,17 +231,42 @@ window.DataClient = DataClient;
 window.DCMap = DCMap;
 window.DCArray = DCArray;
 
-const _makeCrdt = () => {
+const _makeEmptyCrdt = () => {
   return new Map([
-    ['players', new Set(['1'])],
+    ['players', {}],
+  ]);
+};
+const _makeSimpleCrdt = () => {
+  return new Map([
+    ['players', {
+      '1': true,
+    }],
     ['1', {
       name: [2, 'Alice'],
     }],
   ]);
 };
-const testTransfer = () => {
+const testSet = () => {
   const dc = new DataClient({
-    crdt: _makeCrdt(),
+    crdt: _makeEmptyCrdt(),
+  });
+  const binding = dc.readBinding(['players']);
+  const {players} = binding.arrays;
+  // const player = players.getMap('1');
+  // console.assert(player);
+  // console.assert(player.toObject().name === 'Alice');
+  const {map: player, update: updateMessage} = players.add({
+    name: 'Shilo',
+  });
+  console.log('got player object', player.toObject());
+  console.assert(player.toObject().name === 'Shilo');
+  const updateBuffer = dc.serializeMessage(updateMessage);
+
+  console.log('got update buffer, finish test...', {updateMessage, updateBuffer});
+};
+const testAdd = () => {
+  const dc = new DataClient({
+    crdt: _makeSimpleCrdt(),
   });
   // window.dc = dc;
   const binding = dc.readBinding(['players']);
@@ -269,7 +294,7 @@ const testTransfer = () => {
   }
 
   const dc2 = new DataClient({
-    crdt: _makeCrdt(),
+    crdt: _makeSimpleCrdt(),
   });
   const player2 = dc2.getArrayMap('players', '1');
   console.assert(player2.toObject().name === 'Alice');
@@ -296,8 +321,73 @@ const testTransfer = () => {
 
   console.assert(player2.toObject().name === 'Lola');
 };
+const testDoubleAdd = () => {
+  // sources
+  const dc = new DataClient({
+    crdt: _makeEmptyCrdt(),
+  });
+  const binding = dc.readBinding(['players']);
+  const {players} = binding.arrays;
+  const {map: player, update: updateMessage} = players.add({
+    name: 'Shilo',
+  });
+  const updateBuffer = dc.serializeMessage(updateMessage);
+
+  const dc2 = new DataClient({
+    crdt: _makeEmptyCrdt(),
+  });
+  const binding2 = dc2.readBinding(['players']);
+  const {players: players2} = binding.arrays;
+  const {map: player2, update: updateMessage2} = players2.add({
+    name: 'Rex',
+  });
+  const updateBuffer2 = dc2.serializeMessage(updateMessage2);
+
+  // destinations
+  {
+    const dc3 = new DataClient({
+      crdt: _makeEmptyCrdt(),
+    });
+    dc3.applyUint8Array(updateBuffer, {force: true});
+    dc3.applyUint8Array(updateBuffer2, {force: true});
+    const b1 = dc.readBinding(['players']);
+    const b3 = dc3.readBinding(['players']);
+
+    for (const b of [
+      b1,
+      b3,
+    ]) {
+      console.assert(b.arrays.players.toArray().length === 2);
+      console.assert(b.arrays.players.toArray()[0].name === 'Shilo');
+      console.assert(b.arrays.players.toArray()[1].name === 'Rex');
+
+      console.assert(b.arrayMaps.players[0].toObject().name === 'Shilo');
+      console.assert(b.arrayMaps.players[1].toObject().name === 'Rex');
+    }
+
+    /* console.log(
+      'got bindings',
+      [dc.crdt, dc3.crdt],
+      [b1, b3],
+      // b1.arrays.players.toArray(),
+      // b3.arrays.players.toArray(),
+      b1.arrayMaps.players[0].toObject(),
+      b3.arrayMaps.players[0].toObject()
+    ); */
+  }
+};
+const testInitialBind = () => {
+
+};
+const testDeadHand = () => {
+
+};
 const tests = [
-  testTransfer,
+  testSet,
+  testAdd,
+  testDoubleAdd,
+  testInitialBind,
+  testDeadHand,
 ];
 const test = () => {
   for (const fn of tests) {
