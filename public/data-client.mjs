@@ -501,7 +501,18 @@ export class DataClient extends EventTarget {
             arrayIndexId,
           };
         } else {
-          throw new Error('unrecognized message type: ' + m.type);
+          if (m.type === 'rollback') {
+            const {arrayIndexId, key, oldEpoch, oldVal} = m.data;
+            return {
+              type: 'rollback',
+              arrayIndexId,
+              key,
+              oldEpoch,
+              oldVal,
+            };
+          } else {
+            throw new Error('unrecognized message type: ' + m.type);
+          } 
         }
       }
     }
@@ -514,6 +525,8 @@ export class DataClient extends EventTarget {
     } else if (type === 'add' || type === 'remove') {
       saveKeyFn(arrayIndexId);
       saveKeyFn(arrayId);
+    } else if (type === 'rollback') {
+      saveKeyFn(arrayIndexId);
     } else {
       throw new Error('unrecognized message type: ' + m.type);
     }
