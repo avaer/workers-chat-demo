@@ -569,8 +569,10 @@ const testBinary = () => {
   const binding = dc.readBinding(['players']);
   const {players} = binding.arrays;
   const player = players.getMap('1');
-  const position = Float32Array.from([1, 2, 3]);
 
+  // first set
+
+  const position = Float32Array.from([1, 2, 3]);
   const updateMessage = player.setKeyValueUpdate('position', position);
   const updateBuffer = dc.serializeMessage(updateMessage);
   dc.emitUpdate(updateMessage);
@@ -589,6 +591,30 @@ const testBinary = () => {
 
   console.assert(player.getKey('position'));
   console.assert(arrayEquals(player.getKey('position'), position));
+
+  console.assert(player2.getKey('position'));
+  console.assert(arrayEquals(player2.getKey('position'), position));
+
+  // second set
+
+  const position2 = Float32Array.from([2, 2, 2]);
+  const updateMessage2 = player.setKeyValueUpdate('position', position2);
+  const updateBuffer2 = dc.serializeMessage(updateMessage2);
+  dc.emitUpdate(updateMessage2);
+
+  const {
+    rollback: rollback2,
+    update: update2,
+  } = dc2.applyUint8Array(updateBuffer2);
+  console.assert(!rollback2);
+  console.assert(update2);
+  dc2.emitUpdate(update2);
+
+  console.assert(player.getKey('position'));
+  console.assert(arrayEquals(player.getKey('position'), position2));
+
+  console.assert(player2.getKey('position'));
+  console.assert(arrayEquals(player2.getKey('position'), position2));
 };
 // const testInitialBind = () => {
 
