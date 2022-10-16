@@ -60,6 +60,9 @@
 // available for assets served this way is very limited; larger sites should continue to use Workers
 // KV to serve assets.)
 import HTML from "./chat.html";
+import { getAssetFromKV, mapRequestToAsset } from '@cloudflare/kv-asset-handler'
+import manifestJSON from '__STATIC_CONTENT_MANIFEST'
+const assetManifest = JSON.parse(manifestJSON)
 
 // `handleErrors()` is a little utility function that can wrap an HTTP request handler in a
 // try/catch and return errors to the client. You probably wouldn't want to use this in production
@@ -92,7 +95,7 @@ async function handleErrors(request, func) {
 // to a handler named `scheduled`, which should be exported here in a similar way. We will be
 // adding other handlers for other types of events over time.
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     return await handleErrors(request, async () => {
       // We have received an HTTP request! Parse the URL and route the request.
 
@@ -108,7 +111,8 @@ export default {
         case "api":
           // This is a request for `/api/...`, call the API handler.
           return handleApiRequest(path.slice(1), request, env);
-
+        case 'public':
+          return handlePublicRequest(path.slice(1), request, env, ctx);
         default:
           return new Response("Not found", {status: 404});
       }
@@ -116,6 +120,39 @@ export default {
   }
 }
 
+async function handlePublicRequest(path, request, env, ctx) {
+  const event = {
+    request,
+    waitUntil(promise) {
+      return ctx.waitUntil(promise)
+    },
+  }
+  const options = {};
+  function handlePrefix(prefix) {
+    return request => {
+      // compute the default (e.g. / -> index.html)
+      let defaultAssetKey = mapRequestToAsset(request)
+      let url = new URL(defaultAssetKey.url)
+  
+      // strip the prefix from the path for lookup
+      url.pathname = url.pathname.replace(prefix, '/')
+  
+      // inherit all other props from the default request
+      return new Request(url.toString(), defaultAssetKey)
+    }
+  }
+  options.mapRequestToAsset = handlePrefix(/^\/public/);
+  options.ASSET_NAMESPACE = env.__STATIC_CONTENT;
+  options.ASSET_MANIFEST = assetManifest;
+  const page = await getAssetFromKV(event, options)
+
+  // allow headers to be altered
+  const response = new Response(page.body, page);
+
+  console.log('got response', response);
+
+  return response;
+}
 
 async function handleApiRequest(path, request, env) {
   // We've received at API request. Route the request based on the path.
@@ -272,10 +309,10 @@ export class ChatRoom {
     webSocket.accept();
 
     // Set up our rate limiter client.
-    let limiterId = this.env.limiters.idFromName(ip);
-    let limiter = new RateLimiterClient(
-        () => this.env.limiters.get(limiterId),
-        err => webSocket.close(1011, err.stack));
+    // let limiterId = this.env.limiters.idFromName(ip);
+    // let limiter = new RateLimiterClient(
+    //     () => this.env.limiters.get(limiterId),
+    //     err => webSocket.close(1011, err.stack));
 
     // Create our session and add it to the sessions list.
     // We don't send any messages to the client until it has sent us the initial user info
@@ -289,6 +326,15 @@ export class ChatRoom {
         session.blockedMessages.push(JSON.stringify({joined: otherSession.name}));
       }
     });
+
+    // send a message to everyone on the list except us
+    const proxyMessageToPeers = m => {
+      for (const s of this.sessions) {
+        if (s !== session) {
+          s.webSocket.send(m);
+        }
+      }
+    };
 
     // Load the last 100 messages from the chat history stored on disk, and send them to the
     // client.
@@ -314,15 +360,38 @@ export class ChatRoom {
         }
 
         // Check if the user is over their rate limit and reject the message if so.
-        if (!limiter.checkLimit()) {
+        /* if (!limiter.checkLimit()) {
           webSocket.send(JSON.stringify({
             error: "Your IP is being rate-limited, please try again later."
           }));
           return;
-        }
+        } */
 
         // I guess we'll use JSON.
         let data = JSON.parse(msg.data);
+
+        const {method} = data;
+        if (method) {
+          switch (method) {
+            case 'ping': {
+              // console.log('ping');
+              break;
+            }
+            case 'chat': {
+              const {playerId, message} = data.args;
+              console.log('replicate', playerId, message);
+              const m = JSON.stringify({
+                method: 'chat',
+                args: {
+                  playerId,
+                  message,
+                },
+              });
+              proxyMessageToPeers(m);
+            }
+          }
+          return;
+        }
 
         if (!receivedUserInfo) {
           // The first message the client sends is the user info message with their name. Save it
