@@ -127,6 +127,12 @@ export class DCMap extends EventTarget {
   }
   removeUpdate() {
     this.dataClient.crdt.delete(this.arrayIndexId);
+
+    let array = this.dataClient.crdt.get(this.arrayId);
+    if (!array) {
+      throw new Error('remove from nonexistent array!');
+    }
+    delete array[this.arrayIndexId];
     
     return new MessageEvent('remove.' + this.arrayId, {
       data: {
@@ -395,8 +401,9 @@ export class DataClient extends EventTarget {
         const [arrayId, arrayIndexId] = args;
         let array = this.crdt.get(arrayId);
         if (!array) {
-          array = {};
-          this.crdt.set(arrayId, array);
+          throw new Error('remove from nonexistent array!');
+          // array = {};
+          // this.crdt.set(arrayId, array);
         }
         delete array[arrayIndexId];
 
@@ -496,7 +503,7 @@ export class DataClient extends EventTarget {
     }
   }
   emitUpdate(messageEvent) {
-    console.log('emit update', messageEvent.type);
+    // console.log('emit update', messageEvent.type);
     this.dispatchEvent(messageEvent);
   }
   
