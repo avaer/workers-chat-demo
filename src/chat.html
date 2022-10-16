@@ -446,15 +446,32 @@ const testRemove = () => {
   const binding = dc.readBinding(['players']);
   const {players} = binding.arrays;
   const player = players.getMap('1');
-  // console.assert(player);
-  // console.assert(player.toObject().name === 'Alice');
-  // const updateMessage = player.setKeyValueUpdate('name', 'Lola');
-  // console.assert(player.toObject().name === 'Lola');
-  // const updateBuffer = dc.serializeMessage(updateMessage);
   const updateMessage = player.removeUpdate();
+  console.assert(players.toArray().length === 0);
   const updateBuffer = dc.serializeMessage(updateMessage);
 
-  console.assert(players.toArray().length === 0);
+  let updated;
+  {
+    updated = 0;
+    players.addEventListener('remove', e => {
+      const {arrayIndexId} = e.data;
+      // console.log('remove data 1', e.data);
+      console.assert(arrayIndexId === '1');
+      console.assert(players.toArray().length === 0);
+      updated++;
+    });
+    player.addEventListener('remove', e => {
+      const {arrayIndexId} = e.data;
+      // console.log('remove data 2', e.data);
+      console.assert(arrayIndexId === '1');
+      updated++;
+    });
+    console.assert(updated === 0);
+    dc.emitUpdate(updateMessage);
+    // console.log('updated', updated);
+    console.assert(updated === 2);
+  }
+
 };
 const testConclict = () => {
 
