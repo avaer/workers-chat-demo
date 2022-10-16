@@ -221,9 +221,11 @@ p:last-of-type {
 <!-- Client-side JavaScript code for the app. -->
 
 <script type="module">
-// import WSRTC from './wsrtc/wrtc.js';
+import WSRTC from '/public/wsrtc/wsrtc.js';
+import {zbencode, zbdecode} from '/public/encoding.mjs';
 
-console.log('got module');
+window.zbencode = zbencode;
+window.zbdecode = zbdecode;
 
 let currentWebSocket = null;
 
@@ -305,11 +307,11 @@ function startNameChooser() {
 function startRoomChooser() {
   nameForm.remove();
 
-  if (document.location.hash.length > 1) {
-    roomname = document.location.hash.slice(1);
+  // if (document.location.hash.length > 1) {
+    roomname = document.location.hash.slice(1) || 'public';
     startChat();
     return;
-  }
+  // }
 
   roomForm.addEventListener("submit", event => {
     event.preventDefault();
@@ -430,6 +432,19 @@ function startChat() {
   join();
 }
 
+//
+
+let wsrtc = null;
+const startRecording = () => {
+  wsrtc = new WSRTC(currentWebSocket);
+  console.log('got wsrtc', wsrtc);
+};
+const stopRecording = () => {
+
+};
+
+//
+
 let lastSeenTimestamp = 0;
 let wroteWelcomeMessages = false;
 
@@ -517,8 +532,14 @@ function join() {
         {
           const div = document.createElement('div');
           div.innerHTML = `<a href="#">Record</a>`;
+          let recording = false;
           div.childNodes[0].addEventListener('click', e => {
-            console.log('got click', e);
+            if (!recording) {
+              startRecording();
+            } else {
+              stopRecording();
+            }
+            recording = !recording;
           });
           pushChat(div);
         }
