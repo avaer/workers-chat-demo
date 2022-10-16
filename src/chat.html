@@ -246,7 +246,7 @@ const _makeSimpleCrdt = () => {
     }],
   ]);
 };
-const testSet = () => {
+const testAdd = () => {
   const dc = new DataClient({
     crdt: _makeEmptyCrdt(),
   });
@@ -258,13 +258,66 @@ const testSet = () => {
   const {map: player, update: updateMessage} = players.add({
     name: 'Shilo',
   });
-  console.log('got player object', player.toObject());
+  // console.log('got player object', player.toObject());
   console.assert(player.toObject().name === 'Shilo');
   const updateBuffer = dc.serializeMessage(updateMessage);
 
-  console.log('got update buffer, finish test...', {updateMessage, updateBuffer});
+  // console.log('got update buffer, finish test...', {updateMessage, updateBuffer});
+
+  const dc2 = new DataClient({
+    crdt: _makeEmptyCrdt(),
+  });
+  const binding2 = dc2.readBinding(['players']);
+
+  let updated;
+  {
+    updated = 0;
+    players.addEventListener('add', e => {
+      const {arrayIndexId, map, val} = e.data;
+      console.assert(arrayIndexId === player.arrayIndexId);
+      console.assert(val.name === 'Shilo');
+      console.assert(map.toObject().name === 'Shilo');
+      updated++;
+    });
+    console.assert(updated === 0);
+    dc.emitUpdate(updateMessage);
+    console.assert(updated === 1);
+  }
+
+  {
+    updated = 0;
+    const binding2 = dc2.readBinding(['players']);
+    const {players: players2} = binding2.arrays;
+
+    players2.addEventListener('add', e => {
+      const {arrayIndexId, map, val} = e.data;
+      console.assert(arrayIndexId === player.arrayIndexId);
+      console.assert(val.name === 'Shilo');
+      console.assert(map.toObject().name === 'Shilo');
+      updated++;
+    });
+    console.assert(updated === 0);
+    const {
+      rollback,
+      update,
+    } = dc2.applyUint8Array(updateBuffer);
+    console.assert(updated === 0);
+    console.assert(!rollback);
+    console.assert(!!update);
+    dc2.emitUpdate(update);
+    console.assert(updated === 1);
+  }
+
+  const binding3 = dc2.readBinding(['players']);
+  const {players: players3} = binding2.arrays;
+  // const player2 = players2.getMap('1');
+  console.assert(players3.toArray().length === 1);
+  const player3 = players3.toArray()[0];
+  console.assert(player3.name === 'Shilo');
+
+  // console.log('got player 2 object', players2.toArray(), dc2.crdt);
 };
-const testAdd = () => {
+const testSet = () => {
   const dc = new DataClient({
     crdt: _makeSimpleCrdt(),
   });
@@ -364,16 +417,26 @@ const testDoubleAdd = () => {
       console.assert(b.arrayMaps.players[0].toObject().name === 'Shilo');
       console.assert(b.arrayMaps.players[1].toObject().name === 'Rex');
     }
+  }
+  // destinations
+  {
+    const dc3 = new DataClient({
+      crdt: _makeEmptyCrdt(),
+    });
+    dc3.applyUint8Array(updateBuffer2, {force: true});
+    dc3.applyUint8Array(updateBuffer, {force: true});
+    // const b1 = dc.readBinding(['players']);
+    const b3 = dc3.readBinding(['players']);
 
-    /* console.log(
-      'got bindings',
-      [dc.crdt, dc3.crdt],
-      [b1, b3],
-      // b1.arrays.players.toArray(),
-      // b3.arrays.players.toArray(),
-      b1.arrayMaps.players[0].toObject(),
-      b3.arrayMaps.players[0].toObject()
-    ); */
+    {
+      const b = b3;
+      console.assert(b.arrays.players.toArray().length === 2);
+      console.assert(b.arrays.players.toArray()[0].name === 'Rex');
+      console.assert(b.arrays.players.toArray()[1].name === 'Shilo');
+
+      console.assert(b.arrayMaps.players[0].toObject().name === 'Rex');
+      console.assert(b.arrayMaps.players[1].toObject().name === 'Shilo');
+    }
   }
 };
 const testInitialBind = () => {
