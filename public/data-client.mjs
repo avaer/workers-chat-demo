@@ -568,8 +568,13 @@ export class DataClient extends EventTarget {
       }
     }
   }
-  triggerSave(m) {
+  getSaveKeys(m) {
     const {type, arrayId, arrayIndexId} = this.parseMessage(m);
+
+    const saveKeys = [];
+    const saveKeyFn = name => {
+      saveKeys.push(name);
+    };
 
     if (type === 'set') {
       saveKeyFn(arrayIndexId);
@@ -579,11 +584,14 @@ export class DataClient extends EventTarget {
     } else if (type === 'rollback') {
       saveKeyFn(arrayIndexId);
     } else if (type === 'import') {
-      console.warn('should find out how to save all keys...');
+      // console.warn('should find out how to save all keys...');
       // saveKeyFn('crdt');
+      saveKeyFn('*');
     } else {
       throw new Error('unrecognized message type: ' + m.type);
     }
+
+    return saveKeys;
   }
   emitUpdate(messageEvent) {
     // console.log('emit update', messageEvent.type);
@@ -688,8 +696,10 @@ export class DataClient extends EventTarget {
 
 //
 
-export class NetworkedDataClient {
+export class NetworkedDataClient extends EventTarget {
   constructor(dataClient, ws) {
+    super();
+
     this.dataClient = dataClient;
     this.ws = ws;
     this.playerId = makeId();
@@ -713,17 +723,34 @@ export class NetworkedDataClient {
         this.ws.removeEventListener('error', reject);
       };
     });
-    console.log('connect');
+    // console.log('connect');
 
     this.ws.addEventListener('message', e => {
       if (e.data instanceof ArrayBuffer) {
         const updateBuffer = e.data;
         const uint8Array = new Uint8Array(updateBuffer);
+
         const {
           rollback,
           update,
         } = this.dataClient.applyUint8Array(uint8Array, {force: true}); // force since coming from the server
-        console.log('applied data locally', {rollback, update, updateBuffer}, this.dataClient.getArray('players').toArray());
+        if (rollback) {
+          console.warn('rollback', rollback);
+          throw new Error('unexpected rollback');
+        }
+
+        this.dispatchEvent(new MessageEvent('update', {
+          data: {
+            update,
+          },
+        }));
+
+        const saveKeys = this.dataClient.getSaveKeys(update);
+        this.dispatchEvent(new MessageEvent('save', {
+          data: {
+            saveKeys,
+          },
+        }));
       }
     });
   }
