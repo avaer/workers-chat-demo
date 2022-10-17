@@ -722,7 +722,32 @@ export class NetworkedDataClient extends EventTarget {
     });
     // console.log('connect');
 
-    this.ws.addEventListener('message', e => {
+    const _waitForInitialImport = async () => {
+      await new Promise((resolve, reject) => {
+        const initialMessage = e => {
+          if (e.data instanceof ArrayBuffer) {
+            const updateBuffer = e.data;
+            const uint8Array = new Uint8Array(updateBuffer);
+            const updateObject = parseUpdateObject(uint8Array);
+            
+            const {method, args} = updateObject;
+            if (method === UPDATE_METHODS.IMPORT) {
+              const [crdtExport] = args;
+              // console.log('data init', {crdtExport});
+    
+              resolve({
+                crdtExport,
+              });
+              this.ws.removeEventListener('message', initialMessage);
+            }
+          }
+        };
+        this.ws.addEventListener('message', initialMessage);
+      });
+    };
+    await _waitForInitialImport();
+
+    const mainMessage = e => {
       if (e.data instanceof ArrayBuffer) {
         const updateBuffer = e.data;
         const uint8Array = new Uint8Array(updateBuffer);
@@ -753,7 +778,8 @@ export class NetworkedDataClient extends EventTarget {
           }));
         }
       }
-    });
+    };
+    this.ws.addEventListener('message', mainMessage);
   }
   send(msg) {
     // const buffer = msg.slice().buffer;
