@@ -690,7 +690,6 @@ export class NetworkedDataClient extends EventTarget {
 
     this.dataClient = dataClient;
     this.ws = ws;
-    // this.playerId = makeId();
   }
   static handlesMethod(method) {
     return [
