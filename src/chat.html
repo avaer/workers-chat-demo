@@ -722,20 +722,48 @@ const testMultiplayer = async () => {
     ndc2.connect(),
   ]);
 
-  // set position on first player
-  const players = dc1.getArray('players');
-  const {map, update} = players.add({
+  // add player 1
+  const players1 = dc1.getArray('players');
+  const position = Float32Array.from([1, 2, 3]);
+  const {map, update} = players1.add({
     name: 'Weebo',
-    position: Float32Array.from([1, 2, 3]),
+    position,
   });
   const updateBuffer = dc1.serializeMessage(update);
   dc1.emitUpdate(update);
   // console.log('send ipdate buffer', updateBuffer);
   ndc1.send(updateBuffer);
-};
-// const testInitialBind = () => {
 
-// };
+  const players2 = dc2.getArray('players');
+  const update2 = await new Promise((resolve, reject) => {
+    const update = e => {
+      resolve(e.data.update);
+      cleanup();
+    };
+    ndc2.addEventListener('update', update);
+    const cleanup = () => {
+      ndc2.removeEventListener('update', update);
+    };
+  });
+
+  let updated;
+  let player2;
+  {
+    updated = 0;
+    players2.addEventListener('add', e => {
+      player2 = e.data.map;
+      updated++;
+    });
+  }
+  dc2.emitUpdate(update2);
+
+  console.assert(updated === 1);
+  console.assert(player2);
+
+  console.assert(player2.getKey('name') === 'Weebo');
+  console.assert(player2.getKey('position'));
+  console.assert(arrayEquals(player2.getKey('position'), position));
+};
 // const testDeadHand = () => {
 
 // };
@@ -748,7 +776,6 @@ const tests = [
   testBinary,
   testImportExport,
   testMultiplayer,
-  // testInitialBind,
   // testDeadHand,
 ];
 const test = async () => {
@@ -1018,9 +1045,10 @@ function join() {
   });
 
   ws.addEventListener("message", event => {
-    console.log('got event', event.data);
+    // console.log('got event', event.data);
     if (event.data instanceof ArrayBuffer) {
-      console.log('client got binary data', event.data);
+      // console.log('client got binary data', event.data);
+      // NOTE: array buffers handled in NetworkedDataClient
       return;
     }
     
