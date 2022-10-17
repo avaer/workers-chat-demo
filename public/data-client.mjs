@@ -1,15 +1,6 @@
 import {zbencode, zbdecode} from "./encoding.mjs";
-
-function makeid(length) {
-  var result           = '';
-  var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  var charactersLength = characters.length;
-  for ( var i = 0; i < length; i++ ) {
-    result += characters.charAt(Math.floor(Math.random() * charactersLength));
- }
- return result;
-}
-const makeId = () => makeid(5);
+import {UPDATE_METHODS} from "./update-types.js";
+import {parseUpdateObject, makeId} from "./util.mjs";
 
 //
 
@@ -307,13 +298,6 @@ export class DataClient extends EventTarget {
 
     this.crdt = crdt;
   }
-  static UPDATE_METHODS = {
-    IMPORT: 1,
-    SET: 2,
-    ADD: 3,
-    REMOVE: 4,
-    ROLLBACK: 5,
-  };
 
   // for both client and server
   serializeMessage(m) {
@@ -323,7 +307,7 @@ export class DataClient extends EventTarget {
       case 'import': {
         const {crdtExport} = parsedMessage;
         return zbencode({
-          method: DataClient.UPDATE_METHODS.IMPORT,
+          method: UPDATE_METHODS.IMPORT,
           args: [
             crdtExport,
           ],
@@ -332,7 +316,7 @@ export class DataClient extends EventTarget {
       case 'set': {
         const {key, epoch, val} = m.data;
         return zbencode({
-          method: DataClient.UPDATE_METHODS.SET,
+          method: UPDATE_METHODS.SET,
           args: [
             arrayId,
             arrayIndexId,
@@ -345,7 +329,7 @@ export class DataClient extends EventTarget {
       case 'add': {
         const {arrayIndexId, val} = m.data;
         return zbencode({
-          method: DataClient.UPDATE_METHODS.ADD,
+          method: UPDATE_METHODS.ADD,
           args: [
             arrayId,
             arrayIndexId,
@@ -356,7 +340,7 @@ export class DataClient extends EventTarget {
       case 'remove': {
         const {arrayIndexId} = m.data;
         return zbencode({
-          method: DataClient.UPDATE_METHODS.REMOVE,
+          method: UPDATE_METHODS.REMOVE,
           args: [
             arrayId,
             arrayIndexId,
@@ -366,7 +350,7 @@ export class DataClient extends EventTarget {
       case 'rollback': {
         const {arrayIndexId, key, oldEpoch, oldVal} = m.data;
         return zbencode({
-          method: DataClient.UPDATE_METHODS.ROLLBACK,
+          method: UPDATE_METHODS.ROLLBACK,
           args: [
             arrayIndexId,
             key,
@@ -386,15 +370,19 @@ export class DataClient extends EventTarget {
       },
     });
   }
-  applyUint8Array(uint8Array, {
+  applyUint8Array(uint8Array, opts) {
+    const updateObject = parseUpdateObject(uint8Array);
+    return this.applyUpdateObject(updateObject, opts);
+  }
+  applyUpdateObject(updateObject, {
     force = false, // force if it's coming from the server
   } = {}) {
     let rollback = null;
     let update = null;
 
-    const {method, args} = zbdecode(uint8Array);
+    const {method, args} = updateObject;
     switch (method) {
-      case DataClient.UPDATE_METHODS.IMPORT: {
+      case UPDATE_METHODS.IMPORT: {
         const [crdtExport] = args;
         // console.log('importing export', crdtExport, zbdecode(crdtExport));
         this.crdt = convertObjectToMap(zbdecode(crdtExport));
@@ -405,7 +393,7 @@ export class DataClient extends EventTarget {
         });
         break;
       }
-      case DataClient.UPDATE_METHODS.SET: {
+      case UPDATE_METHODS.SET: {
         const [arrayId, arrayIndexId, key, epoch, val] = args;
         const arrayMap = new DCMap(arrayId, arrayIndexId, this);
         let oldObject;
@@ -437,7 +425,7 @@ export class DataClient extends EventTarget {
         }
         break;
       }
-      case DataClient.UPDATE_METHODS.ADD: {
+      case UPDATE_METHODS.ADD: {
         const [arrayId, arrayIndexId, val] = args;
         const crdtVal = convertValToCrdtVal(val);
         this.crdt.set(arrayIndexId, crdtVal);
@@ -459,7 +447,7 @@ export class DataClient extends EventTarget {
         // console.log('add event', update);
         break;
       }
-      case DataClient.UPDATE_METHODS.REMOVE: {
+      case UPDATE_METHODS.REMOVE: {
         const [arrayId, arrayIndexId] = args;
         let array = this.crdt.get(arrayId);
         if (!array) {
@@ -477,7 +465,7 @@ export class DataClient extends EventTarget {
         });
         break;
       }
-      case DataClient.UPDATE_METHODS.ROLLBACK: {
+      case UPDATE_METHODS.ROLLBACK: {
         const [arrayIndexId, key, epoch, val] = args;
         const object = this.crdt.get(arrayIndexId);
         if (object) {
@@ -702,7 +690,16 @@ export class NetworkedDataClient extends EventTarget {
 
     this.dataClient = dataClient;
     this.ws = ws;
-    this.playerId = makeId();
+    // this.playerId = makeId();
+  }
+  static handlesMethod(method) {
+    return [
+      UPDATE_METHODS.IMPORT,
+      UPDATE_METHODS.SET,
+      UPDATE_METHODS.ADD,
+      UPDATE_METHODS.REMOVE,
+      UPDATE_METHODS.ROLLBACK,
+    ].includes(method);
   }
   async connect() {
     await new Promise((resolve, reject) => {
@@ -729,28 +726,32 @@ export class NetworkedDataClient extends EventTarget {
       if (e.data instanceof ArrayBuffer) {
         const updateBuffer = e.data;
         const uint8Array = new Uint8Array(updateBuffer);
+        const updateObject = parseUpdateObject(uint8Array);
 
-        const {
-          rollback,
-          update,
-        } = this.dataClient.applyUint8Array(uint8Array, {force: true}); // force since coming from the server
-        if (rollback) {
-          console.warn('rollback', rollback);
-          throw new Error('unexpected rollback');
-        }
-
-        this.dispatchEvent(new MessageEvent('update', {
-          data: {
+        const {method} = updateObject;
+        if (NetworkedDataClient.handlesMethod(method)) {
+          const {
+            rollback,
             update,
-          },
-        }));
+          } = this.dataClient.applyUpdateObject(updateObject, {force: true}); // force since coming from the server
+          if (rollback) {
+            console.warn('rollback', rollback);
+            throw new Error('unexpected rollback');
+          }
 
-        const saveKeys = this.dataClient.getSaveKeys(update);
-        this.dispatchEvent(new MessageEvent('save', {
-          data: {
-            saveKeys,
-          },
-        }));
+          this.dispatchEvent(new MessageEvent('update', {
+            data: {
+              update,
+            },
+          }));
+
+          const saveKeys = this.dataClient.getSaveKeys(update);
+          this.dispatchEvent(new MessageEvent('save', {
+            data: {
+              saveKeys,
+            },
+          }));
+        }
       }
     });
   }
