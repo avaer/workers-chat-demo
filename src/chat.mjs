@@ -66,7 +66,7 @@ const assetManifest = JSON.parse(manifestJSON);
 import {zbencode, zbdecode} from "../public/encoding.mjs";
 import {DataClient, NetworkedDataClient, DCMap, DCArray} from "../public/data-client.mjs";
 import {NetworkedIrcClient} from "../public/irc-client.js";
-import {parseUpdateObject} from "../public/util.mjs";
+import {parseUpdateObject, serializeMessage} from "../public/util.mjs";
 import {UPDATE_METHODS} from "../public/update-types.js";
 
 // `handleErrors()` is a little utility function that can wrap an HTTP request handler in a
@@ -372,19 +372,6 @@ export class ChatRoom {
     }
     const dataClient = await dataClientPromise;
     const networkClient = {
-      serializeMessage(message) {
-        if (message.type === 'networkinit') {
-          const {playerIds} = message.data;
-          return zbencode({
-            method: UPDATE_METHODS.NETWORK_INIT,
-            args: [
-              playerIds,
-            ],
-          });
-        } else {
-          throw new Error('invalid message type: ' + message.type);
-        }
-      },
       getNetworkInitMessage: () => {
         return new MessageEvent('networkinit', {
           data: {
@@ -395,9 +382,9 @@ export class ChatRoom {
     };
 
     // send import
-    webSocket.send(dataClient.serializeMessage(dataClient.getImportMessage()));
+    webSocket.send(serializeMessage(dataClient.getImportMessage()));
     // send network init
-    webSocket.send(networkClient.serializeMessage(networkClient.getNetworkInitMessage()));
+    webSocket.send(serializeMessage(networkClient.getNetworkInitMessage()));
 
     // Set up our rate limiter client.
     // let limiterId = this.env.limiters.idFromName(ip);
@@ -455,7 +442,7 @@ export class ChatRoom {
       if (NetworkedDataClient.handlesMethod(method)) {
         const {rollback, update} = dataClient.applyUint8Array(uint8Array);
         if (rollback) {
-          const rollbackBuffer = dataClient.serializeMessage(rollback);
+          const rollbackBuffer = serializeMessage(rollback);
           respondToSelf(rollbackBuffer);
         }
         if (update) {
@@ -503,7 +490,10 @@ export class ChatRoom {
                 // console.log('ping');
                 break;
               }
-              case 'chat': {
+              default: {
+                throw new Error('invalid method: ' + method);
+              }
+              /* case 'chat': {
                 const {playerId, message} = data.args;
                 // console.log('replicate', playerId, message);
                 const m = JSON.stringify({
