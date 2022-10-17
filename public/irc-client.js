@@ -8,12 +8,13 @@ export class IrcPlayer extends EventTarget {
   }
 }
 
-export class NetworkedIrcClient {
+export class NetworkedIrcClient extends EventTarget {
   constructor(ws) {
+    super();
     this.ws = ws;
     this.playerId = makeId();
   }
-  static handlesMethod() {
+  static handlesMethod(method) {
     return [
       UPDATE_METHODS.NETWORK_INIT,
       UPDATE_METHODS.JOIN,
@@ -41,13 +42,16 @@ export class NetworkedIrcClient {
       };
     });
 
+    // console.log('irc listen');
     this.ws.addEventListener('message', e => {
       if (e.data instanceof ArrayBuffer) {
         const updateBuffer = e.data;
+        // console.log('irc data', e.data);
         const uint8Array = new Uint8Array(updateBuffer);
         const updateObject = parseUpdateObject(uint8Array);
 
         const {method, args} = updateObject;
+        // console.log('irc handles method', method, NetworkedIrcClient.handlesMethod(method));
         if (NetworkedIrcClient.handlesMethod(method)) {
           this.handleUpdateObject(updateObject);
         }
@@ -56,9 +60,13 @@ export class NetworkedIrcClient {
   }
   handleUpdateObject(updateObject) {
     const {method, args} = updateObject;
-    console.log('got irc', {method, args});
+    // console.log('got irc', {method, args});
     if (method === UPDATE_METHODS.CHAT) {
-      console.log('got irc chat', {method, args});
+      // console.log('got irc chat', {method, args});
+      const chatMessage = new MessageEvent('chat', {
+        data: args,
+      });
+      this.dispatchEvent(chatMessage);
     } else {
       console.warn('unhandled irc method', {method, args});
     }
