@@ -1,4 +1,5 @@
 import {zbencode, zbdecode} from './encoding.mjs';
+import {UPDATE_METHODS} from './update-types.js';
 
 const alignN = n => index => {
   const r = index % n;
@@ -80,6 +81,7 @@ function parseMessage(m) {
             playerId: m.data.playerId,
           };
         } else {
+          console.warn('failed to parse', m);
           throw new Error('unrecognized message type: ' + m.type);
         } 
       }
@@ -147,7 +149,7 @@ function serializeMessage(m) {
       });
     }
     case 'networkinit': {
-      const {playerIds} = message.data;
+      const {playerIds} = m.data;
       return zbencode({
         method: UPDATE_METHODS.NETWORK_INIT,
         args: [
