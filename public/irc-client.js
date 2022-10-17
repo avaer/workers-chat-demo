@@ -72,6 +72,7 @@ export class NetworkedIrcClient extends EventTarget {
 
     // console.log('irc listen');
     this.ws.addEventListener('message', e => {
+      // console.log('got ws data', e.data);
       if (e.data instanceof ArrayBuffer) {
         const updateBuffer = e.data;
         // console.log('irc data', e.data);
@@ -88,7 +89,7 @@ export class NetworkedIrcClient extends EventTarget {
   }
   handleUpdateObject(updateObject) {
     const {method, args} = updateObject;
-    // console.log('got irc', {method, args});
+    // console.log('got irc event', {method, args});
     if (method === UPDATE_METHODS.NETWORK_INIT) {
       const [playerIds] = args;
       this.playerIds = playerIds;
@@ -103,8 +104,12 @@ export class NetworkedIrcClient extends EventTarget {
       }
     } else if (method === UPDATE_METHODS.CHAT) {
       // console.log('got irc chat', {method, args});
+      const [playerId, message] = args;
       const chatMessage = new MessageEvent('chat', {
-        data: args,
+        data: {
+          playerId,
+          message,
+        },
       });
       this.dispatchEvent(chatMessage);
     } else {
