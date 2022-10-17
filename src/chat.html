@@ -337,7 +337,7 @@ const testSet = () => {
   let updated;
   {
     updated = 0;
-    player.addEventListener('set', e => {
+    player.addEventListener('update', e => {
       const {key, epoch, val} = e.data;
       console.assert(key === 'name');
       console.assert(epoch === 3);
@@ -356,7 +356,7 @@ const testSet = () => {
   console.assert(player2.toObject().name === 'Alice');
   {
     updated = 0;
-    player2.addEventListener('set', e => {
+    player2.addEventListener('update', e => {
       const {key, epoch, val} = e.data;
       console.assert(key === 'name');
       console.assert(epoch === 3);
@@ -489,7 +489,7 @@ const testConclict = () => {
   let updated;
   {
     updated = 0;
-    player.addEventListener('set', e => {
+    player.addEventListener('update', e => {
       const {key, epoch, val} = e.data;
       console.assert(key === 'name');
       console.assert(epoch === 3);
@@ -510,7 +510,7 @@ const testConclict = () => {
   const updateBuffer2 = serializeMessage(updateMessage2);
   {
     updated = 0;
-    player2.addEventListener('set', e => {
+    player2.addEventListener('update', e => {
       const {key, epoch, val} = e.data;
       console.assert(key === 'name');
       console.assert(epoch === 3);
@@ -899,6 +899,85 @@ function makeid(length) {
    return result;
 }
 
+//
+
+class RemotePlayerRenderer {
+  constructor(remotePlayerId, localPlayerId, dataClient) {
+    this.remotePlayerId = remotePlayerId;
+    this.localPlayerId = localPlayerId;
+    this.dataClient = dataClient;
+
+    const div = document.createElement('div');
+    div.style.cssText = `\
+      position: fixed;
+      top: 0;
+      left: 0;
+      background-color: ${this.remotePlayerId === this.localPlayerId ? 'blue' : 'red'};
+      width: 10px;
+      height: 10px;
+      z-index: 100;
+    `;
+    document.body.appendChild(div);
+
+    const map = this.dataClient.getArrayMap('players', this.remotePlayerId);
+    map.addEventListener('update', e => {
+      const {val} = e.data;
+      const [x, y, z] = val;
+      div.style.left = `${x}px`;
+      div.style.top = `${y}px`;
+
+      // console.log('got update', e.data);
+    });
+
+    this.cleanupFn = () => {
+      document.body.removeChild(div);
+    };
+  }
+  destroy() {
+    this.cleanupFn();
+  }
+}
+class LocalPlayerRenderer {
+  constructor(playerId, dataClient, ndc) {
+    this.playerId = playerId;
+    this.dataClient = dataClient;
+    this.ndc = ndc;
+
+    const players = this.dataClient.getArray('players');
+    const {map: player, update: playerAddUpdate} = players.addAt(this.playerId, {
+      name: this.playerId,
+      position: Float32Array.from([0, 0, 0]),
+    });
+
+    this.ndc.send(serializeMessage(playerAddUpdate));
+
+    /* player.addEventListener('update', e => {
+      console.log('got update', e.data);
+      // this._update();
+    }); */
+
+    const mousemove = e => {
+      // console.log('mousemove', e.clientX, e.clientY);
+
+      const update = player.setKeyValueUpdate('position', Float32Array.from([e.clientX, e.clientY, 0]));
+      const updateBuffer = serializeMessage(update);
+      this.dataClient.emitUpdate(update);
+      // console.log('emit update', update, player.arrayIndexId);
+      this.ndc.send(updateBuffer);
+    };
+    window.addEventListener('mousemove', mousemove);
+
+    this.cleanupFn = () => {
+      window.removeEventListener('mousemove', mousemove);
+    };
+  }
+  destroy() {
+    this.cleanupFn();
+  }
+}
+
+//
+
 let username;
 let roomname;
 let playerId = makeid(5);
@@ -1134,19 +1213,27 @@ function join() {
     const ndc1 = new NetworkedDataClient(dc1, ws);
     const nirc1 = new NetworkedIrcClient(ws, playerId);
 
+    // chat
     nirc1.addEventListener('chat', e => {
       const {playerId, message} = e.data;
       addChatMessage(playerId, message);
     });
+
+    // remote players
+    const playerRenderers = [];
     nirc1.addEventListener('join', e => {
       // console.log('player join', e.data);
-      const {playerId} = e.data;
+
       let p = document.createElement("p");
-      p.innerText = playerId;
+      p.innerText = e.data.playerId;
       roster.appendChild(p);
+
+      const playerRenderer = new RemotePlayerRenderer(e.data.playerId, playerId, dc1);
+      playerRenderers.push(playerRenderer);
     });
     nirc1.addEventListener('leave', e => {
       // console.log('player leave', e.data);
+
       const {playerId} = e.data;
       for (let i = 0; i < roster.children.length; i++) {
         let p = roster.children[i];
@@ -1155,14 +1242,32 @@ function join() {
           break;
         }
       }
+
+      for (let i = 0; i < playerRenderers.length; i++) {
+        const playerRenderer = playerRenderers[i];
+        if (playerRenderer.remotePlayerId === playerId) {
+          playerRenderers.splice(i, 1);
+          playerRenderer.destroy();
+          break;
+        }
+      }
     });
     
+    // wait for connection
     await Promise.all([
       ndc1.connect(),
       nirc1.connect(),
     ]);
+
     console.log('connected!');
 
+    // local player renderer
+    const localPlayerRenderer = new LocalPlayerRenderer(playerId, dc1, ndc1);
+    ws.addEventListener('close', e => {
+      localPlayerRenderer.destroy();
+    });
+
+    // chat
     addChatMessage(null,
         "* This is a demo app built with Cloudflare Workers Durable Objects. The source code " +
         "can be found at: https://github.com/cloudflare/workers-chat-demo");

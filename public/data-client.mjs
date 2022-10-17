@@ -174,12 +174,12 @@ export class DCMap extends EventTarget {
   }
   listen() {
     const setKey = 'set.' + this.arrayId + '.' + this.arrayIndexId;
-    // console.log('dc map listen', setKey);
+    // console.log('map listen', setKey);
     const setFn = e => {
       // console.log('map set fn', setKey, e.data);
       const {key, epoch, val} = e.data;
       // console.log('capture set data 1', e.data);
-      this.dispatchEvent(new MessageEvent('set', {
+      this.dispatchEvent(new MessageEvent('update', {
         data: {
           key,
           epoch,
@@ -205,6 +205,7 @@ export class DCMap extends EventTarget {
     this.dataClient.addEventListener(removeKey, removeFn);
     
     this.cleanupFn = () => {
+      console.log('map unlink', setKey);
       this.dataClient.removeEventListener(setKey, setFn);
       this.dataClient.removeEventListener(removeKey, removeFn);
     };
@@ -246,6 +247,9 @@ export class DCArray extends EventTarget {
   }
   add(val) {
     return this.dataClient.createArrayMapElement(this.arrayId, val);
+  }
+  addAt(arrayIndexId, val) {
+    return this.dataClient.addArrayMapElement(this.arrayId, arrayIndexId, val);
   }
   listen() {
     const addKey = 'add.' + this.arrayId;
@@ -348,10 +352,11 @@ export class DataClient extends EventTarget {
         });
       }
       case 'rollback': {
-        const {arrayIndexId, key, oldEpoch, oldVal} = m.data;
+        const {arrayId, arrayIndexId, key, oldEpoch, oldVal} = m.data;
         return zbencode({
           method: UPDATE_METHODS.ROLLBACK,
           args: [
+            arrayId,
             arrayIndexId,
             key,
             oldEpoch,
@@ -416,6 +421,7 @@ export class DataClient extends EventTarget {
           // reject update and roll back
           rollback = new MessageEvent('rollback', {
             data: {
+              arrayId,
               arrayIndexId,
               key,
               oldEpoch,
@@ -466,7 +472,7 @@ export class DataClient extends EventTarget {
         break;
       }
       case UPDATE_METHODS.ROLLBACK: {
-        const [arrayIndexId, key, epoch, val] = args;
+        const [arrayId, arrayIndexId, key, epoch, val] = args;
         const object = this.crdt.get(arrayIndexId);
         if (object) {
           if (object[key]) {
@@ -476,7 +482,7 @@ export class DataClient extends EventTarget {
             object[key] = [epoch, val];
           }
 
-          update = new MessageEvent('set.' + arrayIndexId, {
+          update = new MessageEvent('set.' + arrayId + '.' + arrayIndexId, {
             data: {
               key,
               epoch,
@@ -536,9 +542,10 @@ export class DataClient extends EventTarget {
           };
         } else {
           if (m.type === 'rollback') {
-            const {arrayIndexId, key, oldEpoch, oldVal} = m.data;
+            const {arrayId, arrayIndexId, key, oldEpoch, oldVal} = m.data;
             return {
               type: 'rollback',
+              arrayId,
               arrayIndexId,
               key,
               oldEpoch,
@@ -616,7 +623,7 @@ export class DataClient extends EventTarget {
     const map = new DCMap(arrayId, arrayIndexId, this);
     map.listen();
 
-    const o = map.toObject();
+    // const o = map.toObject();
     // console.log('add map element readback', {array, arrayIndexId, o, val});
 
     const update = new MessageEvent('add.' + arrayId, {
@@ -763,11 +770,13 @@ export class NetworkedDataClient extends EventTarget {
             throw new Error('unexpected rollback');
           }
 
-          this.dispatchEvent(new MessageEvent('update', {
+          /* this.dispatchEvent(new MessageEvent('update', {
             data: {
               update,
             },
-          }));
+          })); */
+
+          this.dataClient.emitUpdate(update);
 
           const saveKeys = this.dataClient.getSaveKeys(update);
           this.dispatchEvent(new MessageEvent('save', {
