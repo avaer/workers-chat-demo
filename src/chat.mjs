@@ -394,6 +394,9 @@ export class ChatRoom {
       },
     };
 
+    let session = {webSocket, playerId, blockedMessages: []};
+    this.sessions.push(session);
+
     // send import
     webSocket.send(dataClient.serializeMessage(dataClient.getImportMessage()));
     // send network init
@@ -412,8 +415,6 @@ export class ChatRoom {
     // Create our session and add it to the sessions list.
     // We don't send any messages to the client until it has sent us the initial user info
     // message. Until then, we will queue messages in `session.blockedMessages`.
-    let session = {webSocket, playerId, blockedMessages: []};
-    this.sessions.push(session);
 
     // Queue "join" messages for all online users, to populate the client's roster.
     this.sessions.forEach(otherSession => {
