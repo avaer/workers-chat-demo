@@ -9,11 +9,11 @@ export class IrcPlayer extends EventTarget {
 }
 
 export class NetworkedIrcClient extends EventTarget {
-  constructor(ws) {
+  constructor(ws, playerId = makeId()) {
     super();
     this.ws = ws;
 
-    this.playerId = makeId();
+    this.playerId = playerId;
     this.playerIds = [];
   }
   static handlesMethod(method) {
@@ -96,7 +96,7 @@ export class NetworkedIrcClient extends EventTarget {
       
       for (let i = 0; i < playerIds.length; i++) {
         const playerId = playerIds[i];
-        this.dispatchEvent(new MessageEvent('playerjoin', {
+        this.dispatchEvent(new MessageEvent('join', {
           data: {
             playerId,
           },
@@ -112,6 +112,23 @@ export class NetworkedIrcClient extends EventTarget {
         },
       });
       this.dispatchEvent(chatMessage);
+    } else if (method === UPDATE_METHODS.JOIN) {
+      const [playerId] = args;
+      this.playerIds.push(playerId);
+      this.dispatchEvent(new MessageEvent('join', {
+        data: {
+          playerId,
+        },
+      }));
+    } else if (method === UPDATE_METHODS.LEAVE) {
+      const [playerId] = args;
+      const index = this.playerIds.indexOf(playerId);
+      this.playerIds.splice(index, 1);
+      this.dispatchEvent(new MessageEvent('leave', {
+        data: {
+          playerId,
+        },
+      }));
     } else {
       console.warn('unhandled irc method', {method, args});
     }
