@@ -771,9 +771,37 @@ const testMultiplayer = async () => {
 const testIrc = async () => {
   const wss = document.location.protocol === "http:" ? "ws://" : "wss://";
   let ws1 = new WebSocket(wss + hostname + "/api/room/" + roomname + "/websocket");
+  ws1.binaryType = 'arraybuffer';
   const nirc1 = new NetworkedIrcClient(ws1);
 
-  await nirc1.connect();
+  let ws2 = new WebSocket(wss + hostname + "/api/room/" + roomname + "/websocket");
+  ws2.binaryType = 'arraybuffer';
+  const nirc2 = new NetworkedIrcClient(ws2);
+
+  await Promise.all([
+    nirc1.connect(),
+    nirc2.connect(),
+  ]);
+  
+  // console.log('send chat');
+  const initialMessage = 'hello there';
+  nirc1.sendChatMessage(initialMessage);
+
+  const chatMessage = await new Promise((accept, reject) => {
+    const chat = e => {
+      const {playerId, message} = e.data;
+      console.assert(playerId === nirc1.playerId);
+      console.assert(message === initialMessage);
+      accept(e.data);
+      cleanup();
+    };
+    nirc2.addEventListener('chat', chat);
+    const cleanup = () => {
+      nirc2.removeEventListener('chat', chat);
+    };
+  });
+
+  console.log('got chat message', chatMessage);
 };
 const tests = [
   testSet,

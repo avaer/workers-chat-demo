@@ -420,10 +420,11 @@ export class ChatRoom {
         }
         if (update) {
           dataClient.emitUpdate(update);
-          proxyMessageToPeers(arrayBuffer);
+          proxyMessageToPeers(uint8Array);
         }
-      } else if (NetworkedIrcClient.handlesMethod(arrayBuffer)) {
-        proxyMessageToPeers(arrayBuffer);
+      } else if (NetworkedIrcClient.handlesMethod(method)) {
+        console.log('route chat', method, args, this.sessions);
+        proxyMessageToPeers(uint8Array);
       }
     };
 
