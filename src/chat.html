@@ -213,7 +213,7 @@ p:last-of-type {
         <input type="button" id="pull-button" value="Pull">
       </div>
       </div>
-      <input id="chat-input">
+      <input id="chat-input" autocomplete="off">
     </form>
   </body>
 
@@ -698,14 +698,18 @@ const testImportExport = () => {
   console.assert(player2.getKey('position')); // has been imported
   console.assert(arrayEquals(player2.getKey('position'), position));
 };
+const createTestWs = () => {
+  const wss = document.location.protocol === "http:" ? "ws://" : "wss://";
+  const ws = new WebSocket(wss + hostname + "/api/room/" + roomname + "/websocket?playerId=" + playerId);
+  return ws;
+};
 const testMultiplayer = async () => {
   // player 1
 
   const dc1 = new DataClient({
     crdt: _makeEmptyCrdt(),
   });
-  const wss = document.location.protocol === "http:" ? "ws://" : "wss://";
-  let ws1 = new WebSocket(wss + hostname + "/api/room/" + roomname + "/websocket");
+  const ws1 = createTestWs();
   ws1.binaryType = 'arraybuffer';
   const ndc1 = new NetworkedDataClient(dc1, ws1);
   // player 2
@@ -713,7 +717,7 @@ const testMultiplayer = async () => {
   const dc2 = new DataClient({
     crdt: _makeEmptyCrdt(),
   });
-  let ws2 = new WebSocket(wss + hostname + "/api/room/" + roomname + "/websocket");
+  const ws2 = createTestWs();
   ws2.binaryType = 'arraybuffer';
   const ndc2 = new NetworkedDataClient(dc2, ws2);
 
@@ -772,12 +776,11 @@ const testMultiplayer = async () => {
   ws2.close();
 };
 const testIrc = async () => {
-  const wss = document.location.protocol === "http:" ? "ws://" : "wss://";
-  let ws1 = new WebSocket(wss + hostname + "/api/room/" + roomname + "/websocket");
+  const ws1 = createTestWs();
   ws1.binaryType = 'arraybuffer';
   const nirc1 = new NetworkedIrcClient(ws1);
 
-  let ws2 = new WebSocket(wss + hostname + "/api/room/" + roomname + "/websocket");
+  const ws2 = createTestWs();
   ws2.binaryType = 'arraybuffer';
   const nirc2 = new NetworkedIrcClient(ws2);
 
@@ -1002,7 +1005,7 @@ function startChat() {
   chatroom.addEventListener("submit", event => {
     event.preventDefault();
 
-    if (currentWebSocket) {
+    if (currentWebSocket && chatInput.value) {
       /* console.log('send chat', {
         playerId,
         message: chatInput.value,
@@ -1025,7 +1028,7 @@ function startChat() {
         ],
       }));
 
-      chatInput.value = "";
+      chatInput.value = '';
 
       // Scroll to bottom whenever sending a message.
       chatlog.scrollBy(0, 1e8);
@@ -1085,8 +1088,9 @@ let wroteWelcomeMessages = false;
 
 function join() {
   // If we are running via wrangler dev, use ws:
-  const wss = document.location.protocol === "http:" ? "ws://" : "wss://";
-  let ws = new WebSocket(wss + hostname + "/api/room/" + roomname + "/websocket?playerId=" + playerId);
+  // const wss = document.location.protocol === "http:" ? "ws://" : "wss://";
+  // let ws = new WebSocket(wss + hostname + "/api/room/" + roomname + "/websocket?playerId=" + playerId);
+  const ws = createTestWs();
   ws.binaryType = 'arraybuffer';
   let rejoined = false;
   let startTime = Date.now();
