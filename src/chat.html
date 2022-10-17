@@ -1139,10 +1139,22 @@ function join() {
       addChatMessage(playerId, message);
     });
     nirc1.addEventListener('join', e => {
-      console.log('player join', e.data);
+      // console.log('player join', e.data);
+      const {playerId} = e.data;
+      let p = document.createElement("p");
+      p.innerText = playerId;
+      roster.appendChild(p);
     });
     nirc1.addEventListener('leave', e => {
-      console.log('player leave', e.data);
+      // console.log('player leave', e.data);
+      const {playerId} = e.data;
+      for (let i = 0; i < roster.children.length; i++) {
+        let p = roster.children[i];
+        if (p.innerText === playerId) {
+          roster.removeChild(p);
+          break;
+        }
+      }
     });
     
     await Promise.all([
