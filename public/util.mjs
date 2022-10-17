@@ -80,6 +80,11 @@ function parseMessage(m) {
             type: 'join',
             playerId: m.data.playerId,
           };
+        } else if (m.type === 'leave') {
+          return {
+            type: 'leave',
+            playerId: m.data.playerId,
+          };
         } else {
           console.warn('failed to parse', m);
           throw new Error('unrecognized message type: ' + m.type);
@@ -165,7 +170,15 @@ function serializeMessage(m) {
           playerId,
         ],
       });
-      // throw new Error('not implemented');
+    }
+    case 'leave': {
+      const {playerId} = m.data;
+      return zbencode({
+        method: UPDATE_METHODS.LEAVE,
+        args: [
+          playerId,
+        ],
+      });
     }
     default: {
       console.warn('unrecognized message type', type);
