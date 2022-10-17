@@ -224,6 +224,7 @@ p:last-of-type {
 import WSRTC from '/public/wsrtc/wsrtc.js';
 import {zbencode, zbdecode} from '/public/encoding.mjs';
 import {DataClient, NetworkedDataClient, DCMap, DCArray} from "/public/data-client.mjs";
+import {NetworkedIrcClient} from "/public/irc-client.js";
 
 window.zbencode = zbencode;
 window.zbdecode = zbdecode;
@@ -763,10 +764,17 @@ const testMultiplayer = async () => {
   console.assert(player2.getKey('name') === 'Weebo');
   console.assert(player2.getKey('position'));
   console.assert(arrayEquals(player2.getKey('position'), position));
-};
-// const testDeadHand = () => {
 
-// };
+  ws1.close();
+  ws2.close();
+};
+const testIrc = async () => {
+  const wss = document.location.protocol === "http:" ? "ws://" : "wss://";
+  let ws1 = new WebSocket(wss + hostname + "/api/room/" + roomname + "/websocket");
+  const nirc1 = new NetworkedIrcClient(ws1);
+
+  await nirc1.connect();
+};
 const tests = [
   testSet,
   testAdd,
@@ -776,7 +784,7 @@ const tests = [
   testBinary,
   testImportExport,
   testMultiplayer,
-  // testDeadHand,
+  testIrc,
 ];
 const test = async () => {
   for (const fn of tests) {

@@ -64,7 +64,9 @@ import { getAssetFromKV, mapRequestToAsset } from '@cloudflare/kv-asset-handler'
 import manifestJSON from '__STATIC_CONTENT_MANIFEST'
 const assetManifest = JSON.parse(manifestJSON)
 import {zbencode, zbdecode} from "../public/encoding.mjs";
-import {DataClient, DCMap, DCArray} from "../public/data-client.mjs";
+import {DataClient, NetworkedDataClient, DCMap, DCArray} from "../public/data-client.mjs";
+import {NetworkedIrcClient} from "../public/irc-client.js";
+import {parseUpdateObject} from "../public/util.mjs";
 
 // `handleErrors()` is a little utility function that can wrap an HTTP request handler in a
 // try/catch and return errors to the client. You probably wouldn't want to use this in production
@@ -383,10 +385,8 @@ export class ChatRoom {
     });
 
     // respond back to the client
-    const respondToSelf = messages => {
-      for (const message of messages) {
-        session.webSocket.send(message);
-      }
+    const respondToSelf = message => {
+      session.webSocket.send(message);
     };
 
     // send a message to everyone on the list except us
@@ -408,34 +408,21 @@ export class ChatRoom {
     }); */
 
     const handleBinaryMessage = (arrayBuffer) => {
-      let result = null;
-    
-      const dataView = new DataView(arrayBuffer);
-      // const byteLength = dataView.getUint32(Uint32Array.BYTES_PER_ELEMENT, true);
-      const messageType = dataView.getUint32(Uint32Array.BYTES_PER_ELEMENT, true);
-      switch (messageType) {
-        case MESSAGE_TYPES.AUDIO: {
-          // proxy
-          break;
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const updateObject = parseUpdateObject(uint8Array);
+
+      const {method, args} = updateObject;
+      if (NetworkedDataClient.handlesMethod(method)) {
+        const {rollback, update} = dataClient.applyUint8Array(uint8Array);
+        if (rollback) {
+          const rollbackBuffer = dataClient.serializeMessage(rollback);
+          respondToSelf(rollbackBuffer);
         }
-        case MESSAGE_TYPES.DATA: {
-          const uint8Array = new Uint8Array(arrayBuffer, Uint32Array.BYTES_PER_ELEMENT);
-          const {rollback, update} = dataClient.applyUint8Array(uint8Array);
-          if (rollback) {
-            result = [rollback];
-          }
-          if (update) {
-            dataClient.triggerSave(update, key => {
-              this.storage.put(key, this.crdt.get(key));
-            });
-          }
-          break;
+        if (update) {
+          dataClient.emitUpdate(update);
+          proxyMessageToPeers(arrayBuffer);
         }
-      }
-      if (result) {
-        respondToSelf(result);
-      } else {
-        // console.log('got arraybuffer', arrayBuffer);
+      } else if (NetworkedIrcClient.handlesMethod(arrayBuffer)) {
         proxyMessageToPeers(arrayBuffer);
       }
     };
