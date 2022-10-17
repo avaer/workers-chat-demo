@@ -93,7 +93,7 @@ export class NetworkedIrcClient extends EventTarget {
     if (method === UPDATE_METHODS.NETWORK_INIT) {
       const [playerIds] = args;
       this.playerIds = playerIds;
-      
+
       for (let i = 0; i < playerIds.length; i++) {
         const playerId = playerIds[i];
         this.dispatchEvent(new MessageEvent('join', {
