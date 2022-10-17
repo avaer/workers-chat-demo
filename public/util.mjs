@@ -18,7 +18,7 @@ function makeid(length) {
  }
  return result;
 }
-const makeId = () => makeid(5);
+const makeId = () => makeid(10);
 
 function parseMessage(m) {
   const match = m.type.match(/^set\.(.+?)\.(.+?)$/);
@@ -57,9 +57,10 @@ function parseMessage(m) {
         };
       } else {
         if (m.type === 'rollback') {
-          const {arrayIndexId, key, oldEpoch, oldVal} = m.data;
+          const {arrayId, arrayIndexId, key, oldEpoch, oldVal} = m.data;
           return {
             type: 'rollback',
+            arrayId,
             arrayIndexId,
             key,
             oldEpoch,
@@ -142,10 +143,11 @@ function serializeMessage(m) {
       });
     }
     case 'rollback': {
-      const {arrayIndexId, key, oldEpoch, oldVal} = m.data;
+      const {arrayId, arrayIndexId, key, oldEpoch, oldVal} = m.data;
       return zbencode({
         method: UPDATE_METHODS.ROLLBACK,
         args: [
+          arrayId,
           arrayIndexId,
           key,
           oldEpoch,
