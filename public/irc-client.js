@@ -119,10 +119,10 @@ export class NetworkedIrcClient extends EventTarget {
   sendChatMessage(message) {
     const buffer = zbencode({
       method: UPDATE_METHODS.CHAT,
-      args: {
-        playerId: this.playerId,
+      args: [
+        this.playerId,
         message,
-      },
+      ],
     });
     this.ws.send(buffer);
   }
