@@ -899,31 +899,32 @@ let roomname;
 let playerId = makeid(5);
 
 let hostname = window.location.host;
-if (hostname == "") {
+/* if (hostname == "") {
   // Probably testing the HTML locally.
   hostname = "edge-chat-demo.cloudflareworkers.com";
-}
+} */
+
+username = playerId; // nameInput.value || 'a';
+roomname = document.location.hash.slice(1) || 'public';
 
 function startNameChooser() {
-  username = playerId; // nameInput.value || 'a';
   if (username.length > 0) {
     startRoomChooser();
   }
 
-  nameInput.addEventListener("input", event => {
+  /* nameInput.addEventListener("input", event => {
     if (event.currentTarget.value.length > 32) {
       event.currentTarget.value = event.currentTarget.value.slice(0, 32);
     }
   });
 
-  nameInput.focus();
+  nameInput.focus(); */
 }
 
 function startRoomChooser() {
   nameForm.remove();
 
   // if (document.location.hash.length > 1) {
-    roomname = document.location.hash.slice(1) || 'public';
     startChat();
     return;
   // }
@@ -1001,7 +1002,11 @@ function startChat() {
     event.preventDefault();
 
     if (currentWebSocket) {
-      currentWebSocket.send(JSON.stringify({
+      console.log('send chat', {
+        playerId,
+        message: chatInput.value,
+      });
+      /* currentWebSocket.send(JSON.stringify({
         method: 'chat',
         args: {
           playerId,
@@ -1012,9 +1017,13 @@ function startChat() {
       chatInput.value = "";
 
       // Scroll to bottom whenever sending a message.
-      chatlog.scrollBy(0, 1e8);
+      chatlog.scrollBy(0, 1e8); */
     }
   });
+
+  // currentWebSocket.addEventListener('message', e => {
+  //   console.log('message', e.data);
+  // });
 
   chatInput.addEventListener("input", event => {
     if (event.currentTarget.value.length > 256) {
@@ -1066,7 +1075,7 @@ let wroteWelcomeMessages = false;
 function join() {
   // If we are running via wrangler dev, use ws:
   const wss = document.location.protocol === "http:" ? "ws://" : "wss://";
-  let ws = new WebSocket(wss + hostname + "/api/room/" + roomname + "/websocket");
+  let ws = new WebSocket(wss + hostname + "/api/room/" + roomname + "/websocket?playerId=" + playerId);
   ws.binaryType = 'arraybuffer';
   let rejoined = false;
   let startTime = Date.now();
@@ -1100,7 +1109,23 @@ function join() {
     // ws.send(JSON.stringify({name: username}));
   });
 
-  ws.addEventListener("message", event => {
+  (async () => {
+    console.log('connecting...');
+    const dc1 = new DataClient({
+      crdt: _makeEmptyCrdt(),
+    });
+    ws.binaryType = 'arraybuffer';
+    const ndc1 = new NetworkedDataClient(dc1, ws);
+    const nirc1 = new NetworkedIrcClient(ws);
+    
+    await Promise.all([
+      ndc1.connect(),
+      nirc1.connect(),
+    ]);
+    console.log('connected!');
+  })();
+
+  ws.addEventListener("message-NEVER", event => {
     // console.log('got event', event.data);
     if (event.data instanceof ArrayBuffer) {
       // console.log('client got binary data', event.data);
