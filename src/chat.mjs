@@ -372,6 +372,19 @@ export class ChatRoom {
     }
     const dataClient = await dataClientPromise;
     const networkClient = {
+      serializeMessage(message) {
+        if (message.type === 'networkinit') {
+          const {playerIds} = message.data;
+          return zbencode({
+            method: UPDATE_METHODS.NETWORK_INIT,
+            args: [
+              playerIds,
+            ],
+          });
+        } else {
+          throw new Error('invalid message type: ' + message.type);
+        }
+      },
       getNetworkInitMessage: () => {
         return new MessageEvent('networkinit', {
           data: {
@@ -382,9 +395,13 @@ export class ChatRoom {
     };
 
     // send import
-    webSocket.send(serializeMessage(dataClient.getImportMessage()));
+    webSocket.send(dataClient.serializeMessage(dataClient.getImportMessage()));
     // send network init
-    webSocket.send(serializeMessage(networkClient.getNetworkInitMessage()));
+    // try {
+      webSocket.send(serializeMessage(networkClient.getNetworkInitMessage()));
+    // } catch(err) {
+    //   console.warn(err.stack);
+    // }
 
     // Set up our rate limiter client.
     // let limiterId = this.env.limiters.idFromName(ip);
@@ -490,20 +507,21 @@ export class ChatRoom {
                 // console.log('ping');
                 break;
               }
-              default: {
+              /* default: {
                 throw new Error('invalid method: ' + method);
-              }
-              /* case 'chat': {
+              } */
+              case 'chat': {
                 const {playerId, message} = data.args;
+                console.log('ignoring JSON chat...', data.args);
                 // console.log('replicate', playerId, message);
-                const m = JSON.stringify({
-                  method: 'chat',
-                  args: {
-                    playerId,
-                    message,
-                  },
-                });
-                proxyMessageToPeers(m);
+                // const m = JSON.stringify({
+                //   method: 'chat',
+                //   args: {
+                //     playerId,
+                //     message,
+                //   },
+                // });
+                // proxyMessageToPeers(m);
               }
             }
           } else {

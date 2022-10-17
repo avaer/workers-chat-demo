@@ -226,6 +226,7 @@ import {zbencode, zbdecode} from '/public/encoding.mjs';
 import {DataClient, NetworkedDataClient, DCMap, DCArray} from "/public/data-client.mjs";
 import {NetworkedIrcClient} from "/public/irc-client.js";
 import {UPDATE_METHODS} from './public/update-types.js';
+import {serializeMessage} from './public/util.mjs';
 
 window.zbencode = zbencode;
 window.zbdecode = zbdecode;
@@ -262,7 +263,7 @@ const testAdd = () => {
   });
   // console.log('got player object', player.toObject());
   console.assert(player.toObject().name === 'Shilo');
-  const updateBuffer = dc.serializeMessage(updateMessage);
+  const updateBuffer = serializeMessage(updateMessage);
 
   // console.log('got update buffer, finish test...', {updateMessage, updateBuffer});
 
@@ -331,7 +332,7 @@ const testSet = () => {
   console.assert(player.toObject().name === 'Alice');
   const updateMessage = player.setKeyValueUpdate('name', 'Lola');
   console.assert(player.toObject().name === 'Lola');
-  const updateBuffer = dc.serializeMessage(updateMessage);
+  const updateBuffer = serializeMessage(updateMessage);
 
   let updated;
   {
@@ -386,7 +387,7 @@ const testDoubleAdd = () => {
   const {map: player, update: updateMessage} = players.add({
     name: 'Shilo',
   });
-  const updateBuffer = dc.serializeMessage(updateMessage);
+  const updateBuffer = serializeMessage(updateMessage);
 
   const dc2 = new DataClient({
     crdt: _makeEmptyCrdt(),
@@ -396,7 +397,7 @@ const testDoubleAdd = () => {
   const {map: player2, update: updateMessage2} = players2.add({
     name: 'Rex',
   });
-  const updateBuffer2 = dc2.serializeMessage(updateMessage2);
+  const updateBuffer2 = serializeMessage(updateMessage2);
 
   // destinations
   {
@@ -450,7 +451,7 @@ const testRemove = () => {
   const player = players.getMap('1');
   const updateMessage = player.removeUpdate();
   console.assert(players.toArray().length === 0);
-  const updateBuffer = dc.serializeMessage(updateMessage);
+  const updateBuffer = serializeMessage(updateMessage);
 
   let updated;
   {
@@ -484,7 +485,7 @@ const testConclict = () => {
   const {players} = binding.arrays;
   const player = players.getMap('1');
   const updateMessage = player.setKeyValueUpdate('name', 'Lola');
-  const updateBuffer = dc.serializeMessage(updateMessage);
+  const updateBuffer = serializeMessage(updateMessage);
   let updated;
   {
     updated = 0;
@@ -506,7 +507,7 @@ const testConclict = () => {
   });
   const player2 = dc2.getArrayMap('players', '1');
   const updateMessage2 = player2.setKeyValueUpdate('name', 'Kila');
-  const updateBuffer2 = dc2.serializeMessage(updateMessage2);
+  const updateBuffer2 = serializeMessage(updateMessage2);
   {
     updated = 0;
     player2.addEventListener('set', e => {
@@ -545,7 +546,7 @@ const testConclict = () => {
     console.assert(player2.getKey('name') === 'Kila'); // did not get the update yet
     console.assert(player2.toObject().name === 'Kila');
 
-    const rollbackBuffer = dc2.serializeMessage(rollback2);
+    const rollbackBuffer = serializeMessage(rollback2);
     const {
       rollback: rollback3,
       update: update3,
@@ -576,7 +577,7 @@ const testBinary = () => {
 
   const position = Float32Array.from([1, 2, 3]);
   const updateMessage = player.setKeyValueUpdate('position', position);
-  const updateBuffer = dc.serializeMessage(updateMessage);
+  const updateBuffer = serializeMessage(updateMessage);
   dc.emitUpdate(updateMessage);
 
   const dc2 = new DataClient({
@@ -601,7 +602,7 @@ const testBinary = () => {
 
   const position2 = Float32Array.from([2, 2, 2]);
   const updateMessage2 = player.setKeyValueUpdate('position', position2);
-  const updateBuffer2 = dc.serializeMessage(updateMessage2);
+  const updateBuffer2 = serializeMessage(updateMessage2);
   dc.emitUpdate(updateMessage2);
 
   const {
@@ -622,7 +623,7 @@ const testBinary = () => {
   
   const position3 = Float32Array.from([3, 2, 1]);
   const updateMessage3 = player2.setKeyValueUpdate('position', position3);
-  const updateBuffer3 = dc2.serializeMessage(updateMessage3);
+  const updateBuffer3 = serializeMessage(updateMessage3);
   dc2.emitUpdate(updateMessage3);
 
   const {
@@ -651,7 +652,7 @@ const testImportExport = () => {
 
   const position = Float32Array.from([1, 2, 3]);
   const updateMessage = player.setKeyValueUpdate('position', position);
-  const updateBuffer = dc.serializeMessage(updateMessage);
+  const updateBuffer = serializeMessage(updateMessage);
   dc.emitUpdate(updateMessage);
 
   // second player
@@ -685,7 +686,7 @@ const testImportExport = () => {
   const importMessage = dc3.getImportMessage();
   dc3.emitUpdate(importMessage);
   // console.log('import update', importMessage);
-  const importUpdateBuffer = dc.serializeMessage(importMessage);
+  const importUpdateBuffer = serializeMessage(importMessage);
   // console.log('import update buffer', importUpdateBuffer);
 
   const {
@@ -735,7 +736,7 @@ const testMultiplayer = async () => {
     name: 'Weebo',
     position,
   });
-  const updateBuffer = dc1.serializeMessage(update);
+  const updateBuffer = serializeMessage(update);
   dc1.emitUpdate(update);
   // console.log('send ipdate buffer', updateBuffer);
   ndc1.send(updateBuffer);
