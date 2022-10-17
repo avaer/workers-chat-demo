@@ -225,6 +225,7 @@ import WSRTC from '/public/wsrtc/wsrtc.js';
 import {zbencode, zbdecode} from '/public/encoding.mjs';
 import {DataClient, NetworkedDataClient, DCMap, DCArray} from "/public/data-client.mjs";
 import {NetworkedIrcClient} from "/public/irc-client.js";
+import {UPDATE_METHODS} from './public/update-types.js';
 
 window.zbencode = zbencode;
 window.zbdecode = zbdecode;
@@ -875,9 +876,9 @@ pullButton.addEventListener('click', e => {
 
 const pushChat = div => {
   chatlog.appendChild(div);
-  if (isAtBottom) {
+  // if (isAtBottom) {
     chatlog.scrollBy(0, 1e8);
-  }
+  // }
 };
 
 // Is the chatlog scrolled to the bottom?
@@ -1002,10 +1003,11 @@ function startChat() {
     event.preventDefault();
 
     if (currentWebSocket) {
-      console.log('send chat', {
+      /* console.log('send chat', {
         playerId,
         message: chatInput.value,
-      });
+      }); */
+
       /* currentWebSocket.send(JSON.stringify({
         method: 'chat',
         args: {
@@ -1013,11 +1015,20 @@ function startChat() {
           message: chatInput.value,
         },
       }));
-      currentWebSocket.send(JSON.stringify({message: chatInput.value}));
+      currentWebSocket.send(JSON.stringify({message: chatInput.value})); */
+
+      currentWebSocket.send(zbencode({
+        method: UPDATE_METHODS.CHAT,
+        args: [
+          playerId,
+          chatInput.value,
+        ],
+      }));
+
       chatInput.value = "";
 
       // Scroll to bottom whenever sending a message.
-      chatlog.scrollBy(0, 1e8); */
+      chatlog.scrollBy(0, 1e8);
     }
   });
 
@@ -1117,12 +1128,46 @@ function join() {
     ws.binaryType = 'arraybuffer';
     const ndc1 = new NetworkedDataClient(dc1, ws);
     const nirc1 = new NetworkedIrcClient(ws);
+
+    nirc1.addEventListener('chat', e => {
+      const {playerId, message} = e.data;
+      addChatMessage(playerId, message);
+    });
     
     await Promise.all([
       ndc1.connect(),
       nirc1.connect(),
     ]);
     console.log('connected!');
+
+    addChatMessage(null,
+        "* This is a demo app built with Cloudflare Workers Durable Objects. The source code " +
+        "can be found at: https://github.com/cloudflare/workers-chat-demo");
+    addChatMessage(null,
+        "* WARNING: Participants in this chat are random people on the internet. " +
+        "Names are not authenticated; anyone can pretend to be anyone. The people " +
+        "you are chatting with are NOT Cloudflare employees. Chat history is saved.");
+    if (roomname.length == 64) {
+      addChatMessage(null,
+          "* This is a private room. You can invite someone to the room by sending them the URL.");
+    } else {
+      addChatMessage(null,
+          "* Welcome to #" + roomname + ". Say hi!");
+    }
+    {
+      const div = document.createElement('div');
+      div.innerHTML = `<a href="#">Record</a>`;
+      let recording = false;
+      div.childNodes[0].addEventListener('click', e => {
+        if (!recording) {
+          startRecording();
+        } else {
+          stopRecording();
+        }
+        recording = !recording;
+      });
+      pushChat(div);
+    }
   })();
 
   ws.addEventListener("message-NEVER", event => {
@@ -1160,34 +1205,7 @@ function join() {
       // All pre-join messages have been delivered.
       if (!wroteWelcomeMessages) {
         wroteWelcomeMessages = true;
-        addChatMessage(null,
-            "* This is a demo app built with Cloudflare Workers Durable Objects. The source code " +
-            "can be found at: https://github.com/cloudflare/workers-chat-demo");
-        addChatMessage(null,
-            "* WARNING: Participants in this chat are random people on the internet. " +
-            "Names are not authenticated; anyone can pretend to be anyone. The people " +
-            "you are chatting with are NOT Cloudflare employees. Chat history is saved.");
-        if (roomname.length == 64) {
-          addChatMessage(null,
-              "* This is a private room. You can invite someone to the room by sending them the URL.");
-        } else {
-          addChatMessage(null,
-              "* Welcome to #" + roomname + ". Say hi!");
-        }
-        {
-          const div = document.createElement('div');
-          div.innerHTML = `<a href="#">Record</a>`;
-          let recording = false;
-          div.childNodes[0].addEventListener('click', e => {
-            if (!recording) {
-              startRecording();
-            } else {
-              stopRecording();
-            }
-            recording = !recording;
-          });
-          pushChat(div);
-        }
+        
       }
     } else {
       // A regular chat message.

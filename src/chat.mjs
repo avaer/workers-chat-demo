@@ -431,6 +431,12 @@ export class ChatRoom {
         }
       }
     };
+    // send a message to all peers
+    const reflectMessageToPeers = m => {
+      for (const s of this.sessions) {
+        s.webSocket.send(m);
+      }
+    };
 
     // Load the last 100 messages from the chat history stored on disk, and send them to the
     // client.
@@ -457,8 +463,8 @@ export class ChatRoom {
           proxyMessageToPeers(uint8Array);
         }
       } else if (NetworkedIrcClient.handlesMethod(method)) {
-        console.log('route chat', method, args, this.sessions);
-        proxyMessageToPeers(uint8Array);
+        // console.log('route chat', method, args, this.sessions);
+        reflectMessageToPeers(uint8Array);
       }
     };
 
