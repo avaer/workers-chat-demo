@@ -751,7 +751,9 @@ const testMultiplayer = async () => {
   let player2;
   {
     updated = 0;
+    // console.log('wait for update', update2);
     players2.addEventListener('add', e => {
+      // console.log('got player add', e.data);
       player2 = e.data.map;
       updated++;
     });
@@ -778,10 +780,28 @@ const testIrc = async () => {
   ws2.binaryType = 'arraybuffer';
   const nirc2 = new NetworkedIrcClient(ws2);
 
+  let numPlayers1 = 0;
+  nirc1.addEventListener('playerjoin', e => {
+    numPlayers1++;
+  });
+  nirc1.addEventListener('playerleave', e => {
+    numPlayers1--;
+  });
+  let numPlayers2 = 0;
+  nirc2.addEventListener('playerjoin', e => {
+    numPlayers2++;
+  });
+  nirc2.addEventListener('playerleave', e => {
+    numPlayers2--;
+  });
+
   await Promise.all([
     nirc1.connect(),
     nirc2.connect(),
   ]);
+
+  console.assert(numPlayers1 >= 1);
+  console.assert(numPlayers2 >= 1);
   
   // console.log('send chat');
   const initialMessage = 'hello there';

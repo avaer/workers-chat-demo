@@ -62,11 +62,12 @@
 import HTML from "./chat.html";
 import { getAssetFromKV, mapRequestToAsset } from '@cloudflare/kv-asset-handler'
 import manifestJSON from '__STATIC_CONTENT_MANIFEST'
-const assetManifest = JSON.parse(manifestJSON)
+const assetManifest = JSON.parse(manifestJSON);
 import {zbencode, zbdecode} from "../public/encoding.mjs";
 import {DataClient, NetworkedDataClient, DCMap, DCArray} from "../public/data-client.mjs";
 import {NetworkedIrcClient} from "../public/irc-client.js";
 import {parseUpdateObject} from "../public/util.mjs";
+import {UPDATE_METHODS} from "../public/update-types.js";
 
 // `handleErrors()` is a little utility function that can wrap an HTTP request handler in a
 // try/catch and return errors to the client. You probably wouldn't want to use this in production
@@ -353,6 +354,8 @@ export class ChatRoom {
     // WebSocket in JavaScript, not sending it elsewhere.
     webSocket.accept();
 
+    const playerId = 'Anonymous'; // XXX get this from the query string
+
     const _resumeWebsocket = _pauseWebSocket(webSocket);
 
     if (!dataClientPromise) {
@@ -364,6 +367,33 @@ export class ChatRoom {
       })();
     }
     const dataClient = await dataClientPromise;
+    const networkClient = {
+      serializeMessage(message) {
+        if (message.type === 'networkinit') {
+          const {playerIds} = message.data;
+          return zbencode({
+            method: UPDATE_METHODS.NETWORK_INIT,
+            args: [
+              playerIds,
+            ],
+          });
+        } else {
+          throw new Error('invalid message type: ' + message.type);
+        }
+      },
+      getNetworkInitMessage: () => {
+        return new MessageEvent('networkinit', {
+          data: {
+            playerIds: this.sessions.map(session => session.playerId),
+          },
+        });
+      },
+    };
+
+    // send import
+    webSocket.send(dataClient.serializeMessage(dataClient.getImportMessage()));
+    // send network init
+    webSocket.send(networkClient.serializeMessage(networkClient.getNetworkInitMessage()));
 
     // Set up our rate limiter client.
     // let limiterId = this.env.limiters.idFromName(ip);
@@ -374,7 +404,7 @@ export class ChatRoom {
     // Create our session and add it to the sessions list.
     // We don't send any messages to the client until it has sent us the initial user info
     // message. Until then, we will queue messages in `session.blockedMessages`.
-    let session = {webSocket, blockedMessages: []};
+    let session = {webSocket, playerId, blockedMessages: []};
     this.sessions.push(session);
 
     // Queue "join" messages for all online users, to populate the client's roster.
