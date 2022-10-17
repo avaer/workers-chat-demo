@@ -336,7 +336,7 @@ export class ChatRoom {
           let pair = new WebSocketPair();
 
           // We're going to take pair[1] as our end, and return pair[0] to the client.
-          await this.handleSession(pair[1], ip);
+          await this.handleSession(pair[1], ip, url);
 
           // Now we return the other end of the pair to the client.
           return new Response(null, { status: 101, webSocket: pair[0] });
@@ -349,12 +349,16 @@ export class ChatRoom {
   }
 
   // handleSession() implements our WebSocket-based chat protocol.
-  async handleSession(webSocket, ip) {
+  async handleSession(webSocket, ip, url) {
     // Accept our end of the WebSocket. This tells the runtime that we'll be terminating the
     // WebSocket in JavaScript, not sending it elsewhere.
     webSocket.accept();
 
-    const playerId = 'Anonymous'; // XXX get this from the query string
+    const playerId = url.searchParams.get('playerId');
+    if (!playerId) {
+      webSocket.close();
+      return;
+    }
 
     const _resumeWebsocket = _pauseWebSocket(webSocket);
 
