@@ -472,6 +472,29 @@ export class ChatRoom {
       }
     };
 
+    const _sendJoinMessage = () => {
+      const joinMessage = new MessageEvent('join', {
+        data: {
+          playerId,
+        },
+      });
+      const joinBuffer = serializeMessage(joinMessage);
+      dataClient.emitUpdate(joinMessage);
+      proxyMessageToPeers(joinBuffer);
+    };
+    _sendJoinMessage(playerId);
+
+    const _sendLeaveMessage = () => {
+      const leaveMessage = new MessageEvent('leave', {
+        data: {
+          playerId,
+        },
+      });
+      const leaveBuffer = serializeMessage(leaveMessage);
+      dataClient.emitUpdate(leaveMessage);
+      proxyMessageToPeers(leaveBuffer);
+    };
+
     // Set event handlers to receive messages.
     // let receivedUserInfo = false;
     webSocket.addEventListener("message", async msg => {
@@ -595,9 +618,11 @@ export class ChatRoom {
     let closeOrErrorHandler = evt => {
       session.quit = true;
       this.sessions = this.sessions.filter(member => member !== session);
-      if (session.name) {
+      
+      _sendLeaveMessage();
+      /* if (session.name) {
         this.broadcast({quit: session.name});
-      }
+      } */
     };
     webSocket.addEventListener("close", closeOrErrorHandler);
     webSocket.addEventListener("error", closeOrErrorHandler);

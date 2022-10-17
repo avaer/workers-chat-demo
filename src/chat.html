@@ -1132,11 +1132,17 @@ function join() {
     });
     ws.binaryType = 'arraybuffer';
     const ndc1 = new NetworkedDataClient(dc1, ws);
-    const nirc1 = new NetworkedIrcClient(ws);
+    const nirc1 = new NetworkedIrcClient(ws, playerId);
 
     nirc1.addEventListener('chat', e => {
       const {playerId, message} = e.data;
       addChatMessage(playerId, message);
+    });
+    nirc1.addEventListener('join', e => {
+      console.log('player join', e.data);
+    });
+    nirc1.addEventListener('leave', e => {
+      console.log('player leave', e.data);
     });
     
     await Promise.all([
