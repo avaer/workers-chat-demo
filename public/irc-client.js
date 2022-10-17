@@ -12,7 +12,9 @@ export class NetworkedIrcClient extends EventTarget {
   constructor(ws) {
     super();
     this.ws = ws;
+
     this.playerId = makeId();
+    this.playerIds = [];
   }
   static handlesMethod(method) {
     return [
@@ -42,6 +44,32 @@ export class NetworkedIrcClient extends EventTarget {
       };
     });
 
+    const _waitForInitialImport = async () => {
+      await new Promise((resolve, reject) => {
+        const initialMessage = e => {
+          if (e.data instanceof ArrayBuffer) {
+            const updateBuffer = e.data;
+            const uint8Array = new Uint8Array(updateBuffer);
+            const updateObject = parseUpdateObject(uint8Array);
+            
+            const {method, args} = updateObject;
+            if (method === UPDATE_METHODS.NETWORK_INIT) {
+              // const [playerIds] = args;
+              // console.log('irc init', {playerIds});
+
+              this.handleUpdateObject(updateObject);
+    
+              resolve();
+              
+              this.ws.removeEventListener('message', initialMessage);
+            }
+          }
+        };
+        this.ws.addEventListener('message', initialMessage);
+      });
+    };
+    await _waitForInitialImport();
+
     // console.log('irc listen');
     this.ws.addEventListener('message', e => {
       if (e.data instanceof ArrayBuffer) {
@@ -61,7 +89,19 @@ export class NetworkedIrcClient extends EventTarget {
   handleUpdateObject(updateObject) {
     const {method, args} = updateObject;
     // console.log('got irc', {method, args});
-    if (method === UPDATE_METHODS.CHAT) {
+    if (method === UPDATE_METHODS.NETWORK_INIT) {
+      const [playerIds] = args;
+      this.playerIds = playerIds;
+      
+      for (let i = 0; i < playerIds.length; i++) {
+        const playerId = playerIds[i];
+        this.dispatchEvent(new MessageEvent('playerjoin', {
+          data: {
+            playerId,
+          },
+        }));
+      }
+    } else if (method === UPDATE_METHODS.CHAT) {
       // console.log('got irc chat', {method, args});
       const chatMessage = new MessageEvent('chat', {
         data: args,
