@@ -5,8 +5,7 @@
   "scripts": {
     "dev": "bash ./start.sh"
   },
-  "main": "./src/chat.mjs",
-  "type": "module",
+  "module": "./src/chat.mjs",
   "private": true,
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.2.0",
