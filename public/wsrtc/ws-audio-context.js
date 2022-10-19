@@ -18,7 +18,7 @@ export const ensureAudioContext = () => {
         console.log('audio context suspend');
       });
       audioCtx.addEventListener('statechange', e => {
-        console.log('audio context statechange', audioCtx.state);
+        console.log('audio context statechange', JSON.stringify(audioCtx.state));
       });
 
       await Promise.all([
