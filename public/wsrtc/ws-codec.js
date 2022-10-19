@@ -79,6 +79,9 @@ export class WsMediaStreamAudioReader {
     const mediaStreamSourceNode = audioCtx.createMediaStreamSource(mediaStream);
     
     const audioWorkletNode = new AudioWorkletNode(audioCtx, 'ws-input-worklet');
+    audioWorkletNode.onprocessorerror = err => {
+      console.warn('audio worklet error', err);
+    };
     audioWorkletNode.port.onmessage = e => {
       this.pushAudioData(e.data);
     };
@@ -167,8 +170,8 @@ export class WsAudioDecoder {
     this.worker.onerror = error;
     this.worker.postMessage('decode');
   }
-  decode(encodedAudioChunk) {
-    this.worker.postMessage(encodedAudioChunk.data, [encodedAudioChunk.data.buffer]);
+  decode(data) {
+    this.worker.postMessage(data, [data.buffer]);
   }
   close() {
     this.worker.terminate();

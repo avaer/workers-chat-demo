@@ -223,8 +223,10 @@ p:last-of-type {
 <script type="module">
 import WSRTC from '/public/wsrtc/wsrtc.js';
 import {zbencode, zbdecode} from '/public/encoding.mjs';
+import {getAudioContext} from './public/wsrtc/ws-audio-context.js';
 import {DataClient, NetworkedDataClient, DCMap, DCArray} from "/public/data-client.mjs";
 import {NetworkedIrcClient} from "/public/irc-client.js";
+import {NetworkedAudioClient} from "/public/audio-client.js";
 import {UPDATE_METHODS} from './public/update-types.js';
 import {serializeMessage} from './public/util.mjs';
 
@@ -1152,17 +1154,6 @@ function startChat() {
 
 //
 
-let wsrtc = null;
-const startRecording = () => {
-  wsrtc = new WSRTC(currentWebSocket);
-  console.log('got wsrtc', wsrtc);
-};
-const stopRecording = () => {
-
-};
-
-//
-
 let lastSeenTimestamp = 0;
 let wroteWelcomeMessages = false;
 
@@ -1212,11 +1203,19 @@ function join() {
     ws.binaryType = 'arraybuffer';
     const ndc1 = new NetworkedDataClient(dc1, ws);
     const nirc1 = new NetworkedIrcClient(ws, playerId);
+    const nac1 = new NetworkedAudioClient(ws, playerId);
 
     // chat
     nirc1.addEventListener('chat', e => {
       const {playerId, message} = e.data;
       addChatMessage(playerId, message);
+    });
+
+    // audio
+    nac1.addEventListener('stream', e => {
+      const {playerId, stream} = e.data;
+      console.log('got stream', {playerId, stream});
+      // addAudioStream(playerId, stream);
     });
 
     // remote players
@@ -1288,9 +1287,11 @@ function join() {
       let recording = false;
       div.childNodes[0].addEventListener('click', e => {
         if (!recording) {
-          startRecording();
+          div.childNodes[0].innerText = 'Stop';
+          nac1.enableMic();
         } else {
-          stopRecording();
+          div.childNodes[0].innerText = 'Record';
+          nac1.disableMic();
         }
         recording = !recording;
       });

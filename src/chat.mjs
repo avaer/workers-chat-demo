@@ -66,6 +66,7 @@ const assetManifest = JSON.parse(manifestJSON);
 import {zbencode, zbdecode} from "../public/encoding.mjs";
 import {DataClient, NetworkedDataClient, DCMap, DCArray} from "../public/data-client.mjs";
 import {NetworkedIrcClient} from "../public/irc-client.js";
+import {NetworkedAudioClient} from "../public/audio-client.js";
 import {parseUpdateObject, serializeMessage} from "../public/util.mjs";
 import {UPDATE_METHODS} from "../public/update-types.js";
 
@@ -467,7 +468,7 @@ export class ChatRoom {
           dataClient.emitUpdate(update);
           proxyMessageToPeers(uint8Array);
         }
-      } else if (NetworkedIrcClient.handlesMethod(method)) {
+      } else if (NetworkedIrcClient.handlesMethod(method) || NetworkedAudioClient.handlesMethod(method)) {
         // console.log('route chat', method, args, this.sessions);
         reflectMessageToPeers(uint8Array);
       }

@@ -216,7 +216,6 @@ class WSRTC extends EventTarget {
         readAndEncode();
       }
     }
-    
     readAndEncode();
   }
   disableMic() {
