@@ -183,6 +183,11 @@ p:last-of-type {
   width: 20em;
 }
 
+#audio-indicator {
+  width: 20px;
+  height: 20px;
+}
+
 </style>
 
 <!--===================================================================================-->
@@ -190,6 +195,7 @@ p:last-of-type {
 
   </head>
   <body>
+    <img src="/public/images/audio.svg" id="audio-indicator" style="opacity: 0.2;">
     <form id="name-form" action="/fake-form-action">
       <input id="name-input" placeholder="your name">
       <p>This chat runs entirely on the edge, powered by<br>
@@ -238,6 +244,10 @@ import {ensureAudioContext} from './public/wsrtc/ws-audio-context.js';
 // window.DCArray = DCArray;
 
 ensureAudioContext()
+  .then(async audioContext => {
+    await audioContext.resume();
+    audioIndicator.style.opacity = 1.;
+  })
   .catch(console.warn);
 
 const _makeEmptyCrdt = () => {
@@ -855,6 +865,7 @@ globalThis.test = test;
 
 let currentWebSocket = null;
 
+let audioIndicator = document.getElementById('audio-indicator');
 let nameForm = document.querySelector("#name-form");
 let nameInput = document.querySelector("#name-input");
 let roomForm = document.querySelector("#room-form");
