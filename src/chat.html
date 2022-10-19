@@ -229,12 +229,16 @@ import {NetworkedIrcClient} from "/public/irc-client.js";
 import {NetworkedAudioClient} from "/public/audio-client.js";
 import {UPDATE_METHODS} from './public/update-types.js';
 import {serializeMessage} from './public/util.mjs';
+import {ensureAudioContext} from './public/wsrtc/ws-audio-context.js';
 
-window.zbencode = zbencode;
-window.zbdecode = zbdecode;
-window.DataClient = DataClient;
-window.DCMap = DCMap;
-window.DCArray = DCArray;
+// window.zbencode = zbencode;
+// window.zbdecode = zbdecode;
+// window.DataClient = DataClient;
+// window.DCMap = DCMap;
+// window.DCArray = DCArray;
+
+ensureAudioContext()
+  .catch(console.warn);
 
 const _makeEmptyCrdt = () => {
   return new Map([
@@ -1139,6 +1143,11 @@ function startChat() {
     if (window.getSelection().toString() == "") {
       chatInput.focus();
     }
+
+    (async () => {
+      const audioContext = await ensureAudioContext();
+      audioContext.resume();
+    })();
   });
 
   // Detect mobile keyboard appearing and disappearing, and adjust the scroll as appropriate.
@@ -1213,11 +1222,11 @@ function join() {
     });
 
     // audio
-    nac1.addEventListener('stream', e => {
+    /* nac1.addEventListener('stream', e => {
       const {playerId, stream} = e.data;
       console.log('got stream', {playerId, stream});
       // addAudioStream(playerId, stream);
-    });
+    }); */
 
     // remote players
     const playerRenderers = [];
@@ -1257,6 +1266,7 @@ function join() {
     await Promise.all([
       ndc1.connect(),
       nirc1.connect(),
+      nac1.connect(),
     ]);
 
     console.log('connected!');

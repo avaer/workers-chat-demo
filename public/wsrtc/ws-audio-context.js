@@ -9,6 +9,18 @@ export const ensureAudioContext = () => {
         latencyHint: 'interactive',
         sampleRate,
       });
+
+      // debugging
+      audioCtx.addEventListener('resume', e => {
+        console.log('audio context resumed');
+      });
+      audioCtx.addEventListener('suspend', e => {
+        console.log('audio context suspend');
+      });
+      audioCtx.addEventListener('statechange', e => {
+        console.log('audio context statechange', audioCtx.state);
+      });
+
       await Promise.all([
         audioCtx.audioWorklet.addModule(`${import.meta.url.replace(/(\/)[^\/]*$/, '$1')}ws-input-worklet.js`),
         audioCtx.audioWorklet.addModule(`${import.meta.url.replace(/(\/)[^\/]*$/, '$1')}ws-output-worklet.js`),
@@ -16,6 +28,7 @@ export const ensureAudioContext = () => {
       return audioCtx;
     })();
   }
+  audioCtx.resume();
   return audioCtxPromise;
 };
 export const getAudioContext = () => {

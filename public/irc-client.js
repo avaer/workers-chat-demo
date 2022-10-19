@@ -47,7 +47,7 @@ export class NetworkedIrcClient extends EventTarget {
     const _waitForInitialImport = async () => {
       await new Promise((resolve, reject) => {
         const initialMessage = e => {
-          if (e.data instanceof ArrayBuffer) {
+          if (e.data instanceof ArrayBuffer && e.data.byteLength > 0) {
             const updateBuffer = e.data;
             const uint8Array = new Uint8Array(updateBuffer);
             const updateObject = parseUpdateObject(uint8Array);
@@ -73,7 +73,7 @@ export class NetworkedIrcClient extends EventTarget {
     // console.log('irc listen');
     this.ws.addEventListener('message', e => {
       // console.log('got ws data', e.data);
-      if (e.data instanceof ArrayBuffer) {
+      if (e.data instanceof ArrayBuffer && e.data.byteLength > 0) {
         const updateBuffer = e.data;
         // console.log('irc data', e.data);
         const uint8Array = new Uint8Array(updateBuffer);

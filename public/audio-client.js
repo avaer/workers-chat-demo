@@ -1,10 +1,11 @@
 import {UPDATE_METHODS} from './update-types.js';
 import {parseUpdateObject, makeId} from './util.mjs';
+import {zbencode, zbdecode} from "./encoding.mjs";
 import {ensureAudioContext, getAudioContext} from './wsrtc/ws-audio-context.js';
 import {WsMediaStreamAudioReader, WsAudioEncoder, WsAudioDecoder} from './wsrtc/ws-codec.js';
 import {getEncodedAudioChunkBuffer, getAudioDataBuffer} from './wsrtc/ws-util.js';
 
-function createAudioOutputFromStream(socket) {
+function createAudioOutputStream() {
   const audioContext = getAudioContext();
 
   const audioWorkletNode = new AudioWorkletNode(
@@ -18,17 +19,18 @@ function createAudioOutputFromStream(socket) {
       audioWorkletNode.port.postMessage(data, [data.buffer]);
     },
   });
-  
-  const result = new EventTarget();
-  result.outputNode = audioWorkletNode;
-  result.audioDecoder = audioDecoder;
 
-  socket.addEventListener('data', e => {
-    const {data} = e;
-    audioDecoder.decode(data);
-  });
-
-  return result;
+  return {
+    outputNode: audioWorkletNode,
+    audioDecoder,
+    write(data) {
+      audioDecoder.decode(data);
+    },
+    close() {
+      audioWorkletNode.disconnect();
+      audioDecoder.close();
+    },
+  }
 }
 
 const stopMediaStream = mediaStream => {
@@ -37,7 +39,7 @@ const stopMediaStream = mediaStream => {
     track.stop();
   }
 };
-async function createMicrophoneSource(playerId = makeId()) {
+async function createMicrophoneSource() {
   const audioContext = await ensureAudioContext();
   audioContext.resume();
   
@@ -48,16 +50,11 @@ async function createMicrophoneSource(playerId = makeId()) {
   const audioReader = new WsMediaStreamAudioReader(mediaStream);
 
   const fakeWs = new EventTarget();
-  const _renderOutput = async () => {
+  /* const _renderOutput = async () => {
     const result = createAudioOutputFromStream(fakeWs);
-    const {
-      outputNode,
-      audioDecoder,
-    } = result;
-    const audioContext = getAudioContext();
-    outputNode.connect(audioContext.destination);
+    result.outputNode.connect(audioContext.destination);
   };
-  _renderOutput();
+  _renderOutput(); */
 
   const muxAndSend = encodedChunk => {
     const {type, timestamp} = encodedChunk;
@@ -85,6 +82,7 @@ async function createMicrophoneSource(playerId = makeId()) {
   readAndEncode();
 
   return {
+    outputSocket: fakeWs,
     mediaStream,
     audioReader,
     audioEncoder,
@@ -103,15 +101,44 @@ export class NetworkedAudioClient extends EventTarget {
     this.ws = ws;
     this.playerId = playerId;
 
+    this.audioStreams = new Map();
+
     if (typeof window !== 'undefined') {
-      window.createMicrophoneSource = ((createMicrophoneSource) => async function() {
-        const result = await createMicrophoneSource.apply(this, arguments);
-        window.cancelMicrophoneSource = () => {
+      window.startAudio = async () => {
+        this.ws.send(zbencode({
+          method: UPDATE_METHODS.AUDIO_START,
+          args: [
+            this.playerId,
+          ],
+        }));
+        
+        const result = await createMicrophoneSource();
+
+        result.outputSocket.addEventListener('data', e => {
+          // console.log('send mic data', e.data.byteLength);
+          this.ws.send(zbencode({
+            method: UPDATE_METHODS.AUDIO,
+            args: [
+              this.playerId,
+              e.data,
+            ],
+          }));
+        });
+
+        window.stopAudio = () => {
+          this.ws.send(zbencode({
+            method: UPDATE_METHODS.AUDIO_END,
+            args: [
+              this.playerId,
+            ],
+          }));
+          
           result.destroy();
-          window.cancelMicrophoneSource = null;
+
+          window.stopAudio = null;
         };
-      })(createMicrophoneSource);
-      window.cancelMicrophoneSource = null;
+      };
+      window.stopAudio = null;
     }
   }
   static handlesMethod(method) {
@@ -122,10 +149,10 @@ export class NetworkedAudioClient extends EventTarget {
     ].includes(method);
   }
   async enableMic() {
-    await window.createMicrophoneSource();
+    await window.startAudio();
   }
   disableMic() {
-    window.cancelMicrophoneSource();
+    window.stopAudio();
   }
   async connect() {
     await new Promise((resolve, reject) => {
@@ -147,7 +174,7 @@ export class NetworkedAudioClient extends EventTarget {
       };
     });
 
-    const _waitForInitialImport = async () => {
+    /* const _waitForInitialImport = async () => {
       await new Promise((resolve, reject) => {
         const initialMessage = e => {
           if (e.data instanceof ArrayBuffer) {
@@ -171,12 +198,12 @@ export class NetworkedAudioClient extends EventTarget {
         this.ws.addEventListener('message', initialMessage);
       });
     };
-    await _waitForInitialImport();
+    await _waitForInitialImport(); */
 
     // console.log('irc listen');
     this.ws.addEventListener('message', e => {
       // console.log('got ws data', e.data);
-      if (e.data instanceof ArrayBuffer) {
+      if (e.data instanceof ArrayBuffer && e.data.byteLength > 0) {
         const updateBuffer = e.data;
         // console.log('irc data', e.data);
         const uint8Array = new Uint8Array(updateBuffer);
@@ -192,34 +219,47 @@ export class NetworkedAudioClient extends EventTarget {
   }
   handleUpdateObject(updateObject) {
     const {method, args} = updateObject;
-    // console.log('got irc event', {method, args});
+    // console.log('got audio message event', {method, args});
     if (method === UPDATE_METHODS.AUDIO_START) {
       const [playerId] = args;
 
-      this.dispatchEvent(new MessageEvent('audiostart', {
+      // console.log('create audio stream for player id', playerId);
+      const outputStream = createAudioOutputStream();
+      outputStream.outputNode.connect(getAudioContext().destination);
+      this.audioStreams.set(playerId, outputStream);
+      // console.log('create audio stream', playerId);
+
+      /* this.dispatchEvent(new MessageEvent('audiostart', {
         data: {
           playerId,
         },
-      }));
+      })); */
     } else if (method === UPDATE_METHODS.AUDIO) {
       // console.log('got irc chat', {method, args});
-      const [playerId, buffer] = args;
-      const audioMessage = new MessageEvent('audio', {
-        data: {
-          playerId,
-          buffer,
-        },
-      });
-      this.dispatchEvent(audioMessage);
+      const [playerId, data] = args;
+
+      const audioStream = this.audioStreams.get(playerId);
+      if (!audioStream) {
+        console.log('unknown audio event', playerId);
+        // debugger;
+        // throw new Error('no audio stream for player id: ' + playerId);
+        return;
+      }
+      // console.log('receive mic data', data.byteLength);
+      audioStream.write(data);
     } else if (method === UPDATE_METHODS.AUDIO_END) {
-      // console.log('got irc chat', {method, args});
+      console.log('got end', {method, args});
       const [playerId] = args;
-      const audioEndMessage = new MessageEvent('audioend', {
-        data: {
-          playerId,
-        },
-      });
-      this.dispatchEvent(audioEndMessage);
+
+      const audioStream = this.audioStreams.get(playerId);
+      if (!audioStream) {
+        console.log('unknown audio ended', playerId);
+        // debugger;
+        // throw new Error('no audio stream for player id: ' + playerId);
+        return;
+      }
+      audioStream.close();
+      this.audioStreams.delete(playerId);
     } else if (method === UPDATE_METHODS.JOIN) {
       const [playerId] = args;
       this.playerIds.push(playerId);

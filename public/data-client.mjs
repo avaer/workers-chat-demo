@@ -205,7 +205,7 @@ export class DCMap extends EventTarget {
     this.dataClient.addEventListener(removeKey, removeFn);
     
     this.cleanupFn = () => {
-      console.log('map unlink', setKey);
+      // console.log('map unlink', setKey);
       this.dataClient.removeEventListener(setKey, setFn);
       this.dataClient.removeEventListener(removeKey, removeFn);
     };
@@ -731,7 +731,7 @@ export class NetworkedDataClient extends EventTarget {
     const _waitForInitialImport = async () => {
       await new Promise((resolve, reject) => {
         const initialMessage = e => {
-          if (e.data instanceof ArrayBuffer) {
+          if (e.data instanceof ArrayBuffer && e.data.byteLength > 0) {
             const updateBuffer = e.data;
             const uint8Array = new Uint8Array(updateBuffer);
             const updateObject = parseUpdateObject(uint8Array);
@@ -754,7 +754,7 @@ export class NetworkedDataClient extends EventTarget {
     await _waitForInitialImport();
 
     const mainMessage = e => {
-      if (e.data instanceof ArrayBuffer) {
+      if (e.data instanceof ArrayBuffer && e.data.byteLength > 0) {
         const updateBuffer = e.data;
         const uint8Array = new Uint8Array(updateBuffer);
         const updateObject = parseUpdateObject(uint8Array);
