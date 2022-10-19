@@ -9,4 +9,5 @@ export const UPDATE_METHODS = {
   LEAVE: 8,
   CHAT: 9,
   AUDIO: 10,
+  AUDIO_END: 11,
 };

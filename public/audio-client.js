@@ -119,12 +119,12 @@ export class NetworkedAudioClient extends EventTarget {
         });
 
         window.stopAudio = () => {
-          /* this.ws.send(zbencode({
+          this.ws.send(zbencode({
             method: UPDATE_METHODS.AUDIO_END,
             args: [
               this.playerId,
             ],
-          })); */
+          }));
           
           microphone.destroy();
 
@@ -138,7 +138,7 @@ export class NetworkedAudioClient extends EventTarget {
     return [
       // UPDATE_METHODS.AUDIO_START,
       UPDATE_METHODS.AUDIO,
-      // UPDATE_METHODS.AUDIO_END,
+      UPDATE_METHODS.AUDIO_END,
     ].includes(method);
   }
   async enableMic() {
@@ -226,11 +226,17 @@ export class NetworkedAudioClient extends EventTarget {
         // debugger;
         // throw new Error('no audio stream for player id: ' + playerId);
         audioStream = outputStream;
+
+        this.dispatchEvent(new MessageEvent('audiostreamstart', {
+          data: {
+            playerId,
+          },
+        }));
       }
       // console.log('receive mic data', data.byteLength);
       audioStream.write(data);
-    } else if (method === UPDATE_METHODS.LEAVE) {
-      console.log('got leave', {method, args});
+    } else if (method === UPDATE_METHODS.LEAVE || method === UPDATE_METHODS.AUDIO_END) {
+      // console.log('got leave', {method, args});
       const [playerId] = args;
 
       const audioStream = this.audioStreams.get(playerId);
@@ -240,6 +246,12 @@ export class NetworkedAudioClient extends EventTarget {
         // throw new Error('no audio stream for player id: ' + playerId);
         audioStream.close();
         this.audioStreams.delete(playerId);
+
+        this.dispatchEvent(new MessageEvent('audiostreamend', {
+          data: {
+            playerId,
+          },
+        }));
       }
     } else if (method === UPDATE_METHODS.JOIN) {
       const [playerId] = args;

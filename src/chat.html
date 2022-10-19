@@ -1238,11 +1238,38 @@ function join() {
     });
 
     // audio
-    /* nac1.addEventListener('stream', e => {
-      const {playerId, stream} = e.data;
-      console.log('got stream', {playerId, stream});
-      // addAudioStream(playerId, stream);
-    }); */
+    const _enableAudioOutput = playerId => {
+      for (let i = 0; i < roster.children.length; i++) {
+        let p = roster.children[i];
+        const textNode = p.children[1];
+        if (textNode.innerText === playerId) {
+          // console.log('swap on');
+          p.classList.add('speaking');
+          break;
+        }
+      }
+    };
+    const _disableAudioOutput = playerId => {
+      for (let i = 0; i < roster.children.length; i++) {
+        let p = roster.children[i];
+        const textNode = p.children[1];
+        if (textNode.innerText === playerId) {
+          // console.log('swap off');
+          p.classList.remove('speaking');
+          break;
+        }
+      }
+    };
+    nac1.addEventListener('audiostreamstart', e => {
+      const {playerId} = e.data;
+      // console.log('stream start', playerId);
+      _enableAudioOutput(playerId);
+    });
+    nac1.addEventListener('audiostreamend', e => {
+      const {playerId} = e.data;
+      // console.log('stream end', playerId);
+      _disableAudioOutput(playerId);
+    });
 
     // remote players
     const playerRenderers = [];
@@ -1250,7 +1277,8 @@ function join() {
       // console.log('player join', e.data);
 
       let p = document.createElement("p");
-      p.innerHTML = `<div class="player"><img src="/public/images/audio.svg" class="audio-icon"><span class="name">${e.data.playerId}</span></div>`;
+      p.classList.add('player');
+      p.innerHTML = `<img src="/public/images/audio.svg" class="audio-icon"><span class="name">${e.data.playerId}</span>`;
       roster.appendChild(p);
 
       const playerRenderer = new RemotePlayerRenderer(e.data.playerId, playerId, dc1);
