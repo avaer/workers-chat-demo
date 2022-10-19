@@ -18,12 +18,6 @@ function createAudioOutputFromStream(socket) {
       audioWorkletNode.port.postMessage(data, [data.buffer]);
     },
   });
-
-  /* if (!this.avatar.isAudioEnabled()) {
-    this.avatar.setAudioEnabled(true);
-  } */
-
-  // audioWorkletNode.connect(this.avatar.getAudioInput());
   
   const result = new EventTarget();
   result.outputNode = audioWorkletNode;
@@ -31,16 +25,10 @@ function createAudioOutputFromStream(socket) {
 
   socket.addEventListener('data', e => {
     const {data} = e;
-    // console.log('decode data', data);
     audioDecoder.decode(data);
   });
 
   return result;
-
-  /* return {
-    outputNode: audioWorkletNode,
-    audioDecoder,
-  }; */
 }
 
 const stopMediaStream = mediaStream => {
@@ -78,14 +66,6 @@ async function createMicrophoneSource(playerId = makeId()) {
     fakeWs.dispatchEvent(new MessageEvent('data', {
       data,
     }));
-
-    /* sendAudioMessage(
-      UPDATE_METHODS.AUDIO,
-      playerId,
-      type,
-      timestamp,
-      data,
-    ); */
   };
   function onEncoderError(err) {
     console.warn('encoder error', err);
@@ -116,22 +96,23 @@ async function createMicrophoneSource(playerId = makeId()) {
     },
   };
 }
-if (typeof window !== 'undefined') {
-  window.createMicrophoneSource = ((createMicrophoneSource) => async function() {
-    const result = await createMicrophoneSource.apply(this, arguments);
-    window.cancelMicrophoneSource = () => {
-      result.destroy();
-      window.cancelMicrophoneSource = null;
-    };
-  })(createMicrophoneSource);
-  window.cancelMicrophoneSource = null;
-}
 
 export class NetworkedAudioClient extends EventTarget {
   constructor(ws, playerId = makeId()) {
     super();
     this.ws = ws;
     this.playerId = playerId;
+
+    if (typeof window !== 'undefined') {
+      window.createMicrophoneSource = ((createMicrophoneSource) => async function() {
+        const result = await createMicrophoneSource.apply(this, arguments);
+        window.cancelMicrophoneSource = () => {
+          result.destroy();
+          window.cancelMicrophoneSource = null;
+        };
+      })(createMicrophoneSource);
+      window.cancelMicrophoneSource = null;
+    }
   }
   static handlesMethod(method) {
     return [
