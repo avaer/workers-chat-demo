@@ -7,7 +7,7 @@ RESOLVED_PORT=$PORT
 if [ -z "$PORT" ]; then
   RESOLVED_PORT=2222
 fi
-echo "http://local-multiplayer.webaverse.com:$RESOLVED_PORT"
+echo "http://localhost:$RESOLVED_PORT/"
 
 # start local development server
 node ./node_modules/wrangler dev -l --port $RESOLVED_PORT
