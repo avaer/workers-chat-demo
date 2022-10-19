@@ -468,10 +468,12 @@ export class ChatRoom {
           dataClient.emitUpdate(update);
           proxyMessageToPeers(uint8Array);
         }
-      } else if (NetworkedIrcClient.handlesMethod(method)) {
+      }
+      if (NetworkedIrcClient.handlesMethod(method)) {
         // console.log('route', method, args, this.sessions);
         reflectMessageToPeers(uint8Array);
-      } else if (NetworkedAudioClient.handlesMethod(method)) {
+      }
+      if (NetworkedAudioClient.handlesMethod(method)) {
         proxyMessageToPeers(uint8Array);
       }
     };

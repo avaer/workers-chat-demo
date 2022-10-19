@@ -105,16 +105,9 @@ export class NetworkedAudioClient extends EventTarget {
 
     if (typeof window !== 'undefined') {
       window.startAudio = async () => {
-        this.ws.send(zbencode({
-          method: UPDATE_METHODS.AUDIO_START,
-          args: [
-            this.playerId,
-          ],
-        }));
-        
-        const result = await createMicrophoneSource();
+        const microphone = await createMicrophoneSource();
 
-        result.outputSocket.addEventListener('data', e => {
+        microphone.outputSocket.addEventListener('data', e => {
           // console.log('send mic data', e.data.byteLength);
           this.ws.send(zbencode({
             method: UPDATE_METHODS.AUDIO,
@@ -126,14 +119,14 @@ export class NetworkedAudioClient extends EventTarget {
         });
 
         window.stopAudio = () => {
-          this.ws.send(zbencode({
+          /* this.ws.send(zbencode({
             method: UPDATE_METHODS.AUDIO_END,
             args: [
               this.playerId,
             ],
-          }));
+          })); */
           
-          result.destroy();
+          microphone.destroy();
 
           window.stopAudio = null;
         };
@@ -143,9 +136,9 @@ export class NetworkedAudioClient extends EventTarget {
   }
   static handlesMethod(method) {
     return [
-      UPDATE_METHODS.AUDIO_START,
+      // UPDATE_METHODS.AUDIO_START,
       UPDATE_METHODS.AUDIO,
-      UPDATE_METHODS.AUDIO_END,
+      // UPDATE_METHODS.AUDIO_END,
     ].includes(method);
   }
   async enableMic() {
@@ -220,46 +213,34 @@ export class NetworkedAudioClient extends EventTarget {
   handleUpdateObject(updateObject) {
     const {method, args} = updateObject;
     // console.log('got audio message event', {method, args});
-    if (method === UPDATE_METHODS.AUDIO_START) {
-      const [playerId] = args;
-
-      // console.log('create audio stream for player id', playerId);
-      const outputStream = createAudioOutputStream();
-      outputStream.outputNode.connect(getAudioContext().destination);
-      this.audioStreams.set(playerId, outputStream);
-      // console.log('create audio stream', playerId);
-
-      /* this.dispatchEvent(new MessageEvent('audiostart', {
-        data: {
-          playerId,
-        },
-      })); */
-    } else if (method === UPDATE_METHODS.AUDIO) {
+    if (method === UPDATE_METHODS.AUDIO) {
       // console.log('got irc chat', {method, args});
       const [playerId, data] = args;
 
-      const audioStream = this.audioStreams.get(playerId);
+      let audioStream = this.audioStreams.get(playerId);
       if (!audioStream) {
-        console.log('unknown audio event', playerId);
+        const outputStream = createAudioOutputStream();
+        outputStream.outputNode.connect(getAudioContext().destination);
+        this.audioStreams.set(playerId, outputStream);
+        // console.log('unknown audio event', playerId);
         // debugger;
         // throw new Error('no audio stream for player id: ' + playerId);
-        return;
+        audioStream = outputStream;
       }
       // console.log('receive mic data', data.byteLength);
       audioStream.write(data);
-    } else if (method === UPDATE_METHODS.AUDIO_END) {
-      console.log('got end', {method, args});
+    } else if (method === UPDATE_METHODS.LEAVE) {
+      console.log('got leave', {method, args});
       const [playerId] = args;
 
       const audioStream = this.audioStreams.get(playerId);
-      if (!audioStream) {
-        console.log('unknown audio ended', playerId);
+      if (audioStream) {
+        // console.log('unknown audio ended', playerId);
         // debugger;
         // throw new Error('no audio stream for player id: ' + playerId);
-        return;
+        audioStream.close();
+        this.audioStreams.delete(playerId);
       }
-      audioStream.close();
-      this.audioStreams.delete(playerId);
     } else if (method === UPDATE_METHODS.JOIN) {
       const [playerId] = args;
       this.playerIds.push(playerId);
@@ -278,7 +259,8 @@ export class NetworkedAudioClient extends EventTarget {
         },
       }));
     } else {
-      console.warn('unhandled irc method', {method, args});
+      console.warn('unhandled irc method', updateObject);
+      debugger;
     }
   }
   sendChatMessage(message) {

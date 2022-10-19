@@ -8,7 +8,5 @@ export const UPDATE_METHODS = {
   JOIN: 7,
   LEAVE: 8,
   CHAT: 9,
-  AUDIO_START: 10,
-  AUDIO: 11,
-  AUDIO_END: 12,
+  AUDIO: 10,
 };

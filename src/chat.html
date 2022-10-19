@@ -183,9 +183,21 @@ p:last-of-type {
   width: 20em;
 }
 
-#audio-indicator {
+.player {
+  display: flex;
+  align-items: center;
+}
+#audio-indicator,
+.audio-icon
+{
   width: 20px;
   height: 20px;
+}
+.audio-icon {
+  margin-right: 8px;
+}
+.player:not(.speaking) .audio-icon {
+  visibility: hidden;
 }
 
 </style>
@@ -242,13 +254,6 @@ import {ensureAudioContext} from './public/wsrtc/ws-audio-context.js';
 // window.DataClient = DataClient;
 // window.DCMap = DCMap;
 // window.DCArray = DCArray;
-
-ensureAudioContext()
-  .then(async audioContext => {
-    await audioContext.resume();
-    audioIndicator.style.opacity = 1.;
-  })
-  .catch(console.warn);
 
 const _makeEmptyCrdt = () => {
   return new Map([
@@ -1245,7 +1250,7 @@ function join() {
       // console.log('player join', e.data);
 
       let p = document.createElement("p");
-      p.innerText = e.data.playerId;
+      p.innerHTML = `<div class="player"><img src="/public/images/audio.svg" class="audio-icon"><span class="name">${e.data.playerId}</span></div>`;
       roster.appendChild(p);
 
       const playerRenderer = new RemotePlayerRenderer(e.data.playerId, playerId, dc1);
@@ -1396,8 +1401,14 @@ function addChatMessage(name, text) {
   // change.
   pushChat(p);
 }
+const loadPromise = ensureAudioContext()
+  .then(async audioContext => {
+    startNameChooser();
 
-startNameChooser();
+    await audioContext.resume();
+    audioIndicator.style.opacity = 1.;
+  })
+  .catch(console.warn);
 </script>
 <!--===================================================================================-->
 </html>
