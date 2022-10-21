@@ -222,6 +222,15 @@ z-index: 2;
   
   // realms
   const realms = new NetworkRealms();
+  realms.addEventListener('realmconnecting', e => {
+    const {realm} = e.data;
+    const canvas = realmsCanvases.canvases.find(canvas => {
+      return canvas.min[0] === realm.min[0] && canvas.min[2] === realm.min[2];
+    });
+    if (canvas) {
+      canvas.classList.add('connecting');
+    }
+  });
   realms.addEventListener('realmjoin', e => {
     const {realm} = e.data;
     const canvas = realmsCanvases.canvases.find(canvas => {
@@ -229,6 +238,7 @@ z-index: 2;
     });
     if (canvas) {
       canvas.classList.add('connected');
+      canvas.classList.remove('connecting');
     }
     // console.log('join canvas', canvas);
   });
@@ -239,6 +249,7 @@ z-index: 2;
     });
     if (canvas) {
       canvas.classList.remove('connected');
+      canvas.classList.remove('connecting');
     }
     // console.log('leave canvas', canvas);
   });

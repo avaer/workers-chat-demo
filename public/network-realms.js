@@ -113,6 +113,12 @@ export class NetworkRealms extends EventTarget {
           }
 
           if (!foundRealm) {
+            this.dispatchEvent(new MessageEvent('realmconnecting', {
+              data: {
+                realm,
+              },
+            }));
+            
             const connectPromise = realm.connect().then(() => {
               this.connectedRealms.add(realm);
               return realm;
