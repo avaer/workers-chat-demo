@@ -164,7 +164,6 @@ class VirtualEntityArray extends EventTarget {
     this.dcCleanupFns = new Map();
   }
   addEntity(val) {
-    // console.log('add entity', val);
     const position = val[positionKey] ?? [0, 0, 0];
     const realm = this.parent.getClosestRealm(position);
     const array = new DCArray(this.arrayId, realm.dataClient);
@@ -172,7 +171,7 @@ class VirtualEntityArray extends EventTarget {
       map,
       update,
     } = array.add(val);
-    realm.dataClient.emitUpdate(update);
+    realm.emitUpdate(update);
     return map;
   }
   getOrCreateVirtualMap(arrayIndexId) {
@@ -269,6 +268,10 @@ export class NetworkRealm {
   disconnect() {
     console.warn('disconnect');
     this.ws.close();
+  }
+  emitUpdate(update) {
+    this.dataClient.emitUpdate(update);
+    this.networkedDataClient.emitUpdate(update);
   }
 }
 
