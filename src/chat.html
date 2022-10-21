@@ -293,10 +293,9 @@ import {DataClient, NetworkedDataClient, DCMap, DCArray} from "/public/data-clie
 import {NetworkedIrcClient} from "/public/irc-client.js";
 import {NetworkedAudioClient} from "/public/audio-client.js";
 import {UPDATE_METHODS} from './public/update-types.js';
-import {serializeMessage} from './public/util.mjs';
+import {createWs, serializeMessage, makePromise} from './public/util.mjs';
 import {ensureAudioContext} from './public/wsrtc/ws-audio-context.js';
 import {startGame} from './public/game.js';
-import {createWs} from './public/util.mjs';
 
 // window.zbencode = zbencode;
 // window.zbdecode = zbdecode;
@@ -775,7 +774,7 @@ const testImportExport = () => {
   console.assert(player2.getKey('position')); // has been imported
   console.assert(arrayEquals(player2.getKey('position'), position));
 };
-const createTestWs = () => createWs(roomname, playerId);
+const createTestWs = () => createWs(roomname + ':test', playerId);
 const testMultiplayer = async () => {
   // player 1
 
@@ -810,11 +809,10 @@ const testMultiplayer = async () => {
   });
   const updateBuffer = serializeMessage(update);
   dc1.emitUpdate(update);
-  // console.log('send ipdate buffer', updateBuffer);
   ndc1.send(updateBuffer);
 
   const players2 = dc2.getArray('players');
-  const update2 = await new Promise((resolve, reject) => {
+  /* const update2 = await new Promise((resolve, reject) => {
     const update = e => {
       resolve(e.data.update);
       cleanup();
@@ -823,20 +821,21 @@ const testMultiplayer = async () => {
     const cleanup = () => {
       ndc2.removeEventListener('update', update);
     };
-  });
+  }); */
 
   let updated;
   let player2;
   {
     updated = 0;
-    // console.log('wait for update', update2);
+    const updatePromise = makePromise();
     players2.addEventListener('add', e => {
-      // console.log('got player add', e.data);
       player2 = e.data.map;
       updated++;
+      updatePromise.resolve();
     });
+    await updatePromise;
   }
-  dc2.emitUpdate(update2);
+  // dc2.emitUpdate(update2);
 
   console.assert(updated === 1);
   console.assert(player2);
@@ -858,17 +857,17 @@ const testIrc = async () => {
   const nirc2 = new NetworkedIrcClient(ws2);
 
   let numPlayers1 = 0;
-  nirc1.addEventListener('playerjoin', e => {
+  nirc1.addEventListener('join', e => {
     numPlayers1++;
   });
-  nirc1.addEventListener('playerleave', e => {
+  nirc1.addEventListener('leave', e => {
     numPlayers1--;
   });
   let numPlayers2 = 0;
-  nirc2.addEventListener('playerjoin', e => {
+  nirc2.addEventListener('join', e => {
     numPlayers2++;
   });
-  nirc2.addEventListener('playerleave', e => {
+  nirc2.addEventListener('leave', e => {
     numPlayers2--;
   });
 
