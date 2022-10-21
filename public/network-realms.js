@@ -58,13 +58,30 @@ const makeTransactionHandler = () => {
 //
 
 class VirtualPlayersArray extends EventTarget {
-
+  
 }
 
 //
 
 class VirtualEntityMap extends EventTarget {
+  constructor(arrayIndexId, virtualArray) {
+    this.arrayIndexId = arrayIndexId;
+    this.virtualArray = virtualArray;
+  }
+  link(networkedDataClient, map) {
+    // listen for map update events
+    map.addEventListener('update', e => {
+      const {
+        key,
+        epoch,
+        val,
+      } = e.data;
+      // XXX only handle if this is the king data client
+    });
+  }
+  unlink() {
 
+  }
 }
 
 class VirtualEntityArray extends EventTarget {
@@ -74,45 +91,23 @@ class VirtualEntityArray extends EventTarget {
     this.arrayId = arrayId;
     this.parent = parent;
 
-    this.dataClients = new Map();
-    this.kingDataClient = null;
     this.virtualMaps = new Map();
     this.dcCleanupFns = new Map();
   }
   addEntity(val) {
+    // XXX add to the dynamically computed center realm based on position
+    const {centerRealm} = this.parent;
     const {
       map,
       update,
-    } = this.kingDataClient.add(val);
-    this.kingDataClient.emitUpdate(update);
+    } = centerRealm.dataClient.add(val);
+    centerRealm.dataClient.emitUpdate(update);
     return map;
-  }
-  #getKingDataClient() {
-    let king = null;
-    let kingPlayerId = '';
-    for (const [playerId, dcArray] of this.dataClients) {
-      if (king === null || playerId.localeCompare(kingPlayerId) > 0) {
-        king = dcArray;
-        kingPlayerId = playerId;
-      }
-    }
-    return king;
-  }
-  updateKingDataClient() {
-    const newKing = this.#getKingDataClient();
-    if (newKing !== this.kingDataClient) {
-      const oldKing = this.kingDataClient;
-      this.kingDataClient = newKing;
-      this.dispatchEvent(new MessageEvent('kingchange', {
-        oldKing,
-        newKing,
-      }));
-    }
   }
   getOrCreateVirtualMap(arrayIndexId) {
     let virtualMap = this.virtualMaps.get(arrayIndexId);
     if (!virtualMap) {
-      virtualMap = new VirtualEntityMap(this);
+      virtualMap = new VirtualEntityMap(arrayIndexId, this);
       this.virtualMaps.set(arrayIndexId, virtualMap);
     
       this.dispatchEvent(new MessageEvent('entityadd', {
@@ -133,21 +128,19 @@ class VirtualEntityArray extends EventTarget {
     return virtualMap;
   }
   link(networkedDataClient) {
-    this.dataClients.set(networkedDataClient.playerId, networkedDataClient.dataClient);
-
-    // bind virtual maps
+    // bind local array maps to virutal maps
     const dcArray = networkedDataClient.dataClient.getArray(this.arrayId);
     const localVirtualMaps = new Map();
     dcArray.addEventListener('add', e => {
       const {arrayIndexId, map} = e.data;
       const virtualMap = this.getOrCreateVirtualMap(arrayIndexId);
-      virtualMap.link(networkedDataClient, map);
-      localVirtualMaps.set(arrayIndexId, virtualMap);
+      virtualMap.link(map);
+      localVirtualMaps.set(map, virtualMap);
     });
     dcArray.addEventListener('remove', e => {
       const {arrayIndexId} = e.data;
       const virtualMap = this.virtualMaps.get(arrayIndexId);
-      virtualMap.unlink(networkedDataClient);
+      virtualMap.unlink(arrayIndexId);
       localVirtualMaps.delete(arrayIndexId);
     });
     
@@ -156,8 +149,6 @@ class VirtualEntityArray extends EventTarget {
       for (const localVirtualMap of localVirtualMaps.values()) {
         localVirtualMap.unlink(networkedDataClient);
       }
-      
-      this.dataClients.delete(networkedDataClient.playerId);
     });
   }
   unlink(networkedDataClient) {
@@ -212,6 +203,7 @@ export class NetworkRealms extends EventTarget {
     this.players = new VirtualPlayersArray();
     this.world = new VirtualEntityArray('world', this);
     this.connectedRealms = new Set();
+    this.centerRealm = null;
     this.tx = makeTransactionHandler();
   }
   getVirtualPlayers() {
@@ -232,9 +224,9 @@ export class NetworkRealms extends EventTarget {
         for (let dz = -1; dz <= 1; dz++) {
           for (let dx = -1; dx <= 1; dx++) {
             const min = [
-              Math.floor((position[0] + dx * realmSize) / realmSize) * realmSize,
+              Math.floor((snappedPosition[0] + dx * realmSize) / realmSize) * realmSize,
               0,
-              Math.floor((position[2] + dz * realmSize) / realmSize) * realmSize,
+              Math.floor((snappedPosition[2] + dz * realmSize) / realmSize) * realmSize,
             ];
             const realm = new NetworkRealm(min, realmSize, this);
             candidateRealms.push(realm);
@@ -252,7 +244,11 @@ export class NetworkRealms extends EventTarget {
             }
           }
 
-          if (!foundRealm) {
+          if (foundRealm) {
+            if (arrayEquals(foundRealm.min, snappedPosition)) {
+              this.centerRealm = foundRealm;
+            }
+          } else {
             this.dispatchEvent(new MessageEvent('realmconnecting', {
               data: {
                 realm,
@@ -262,6 +258,9 @@ export class NetworkRealms extends EventTarget {
             const connectPromise = (async () => {
               await realm.connect();
               this.connectedRealms.add(realm);
+              if (arrayEquals(realm.min, snappedPosition)) {
+                this.centerRealm = realm;
+              }
               this.world.link(realm.networkedDataClient);
               this.dispatchEvent(new MessageEvent('realmjoin', {
                 data: {
