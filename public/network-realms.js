@@ -1,5 +1,5 @@
 import {DataClient, NetworkedDataClient, DCMap, DCArray} from './data-client.mjs';
-import {createWs} from './util.mjs';
+import {createWs, makePromise} from './util.mjs';
 
 //
 
@@ -27,16 +27,6 @@ const distanceTo = (a, b) => {
   const dz = za - zb;
   return Math.sqrt(dx*dx + dy*dy + dz*dz);
 };
-const makePromise = () => {
-  let resolve, reject;
-  const promise = new Promise((a, b) => {
-    resolve = a;
-    reject = b;
-  });
-  promise.resolve = resolve;
-  promise.reject = reject;
-  return promise;
-}
 const makeTransactionHandler = () => {
   let running = false;
   const queue = [];
