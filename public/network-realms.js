@@ -66,16 +66,47 @@ class VirtualEntityArray extends EventTarget {
     this.arrayId = arrayId;
     this.listenOnArray = listenOnArray;
 
-    this.dataClients = [];
     this.dcArray = null;
+    this.dcCleanupFns = new Map();
   }
   link(dataClient) {
+    if (!dataClient) {
+      debugger;
+    }
     this.dcArray = dataClient.getArray(this.arrayId);
 
-    this.dataClients.push(dataClient);
     if (this.listenOnArray) {
-      dataClient.onArrayUpdate(this.arrayId, this._handleArrayUpdate);
+      const listeners = new Map();
+      this.dcArray.addEventListener('add', e => {
+        const {arrayIndexId, map} = e.data;
+        listeners.set(arrayIndexId, map);
+        this.dispatchEvent(new MessageEvent('entityadd', {
+          data: {
+            id: arrayIndexId,
+            entity: map,
+          },
+        }));
+      });
+      this.dcArray.addEventListener('remove', e => {
+        const {arrayIndexId} = e.data;
+        this.dispatchEvent(new MessageEvent('entityremove', {
+          data: {
+            arrayIndexId,
+          },
+        }));
+      });
+      listeners.set(null, this.dcArray);
+      
+      this.dcCleanupFns.set(dataClient, () => {
+        for (const listener of listeners.values()) {
+          listener.unlisten();
+        }
+      });
     }
+  }
+  unlink(dataClient) {
+    const cleanupFn = this.dcCleanupFns.get(dataClient);
+    cleanupFn();
   }
 }
 
@@ -174,26 +205,26 @@ export class NetworkRealms extends EventTarget {
               },
             }));
 
-            const connectPromise = realm.connect().then(() => {
+            const connectPromise = (async () => {
+              await realm.connect();
               this.connectedRealms.add(realm);
-              return realm;
-            });
+              this.world.link(realm.dataClient);
+              this.dispatchEvent(new MessageEvent('realmjoin', {
+                data: {
+                  realm,
+                },
+              }));
+            })();
             connectPromises.push(connectPromise);
           }
         }
-        const newRealms = await Promise.all(connectPromises);
-        for (const newRealm of newRealms) {
-          this.dispatchEvent(new MessageEvent('realmjoin', {
-            data: {
-              realm: newRealm,
-            },
-          }));
-        }
+        await Promise.all(connectPromises);
 
         // check if we need to disconnect from any realms
         const oldRealms = [];
         for (const connectedRealm of this.connectedRealms) {
           if (!candidateRealms.find(candidateRealm => candidateRealm.key === connectedRealm.key)) {
+            this.world.unlink(connectedRealm.dataClient);
             connectedRealm.disconnect();
             this.connectedRealms.delete(connectedRealm);
             oldRealms.push(connectedRealm);

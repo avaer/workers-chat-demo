@@ -210,11 +210,14 @@ export class DCMap extends EventTarget {
       this.dataClient.removeEventListener(removeKey, removeFn);
     };
   }
-  destroy() {
+  unlisten() {
     if (this.cleanupFn) {
       this.cleanupFn();
       this.cleanupFn = null;
     }
+  }
+  destroy() {
+    this.unlisten();
   }
 }
 export class DCArray extends EventTarget {
@@ -287,11 +290,14 @@ export class DCArray extends EventTarget {
       this.dataClient.removeEventListener(removeKey, removeFn);
     };
   }
-  destroy() {
+  unlisten() {
     if (this.cleanupFn) {
       this.cleanupFn();
       this.cleanupFn = null;
     }
+  }
+  destroy() {
+    this.unlisten();
   }
 }
 export class DataClient extends EventTarget {
