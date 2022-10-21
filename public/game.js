@@ -194,6 +194,10 @@ z-index: 2;
           localPlayerCanvas.velocity[0] = 1;
           break;
         }
+        case 'KeyE': {
+          _pickupDrop();
+          break;
+        }
       }
     }
   });
@@ -219,6 +223,62 @@ z-index: 2;
   });
   localPlayerCanvas.canvas.tabIndex = -1;
   document.body.appendChild(localPlayerCanvas.canvas);
+
+  // action methods
+  const _pickupDrop = () => {
+    let baseDirection;
+    if (localPlayerCanvas.direction[0] === -1) {
+      baseDirection = [-1, 0, 0];
+    } else if (localPlayerCanvas.direction[0] === 1) {
+      baseDirection = [1, 0, 0];
+    } else if (localPlayerCanvas.direction[2] === -1) {
+      baseDirection = [0, 0, -1];
+    } else {
+      baseDirection = [0, 0, 1];
+    }
+    const targetPosition = [
+      localPlayerCanvas.position[0] + baseDirection[0] * frameSize,
+      0,
+      localPlayerCanvas.position[2] + baseDirection[2] * frameSize - frameSize / 2,
+    ];
+    console.log('got base direction', targetPosition, baseDirection);
+    const targetBox = {
+      min: [
+        targetPosition[0] - frameSize / 2,
+        0,
+        targetPosition[2] - frameSize / 2,
+      ],
+      max: [
+        targetPosition[0] + frameSize / 2,
+        0,
+        targetPosition[2] + frameSize / 2,
+      ],
+    };
+    const _boxContains = (box, position) => {
+      return position[0] >= box.min[0] && position[0] <= box.max[0] &&
+        position[1] >= box.min[1] && position[1] <= box.max[1] &&
+        position[2] >= box.min[2] && position[2] <= box.max[2];
+    };
+    
+    const inventory = document.querySelector('#inventory');
+    const inventoryItems = Array.from(inventory.querySelectorAll('.realms-item'));
+    const world = document.querySelector('#world');
+    const worldItems = Array.from(world.querySelectorAll('.realms-item'));
+    const collidedItem = worldItems.find(item => _boxContains(targetBox, item.position));
+    if (collidedItem) {
+      inventory.appendChild(collidedItem);
+      collidedItem.style.left = null;
+      collidedItem.style.top = null;
+    } else {
+      if (inventoryItems.length > 0) {
+        const item = inventoryItems.pop();
+        item.position = targetPosition.slice();
+        item.style.left = `${targetPosition[0]}px`;
+        item.style.top = `${targetPosition[2]}px`;
+        world.appendChild(item);
+      }
+    }
+  };
   
   // realms
   const realms = new NetworkRealms();

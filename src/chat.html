@@ -221,6 +221,33 @@ p:last-of-type {
   filter: invert(57%) sepia(55%) saturate(5304%) hue-rotate(90deg) brightness(128%) contrast(116%);
 }
 
+/* */
+
+#world {
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+#world .realms-item {
+  position: absolute;
+  margin-top: -32px;
+  margin-left: -32px;
+}
+
+#inventory {
+  position: fixed;
+  bottom: 100px;
+  right: 0;
+  width: 200px;
+  height: 200px;
+  border: 3px solid;
+  border-radius: 20px;
+}
+.realms-item img {
+  width: 64px;
+  height: 64px;
+}
+
 </style>
 
 <!--===================================================================================-->
@@ -245,11 +272,10 @@ p:last-of-type {
         <div id="spacer"></div>
       </div>
       <div id="roster"></div>
-      <div id="object">
-        <textarea id="object-input" placeholder="{}"></textarea>
-        <input type="button" id="commit-button" value="Commit">
-        <input type="button" id="push-button" value="Push">
-        <input type="button" id="pull-button" value="Pull">
+      <div id="world"></div>
+      <div id="inventory">
+        <div class="realms-item"><img src="/public/images/rock.png"></div>
+        <div class="realms-item"><img src="/public/images/rock.png"></div>
       </div>
       </div>
       <input id="chat-input" autocomplete="off">
@@ -909,24 +935,25 @@ let chatroom = document.querySelector("#chatroom");
 let chatlog = document.querySelector("#chatlog");
 let chatInput = document.querySelector("#chat-input");
 let roster = document.querySelector("#roster");
-let object = document.querySelector("#object");
-let objectInput = document.querySelector("#object-input");
-let commitButton = document.querySelector("#commit-button");
-let pushButton = document.querySelector("#push-button");
-let pullButton = document.querySelector("#pull-button");
+// let object = document.querySelector("#object");
+// let objectInput = document.querySelector("#object-input");
+// let commitButton = document.querySelector("#commit-button");
+// let pushButton = document.querySelector("#push-button");
+// let pullButton = document.querySelector("#pull-button");
+let inventory = document.querySelector("#inventory");
 
-objectInput.addEventListener('click', e => {
-  e.stopPropagation();
-});
-commitButton.addEventListener('click', e => {
-  console.log('commit', objectInput.value);
-});
-pushButton.addEventListener('click', e => {
-  console.log('push', objectInput.value);
-});
-pullButton.addEventListener('click', e => {
-  console.log('pull', objectInput.value);
-});
+// objectInput.addEventListener('click', e => {
+//   e.stopPropagation();
+// });
+// commitButton.addEventListener('click', e => {
+//   console.log('commit', objectInput.value);
+// });
+// pushButton.addEventListener('click', e => {
+//   console.log('push', objectInput.value);
+// });
+// pullButton.addEventListener('click', e => {
+//   console.log('pull', objectInput.value);
+// });
 
 const pushChat = div => {
   chatlog.appendChild(div);
