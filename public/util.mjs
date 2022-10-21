@@ -205,6 +205,18 @@ const createWs = (roomname, playerId) => {
   return ws;
 };
 
+const makePromise = () => {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  promise.resolve = resolve;
+  promise.reject = reject;
+  return promise;
+}
+
 export {
   alignN,
   align4,
@@ -213,4 +225,5 @@ export {
   parseMessage,
   serializeMessage,
   createWs,
+  makePromise,
 };
