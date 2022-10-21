@@ -1177,14 +1177,7 @@ function startChat() {
       }));
       currentWebSocket.send(JSON.stringify({message: chatInput.value})); */
 
-      currentWebSocket.send(zbencode({
-        method: UPDATE_METHODS.CHAT,
-        args: [
-          playerId,
-          chatInput.value,
-        ],
-      }));
-
+      nirc.sendChatMessage(chatInput.value);
       chatInput.value = '';
 
       // Scroll to bottom whenever sending a message.
@@ -1268,25 +1261,25 @@ function join() {
     }
   }
 
+  let dc;
+  let ndc;
+  let nirc;
+  let nac;
   ws.addEventListener("open", event => {
     currentWebSocket = ws;
-
-    // Send user info message.
-    // ws.send(JSON.stringify({name: username}));
   });
-
   (async () => {
     console.log('connecting...');
-    const dc1 = new DataClient({
+    const dc = new DataClient({
       crdt: _makeEmptyCrdt(),
     });
     ws.binaryType = 'arraybuffer';
-    const ndc1 = new NetworkedDataClient(dc1, ws);
-    const nirc1 = new NetworkedIrcClient(ws, playerId);
-    const nac1 = new NetworkedAudioClient(ws, playerId);
+    ndc = new NetworkedDataClient(dc, ws);
+    nirc = new NetworkedIrcClient(ws, playerId);
+    nac = new NetworkedAudioClient(ws, playerId);
 
     // chat
-    nirc1.addEventListener('chat', e => {
+    nirc.addEventListener('chat', e => {
       const {playerId, message} = e.data;
       addChatMessage(playerId, message);
     });
@@ -1314,12 +1307,12 @@ function join() {
         }
       }
     };
-    nac1.addEventListener('audiostreamstart', e => {
+    nac.addEventListener('audiostreamstart', e => {
       const {playerId} = e.data;
       // console.log('stream start', playerId);
       _enableAudioOutput(playerId);
     });
-    nac1.addEventListener('audiostreamend', e => {
+    nac.addEventListener('audiostreamend', e => {
       const {playerId} = e.data;
       // console.log('stream end', playerId);
       _disableAudioOutput(playerId);
@@ -1327,7 +1320,7 @@ function join() {
 
     // remote players
     const playerRenderers = [];
-    nirc1.addEventListener('join', e => {
+    nirc.addEventListener('join', e => {
       // console.log('player join', e.data);
 
       let p = document.createElement("p");
@@ -1335,10 +1328,10 @@ function join() {
       p.innerHTML = `<img src="/public/images/audio.svg" class="audio-icon"><span class="name">${e.data.playerId}</span>`;
       roster.appendChild(p);
 
-      const playerRenderer = new RemotePlayerHtmlRenderer(e.data.playerId, playerId, dc1);
+      const playerRenderer = new RemotePlayerHtmlRenderer(e.data.playerId, playerId, dc);
       playerRenderers.push(playerRenderer);
     });
-    nirc1.addEventListener('leave', e => {
+    nirc.addEventListener('leave', e => {
       // console.log('player leave', e.data);
 
       const {playerId} = e.data;
@@ -1362,15 +1355,15 @@ function join() {
     
     // wait for connection
     await Promise.all([
-      ndc1.connect(),
-      nirc1.connect(),
-      nac1.connect(),
+      ndc.connect(),
+      nirc.connect(),
+      nac.connect(),
     ]);
 
     console.log('connected!');
 
     // local player renderer
-    const localPlayerRenderer = new LocalPlayerRenderer(playerId, dc1, ndc1);
+    const localPlayerRenderer = new LocalPlayerRenderer(playerId, dc, ndc);
     ws.addEventListener('close', e => {
       localPlayerRenderer.destroy();
     });
