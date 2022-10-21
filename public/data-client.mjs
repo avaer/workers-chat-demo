@@ -785,9 +785,9 @@ export class NetworkedDataClient extends EventTarget {
     this.ws.addEventListener('message', mainMessage);
   }
   send(msg) {
-    // const buffer = msg.slice().buffer;
-    // console.log('send', buffer);
-    // this.ws.send(buffer);
     this.ws.send(msg);
+  }
+  emitUpdate(update) {
+    this.send(this.dataClient.serializeMessage(update));
   }
 }
