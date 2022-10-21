@@ -96,12 +96,13 @@ async function createMicrophoneSource() {
 }
 
 export class NetworkedAudioClient extends EventTarget {
-  constructor(ws, playerId = makeId()) {
+  constructor(playerId = makeId()) {
     super();
-    this.ws = ws;
     this.playerId = playerId;
 
     this.audioStreams = new Map();
+
+    this.ws = null;
 
     if (typeof window !== 'undefined') {
       window.startAudio = async () => {
@@ -147,7 +148,9 @@ export class NetworkedAudioClient extends EventTarget {
   disableMic() {
     window.stopAudio();
   }
-  async connect() {
+  async connect(ws) {
+    this.ws = ws;
+
     await new Promise((resolve, reject) => {
       resolve = (resolve => () => {
         resolve();

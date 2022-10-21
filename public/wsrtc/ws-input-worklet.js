@@ -10,15 +10,16 @@ class WsInputWorklet extends AudioWorkletProcessor {
   process(inputs, outputs, parameters) {
     const channels = inputs[0];
     const firstChannel = channels[0];
-    for (let i = 0; i < firstChannel.length; i++) {
-      this.buffer[this.bufferIndex++] = firstChannel[i];
-      if (this.bufferIndex >= this.buffer.length) {
-        this.port.postMessage(this.buffer, [this.buffer.buffer]);
-        this.buffer = new Float32Array(bufferSize);
-        this.bufferIndex = 0;
+    if (firstChannel) {
+      for (let i = 0; i < firstChannel.length; i++) {
+        this.buffer[this.bufferIndex++] = firstChannel[i];
+        if (this.bufferIndex >= this.buffer.length) {
+          this.port.postMessage(this.buffer, [this.buffer.buffer]);
+          this.buffer = new Float32Array(bufferSize);
+          this.bufferIndex = 0;
+        }
       }
     }
-    
     return true;
   }
 }

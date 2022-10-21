@@ -62,7 +62,33 @@ const makeTransactionHandler = () => {
 //
 
 class VirtualPlayersArray extends EventTarget {
-  
+  constructor() {
+    super();
+
+    this.cleanupFns = new Map();
+  }
+  link(networkedDataClient) {
+    const players = networkedDataClient.dataClient.getArray('players');
+
+    const onadd = e => {
+      console.log('got virtual player base add', e);
+    };
+    players.addEventListener('add', onadd);
+    const onremove = e => {
+      console.log('got on remove', e);
+    };
+    players.addEventListener('got virtual player base remove', onremove);
+
+    this.cleanupFns.set(networkedDataClient, () => {
+      players.removeEventListener('add', onadd);
+      players.removeEventListener('remove', onremove);
+      players.unlisten();
+    });
+  }
+  unlink(networkedDataClient) {
+    this.cleanupFns.get(networkedDataClient)();
+    this.cleanupFns.delete(networkedDataClient);
+  }
 }
 
 //
@@ -230,34 +256,30 @@ export class NetworkRealm {
 
     this.key = min.join(':');
     
-    this.ws = null;
-    this.dataClient = null;
-    this.networkedDataClient = null;
-  }
-  async connect() {
     const dc1 = new DataClient({
       crdt: new Map(),
       userData: {
         realm: this,
       },
     });
-    const ws1 = createWs('realm:' + this.key, this.parent.playerId);
-    ws1.binaryType = 'arraybuffer';
-    const ndc1 = new NetworkedDataClient(dc1, ws1, {
+    this.dataClient = dc1;
+    this.networkedDataClient = new NetworkedDataClient(dc1, {
       userData: {
         realm: this,
       },
     });
-
+    this.ws = null;
+  }
+  async connect() {
+    const ws1 = createWs('realm:' + this.key, this.parent.playerId);
+    ws1.binaryType = 'arraybuffer';
+    await this.networkedDataClient.connect(ws1);
     this.ws = ws1;
-    this.dataClient = dc1;
-    this.networkedDataClient = ndc1;
-
-    await this.networkedDataClient.connect();
   }
   disconnect() {
     console.warn('disconnect');
     this.ws.close();
+    this.ws = null;
   }
   emitUpdate(update) {
     this.dataClient.emitUpdate(update);
@@ -330,9 +352,9 @@ export class NetworkRealms extends EventTarget {
           }
 
           if (foundRealm) {
-            if (arrayEquals(foundRealm.min, snappedPosition)) {
-              this.centerRealm = foundRealm;
-            }
+            // if (arrayEquals(foundRealm.min, snappedPosition)) {
+            //   this.centerRealm = foundRealm;
+            // }
           } else {
             this.dispatchEvent(new MessageEvent('realmconnecting', {
               data: {
@@ -341,12 +363,20 @@ export class NetworkRealms extends EventTarget {
             }));
 
             const connectPromise = (async () => {
-              await realm.connect();
-              this.connectedRealms.add(realm);
-              if (arrayEquals(realm.min, snappedPosition)) {
-                this.centerRealm = realm;
-              }
+              this.players.link(realm.networkedDataClient);
               this.world.link(realm.networkedDataClient);
+              
+              try {
+                await realm.connect();
+              } catch(err) {
+                this.players.unlink(realm.networkedDataClient);
+                this.world.unlink(realm.networkedDataClient);
+                throw err;
+              }
+              this.connectedRealms.add(realm);
+              // if (arrayEquals(realm.min, snappedPosition)) {
+              //   this.centerRealm = realm;
+              // }
               this.dispatchEvent(new MessageEvent('realmjoin', {
                 data: {
                   realm,

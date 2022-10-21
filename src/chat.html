@@ -850,11 +850,11 @@ const testMultiplayer = async () => {
 const testIrc = async () => {
   const ws1 = createTestWs();
   ws1.binaryType = 'arraybuffer';
-  const nirc1 = new NetworkedIrcClient(ws1);
+  const nirc1 = new NetworkedIrcClient();
 
   const ws2 = createTestWs();
   ws2.binaryType = 'arraybuffer';
-  const nirc2 = new NetworkedIrcClient(ws2);
+  const nirc2 = new NetworkedIrcClient();
 
   let numPlayers1 = 0;
   nirc1.addEventListener('join', e => {
@@ -872,8 +872,8 @@ const testIrc = async () => {
   });
 
   await Promise.all([
-    nirc1.connect(),
-    nirc2.connect(),
+    nirc1.connect(ws1),
+    nirc2.connect(ws2),
   ]);
 
   console.assert(numPlayers1 >= 1);
@@ -1275,8 +1275,8 @@ function join() {
     });
     ws.binaryType = 'arraybuffer';
     ndc = new NetworkedDataClient(dc, ws);
-    nirc = new NetworkedIrcClient(ws, playerId);
-    nac = new NetworkedAudioClient(ws, playerId);
+    nirc = new NetworkedIrcClient(playerId);
+    nac = new NetworkedAudioClient(playerId);
 
     // chat
     nirc.addEventListener('chat', e => {
@@ -1355,9 +1355,9 @@ function join() {
     
     // wait for connection
     await Promise.all([
-      ndc.connect(),
-      nirc.connect(),
-      nac.connect(),
+      ndc.connect(ws),
+      nirc.connect(ws),
+      nac.connect(ws),
     ]);
 
     console.log('connected!');
@@ -1390,10 +1390,10 @@ function join() {
       div.childNodes[0].addEventListener('click', e => {
         if (!recording) {
           div.childNodes[0].innerText = 'Stop';
-          nac1.enableMic();
+          nac.enableMic();
         } else {
           div.childNodes[0].innerText = 'Record';
-          nac1.disableMic();
+          nac.disableMic();
         }
         recording = !recording;
       });

@@ -690,14 +690,14 @@ export class DataClient extends EventTarget {
 //
 
 export class NetworkedDataClient extends EventTarget {
-  constructor(dataClient, ws, {
+  constructor(dataClient, {
     userData = {},
   } = {}) {
     super();
 
     this.dataClient = dataClient;
-    this.ws = ws;
     this.userData = userData;
+    this.ws = null;
   }
   static handlesMethod(method) {
     return [
@@ -708,7 +708,9 @@ export class NetworkedDataClient extends EventTarget {
       UPDATE_METHODS.ROLLBACK,
     ].includes(method);
   }
-  async connect() {
+  async connect(ws) {
+    this.ws = ws;
+
     await new Promise((resolve, reject) => {
       resolve = (resolve => () => {
         resolve();

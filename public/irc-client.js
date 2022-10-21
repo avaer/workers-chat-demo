@@ -9,12 +9,13 @@ export class IrcPlayer extends EventTarget {
 }
 
 export class NetworkedIrcClient extends EventTarget {
-  constructor(ws, playerId = makeId()) {
+  constructor(playerId = makeId()) {
     super();
-    this.ws = ws;
 
     this.playerId = playerId;
     this.playerIds = [];
+
+    this.ws = null;
   }
   static handlesMethod(method) {
     return [
@@ -24,7 +25,9 @@ export class NetworkedIrcClient extends EventTarget {
       UPDATE_METHODS.CHAT,
     ].includes(method);
   }
-  async connect() {
+  async connect(ws) {
+    this.ws = ws;
+    
     await new Promise((resolve, reject) => {
       resolve = (resolve => () => {
         resolve();
