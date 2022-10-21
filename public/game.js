@@ -226,22 +226,11 @@ z-index: 2;
 
   // action methods
   const _pickupDrop = () => {
-    let baseDirection;
-    if (localPlayerCanvas.direction[0] === -1) {
-      baseDirection = [-1, 0, 0];
-    } else if (localPlayerCanvas.direction[0] === 1) {
-      baseDirection = [1, 0, 0];
-    } else if (localPlayerCanvas.direction[2] === -1) {
-      baseDirection = [0, 0, -1];
-    } else {
-      baseDirection = [0, 0, 1];
-    }
     const targetPosition = [
-      localPlayerCanvas.position[0] + baseDirection[0] * frameSize,
+      localPlayerCanvas.position[0] + localPlayerCanvas.direction[0] * frameSize,
       0,
-      localPlayerCanvas.position[2] + baseDirection[2] * frameSize - frameSize / 2,
+      localPlayerCanvas.position[2] + localPlayerCanvas.direction[2] * frameSize - frameSize / 2,
     ];
-    console.log('got base direction', targetPosition, baseDirection);
     const targetBox = {
       min: [
         targetPosition[0] - frameSize / 2,
