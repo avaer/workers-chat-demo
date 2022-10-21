@@ -15,12 +15,32 @@ class GamePlayerCanvas {
     this.cancelFn = null;
 
     this.position = [0, 0, 0];
-    this.direction = [0, 0, 0];
+    this.velocity = [0, 0, 0];
+    this.direction = [0, 0, 1];
   }
   move() {
     const speed = 3;
-    this.position[0] += this.direction[0] * speed;
-    this.position[2] += this.direction[2] * speed;
+    this.position[0] += this.velocity[0] * speed;
+    this.position[2] += this.velocity[2] * speed;
+    
+    // this.direction[0] = 0;
+    // this.direction[1] = 0;
+    // this.direction[2] = 0;
+    if (this.velocity[2] < 0) {
+      this.direction[0] = 0;
+      this.direction[2] = -1;
+    } else if (this.velocity[0] < 0) {
+      this.direction[0] = -1;
+      this.direction[2] = 0;
+    } else if (this.velocity[0] > 0) {
+      this.direction[0] = 1;
+      this.direction[2] = 0;
+    } else if (this.velocity[2] > 0) {
+      this.direction[0] = 0;
+      this.direction[2] = 1;
+    } else {
+      // nothing
+    }
   }
   draw() {
     let row;
@@ -92,14 +112,46 @@ class GamePlayerCanvas {
 
 //
 
-const realmSize = 300;
-const realmsSize = realmSize * 3;
-class GameRealmsCanvas {
+const realmSize = 200;
+// const realmsSize = realmSize * 3;
+const _drawRectangle = (ctx, color) => {
+  const innerBorder = 3;
+  const borderWidth = 3;
+  ctx.fillStyle = color;
+  ctx.fillRect(innerBorder, innerBorder, realmSize - innerBorder * 2, borderWidth); // top
+  ctx.fillRect(innerBorder, realmSize - borderWidth - innerBorder, realmSize - innerBorder * 2, borderWidth); // bottom
+  ctx.fillRect(innerBorder, innerBorder, borderWidth, realmSize - innerBorder * 2); // left
+  ctx.fillRect(realmSize - borderWidth - innerBorder, innerBorder, borderWidth, realmSize - innerBorder * 2); // right
+};
+class GameRealmsCanvases {
   constructor() {
-    this.canvas = document.createElement('canvas');
-    this.canvas.width = realmsSize;
-    this.canvas.height = realmsSize;
-    this.ctx = this.canvas.getContext('2d');
+    this.canvases = [];
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const canvas = document.createElement('canvas');
+        canvas.className = 'network-realm';
+        canvas.width = realmSize;
+        canvas.height = realmSize;
+        const x = dx + 1;
+        const z = dz + 1;
+        canvas.style.cssText = `\
+position: fixed;
+left: ${realmSize * x}px;
+top: ${realmSize * z}px;
+z-index: 1;
+        `
+        const ctx = canvas.getContext('2d');
+        _drawRectangle(ctx, '#CCC');
+
+        canvas.min = [x * realmSize, 0, z * realmSize];
+        canvas.size = realmSize;
+        canvas.setColor = color => {
+          _drawRectangle(ctx, color);
+        };
+        
+        this.canvases.push(canvas);
+      }
+    }
   }
 }
 
@@ -110,7 +162,7 @@ export const startGame = async () => {
   localPlayerCanvas.canvas.style.cssText = `\
 position: fixed;
 outline: none;
-z-index: 1;
+z-index: 2;
   `;
   localPlayerCanvas.canvas.classList.add('player-sprite');
   let localPlayerFocused = false;
@@ -127,19 +179,19 @@ z-index: 1;
       // WASD
       switch (e.code) {
         case 'KeyW': {
-          localPlayerCanvas.direction[2] = -1;
+          localPlayerCanvas.velocity[2] = -1;
           break;
         }
         case 'KeyA': {
-          localPlayerCanvas.direction[0] = -1;
+          localPlayerCanvas.velocity[0] = -1;
           break;
         }
         case 'KeyS': {
-          localPlayerCanvas.direction[2] = 1;
+          localPlayerCanvas.velocity[2] = 1;
           break;
         }
         case 'KeyD': {
-          localPlayerCanvas.direction[0] = 1;
+          localPlayerCanvas.velocity[0] = 1;
           break;
         }
       }
@@ -148,19 +200,19 @@ z-index: 1;
   window.addEventListener('keyup', e => {
     switch (e.code) {
       case 'KeyW': {
-        localPlayerCanvas.direction[2] = 0;
+        localPlayerCanvas.velocity[2] = 0;
         break;
       }
       case 'KeyA': {
-        localPlayerCanvas.direction[0] = 0;
+        localPlayerCanvas.velocity[0] = 0;
         break;
       }
       case 'KeyS': {
-        localPlayerCanvas.direction[2] = 0;
+        localPlayerCanvas.velocity[2] = 0;
         break;
       }
       case 'KeyD': {
-        localPlayerCanvas.direction[0] = 0;
+        localPlayerCanvas.velocity[0] = 0;
         break;
       }
     }
@@ -170,10 +222,32 @@ z-index: 1;
   
   // realms
   const realms = new NetworkRealms();
+  realms.addEventListener('realmjoin', e => {
+    const {realm} = e.data;
+    const canvas = realmsCanvases.canvases.find(canvas => {
+      return canvas.min[0] === realm.min[0] && canvas.min[2] === realm.min[2];
+    });
+    if (canvas) {
+      canvas.classList.add('connected');
+    }
+    // console.log('join canvas', canvas);
+  });
+  realms.addEventListener('realmleave', e => {
+    const {realm} = e.data;
+    const canvas = realmsCanvases.canvases.find(canvas => {
+      return canvas.min[0] === realm.min[0] && canvas.min[2] === realm.min[2];
+    });
+    if (canvas) {
+      canvas.classList.remove('connected');
+    }
+    // console.log('leave canvas', canvas);
+  });
 
   // realms canvas
-  const realmsCanvas = new GameRealmsCanvas(realmSize);
-  document.body.appendChild(realmsCanvas.canvas);
+  const realmsCanvases = new GameRealmsCanvases(realmSize);
+  for (const canvas of realmsCanvases.canvases) {
+    document.body.appendChild(canvas);
+  }
 
   // focus tracking
   localPlayerCanvas.canvas.focus();
