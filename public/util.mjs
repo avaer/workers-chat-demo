@@ -189,6 +189,22 @@ function serializeMessage(m) {
   }
 }
 
+const createWs = (roomname, playerId) => {
+  const wss = document.location.protocol === "http:" ? "ws://" : "wss://";
+  const ws = new WebSocket(wss + location.host + "/api/room/" + roomname + "/websocket?playerId=" + playerId);
+  /* ws.waitForConnect = async () => {
+    return new Promise((accept, reject) => {
+      ws.onopen = () => {
+        accept();
+      };
+      ws.onerror = err => {
+        reject(err);
+      };
+    });
+  }; */
+  return ws;
+};
+
 export {
   alignN,
   align4,
@@ -196,4 +212,5 @@ export {
   makeId,
   parseMessage,
   serializeMessage,
+  createWs,
 };

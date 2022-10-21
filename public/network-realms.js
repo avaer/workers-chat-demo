@@ -1,3 +1,6 @@
+import {DataClient, NetworkedDataClient, DCMap, DCArray} from './data-client.mjs';
+import {createWs} from './util.mjs';
+
 const arrayEquals = (a, b) => {
   if (a.length !== b.length) {
     return false;
@@ -22,7 +25,7 @@ const makePromise = () => {
 }
 const makeTransactionHandler = () => {
   let running = false;
-  let queue = [];
+  const queue = [];
   async function handle(fn) {
     if (!running) {
       running = true;
@@ -44,7 +47,7 @@ const makeTransactionHandler = () => {
       }
     } else {
       const promise = makePromise();
-      queue.push(promise.accept);
+      queue.push(promise.resolve);
       await promise;
       return handle(fn);
     }
@@ -54,31 +57,91 @@ const makeTransactionHandler = () => {
 
 //
 
+class NetworkRealmArray {
+  constructor() {
+    
+  }
+}
+class NetworkRealmMap {
+  constructor() {
+    
+  }
+}
+
+//
+
 export class NetworkRealm {
   constructor(min, size) {
     this.min = min;
     this.size = size;
 
     this.key = min.join(',');
+    
+    this.ws = [];
+    this.dataClient = null;
+    this.networkedDataClient = null;
   }
-  connect() {
-    console.warn('connect', this.key);
-    return Promise.resolve();
+  async connect() {
+    const dc1 = new DataClient({
+      crdt: new Map(),
+    });
+    const ws1 = createWs();
+    ws1.binaryType = 'arraybuffer';
+    const ndc1 = new NetworkedDataClient(dc1, ws1);
+
+    this.ws = ws1;
+    this.dataClient = dc1;
+    this.networkedDataClient = ndc1;
+
+    await this.networkedDataClient.connect();
   }
   disconnect() {
     console.warn('disconnect');
+    this.ws.close();
   }
 }
 
 //
+
+class VirtualEntityArray extends EventTarget {
+  constructor(arrayId, {
+    listenOnArray = true,
+  } = {}) {
+    super();
+
+    this.arrayId = arrayId;
+    this.listenOnArray = listenOnArray;
+
+    this.dataClients = [];
+    this.dcArray = null;
+  }
+  link(dataClient) {
+    this.dcArray = dataClient.getArray(this.arrayId);
+
+    this.dataClients.push(dataClient);
+    if (this.listenOnArray) {
+      dataClient.onArrayUpdate(this.arrayId, this._handleArrayUpdate);
+    }
+  }
+}
 
 export class NetworkRealms extends EventTarget {
   constructor() {
     super();
 
     this.lastPosition = [NaN, NaN, NaN];
+    this.players = new VirtualEntityArray('players', {
+      listenOnArray: true,
+    });
     this.connectedRealms = new Set();
     this.tx = makeTransactionHandler();
+  }
+  getVirtualPlayers() {
+    return this.players;
+  }
+  getVirtualWorld() {
+    const virtualWorld = new VirtualEntityArray('world');
+    return virtualWorld;
   }
   async updatePosition(position, realmSize) {
     const snappedPosition = position.map(v => Math.floor(v / realmSize) * realmSize);
@@ -118,7 +181,7 @@ export class NetworkRealms extends EventTarget {
                 realm,
               },
             }));
-            
+
             const connectPromise = realm.connect().then(() => {
               this.connectedRealms.add(realm);
               return realm;

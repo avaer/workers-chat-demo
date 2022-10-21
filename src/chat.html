@@ -296,6 +296,7 @@ import {UPDATE_METHODS} from './public/update-types.js';
 import {serializeMessage} from './public/util.mjs';
 import {ensureAudioContext} from './public/wsrtc/ws-audio-context.js';
 import {startGame} from './public/game.js';
+import {createWs} from './public/util.mjs';
 
 // window.zbencode = zbencode;
 // window.zbdecode = zbdecode;
@@ -774,11 +775,7 @@ const testImportExport = () => {
   console.assert(player2.getKey('position')); // has been imported
   console.assert(arrayEquals(player2.getKey('position'), position));
 };
-const createTestWs = () => {
-  const wss = document.location.protocol === "http:" ? "ws://" : "wss://";
-  const ws = new WebSocket(wss + hostname + "/api/room/" + roomname + "/websocket?playerId=" + playerId);
-  return ws;
-};
+const createTestWs = () => createWs(roomname, playerId);
 const testMultiplayer = async () => {
   // player 1
 
@@ -1060,7 +1057,7 @@ let username;
 let roomname;
 let playerId = makeid(5);
 
-let hostname = window.location.host;
+// let hostname = window.location.host;
 /* if (hostname == "") {
   // Probably testing the HTML locally.
   hostname = "edge-chat-demo.cloudflareworkers.com";
