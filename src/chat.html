@@ -250,12 +250,19 @@ import {NetworkedAudioClient} from "/public/audio-client.js";
 import {UPDATE_METHODS} from './public/update-types.js';
 import {serializeMessage} from './public/util.mjs';
 import {ensureAudioContext} from './public/wsrtc/ws-audio-context.js';
+import {startGame} from './public/game.js';
 
 // window.zbencode = zbencode;
 // window.zbdecode = zbdecode;
 // window.DataClient = DataClient;
 // window.DCMap = DCMap;
 // window.DCArray = DCArray;
+
+//
+
+startGame();
+
+//
 
 const _makeEmptyCrdt = () => {
   return new Map([
