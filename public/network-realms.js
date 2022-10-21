@@ -57,14 +57,25 @@ const makeTransactionHandler = () => {
 
 //
 
-class NetworkRealmArray {
-  constructor() {
-    
+class VirtualEntityArray extends EventTarget {
+  constructor(arrayId, {
+    listenOnArray = true,
+  } = {}) {
+    super();
+
+    this.arrayId = arrayId;
+    this.listenOnArray = listenOnArray;
+
+    this.dataClients = [];
+    this.dcArray = null;
   }
-}
-class NetworkRealmMap {
-  constructor() {
-    
+  link(dataClient) {
+    this.dcArray = dataClient.getArray(this.arrayId);
+
+    this.dataClients.push(dataClient);
+    if (this.listenOnArray) {
+      dataClient.onArrayUpdate(this.arrayId, this._handleArrayUpdate);
+    }
   }
 }
 
@@ -103,28 +114,6 @@ export class NetworkRealm {
 }
 
 //
-
-class VirtualEntityArray extends EventTarget {
-  constructor(arrayId, {
-    listenOnArray = true,
-  } = {}) {
-    super();
-
-    this.arrayId = arrayId;
-    this.listenOnArray = listenOnArray;
-
-    this.dataClients = [];
-    this.dcArray = null;
-  }
-  link(dataClient) {
-    this.dcArray = dataClient.getArray(this.arrayId);
-
-    this.dataClients.push(dataClient);
-    if (this.listenOnArray) {
-      dataClient.onArrayUpdate(this.arrayId, this._handleArrayUpdate);
-    }
-  }
-}
 
 export class NetworkRealms extends EventTarget {
   constructor(playerId) {
