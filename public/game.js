@@ -95,12 +95,6 @@ outline: none;
 z-index: 1;
   `;
   localPlayerCanvas.canvas.classList.add('player-sprite');
-  localPlayerCanvas.canvas.addEventListener('click', e => {
-    e.stopPropagation();
-    // e.preventDefault();
-
-
-  });
   let localPlayerFocused = false;
   localPlayerCanvas.canvas.addEventListener('focus', e => {
     console.log('character focus 1');
@@ -156,6 +150,13 @@ z-index: 1;
   localPlayerCanvas.canvas.tabIndex = -1;
   document.body.appendChild(localPlayerCanvas.canvas);
   
+  // focus tracking
+  localPlayerCanvas.canvas.focus();
+  document.body.addEventListener("click", event => {
+    localPlayerCanvas.canvas.focus();
+  });
+  
+  // start frame loop
   let frame;
   const _recurse = () => {
     frame = requestAnimationFrame(_recurse);

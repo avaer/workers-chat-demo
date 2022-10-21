@@ -1059,7 +1059,7 @@ function startRoomChooser() {
     }
   });
 
-  goPublicButton.addEventListener("click", event => {
+  /* goPublicButton.addEventListener("click", event => {
     roomname = roomNameInput.value;
     if (roomname.length > 0) {
       startChat();
@@ -1080,9 +1080,9 @@ function startRoomChooser() {
 
     roomname = await response.text();
     startChat();
-  });
+  }); */
 
-  roomNameInput.focus();
+  // roomNameInput.focus();
 }
 
 function startChat() {
@@ -1098,6 +1098,9 @@ function startChat() {
 
   document.location.hash = "#" + roomname;
 
+  chatInput.addEventListener("click", event => {
+    event.stopPropagation();
+  });
   chatInput.addEventListener("keydown", event => {
     if (event.keyCode == 38) {
       // up arrow
@@ -1161,13 +1164,13 @@ function startChat() {
     isAtBottom = chatlog.scrollTop + chatlog.clientHeight >= chatlog.scrollHeight;
   });
 
-  chatInput.focus();
+  // chatInput.focus();
   document.body.addEventListener("click", event => {
     // If the user clicked somewhere in the window without selecting any text, focus the chat
     // input.
-    if (window.getSelection().toString() == "") {
+    /* if (window.getSelection().toString() == "") {
       chatInput.focus();
-    }
+    } */
 
     (async () => {
       const audioContext = await ensureAudioContext();
