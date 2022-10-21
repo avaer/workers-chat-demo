@@ -1,4 +1,4 @@
-import { zbclone } from './encoding.mjs';
+import {zbencode} from './encoding.mjs';
 import {UPDATE_METHODS} from './update-types.js';
 import {parseUpdateObject, makeId} from './util.mjs';
 
