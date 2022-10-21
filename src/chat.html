@@ -919,6 +919,10 @@ const test = async () => {
 globalThis.test = test;
 
 let currentWebSocket = null;
+let dc;
+let ndc;
+let nirc;
+let nac;
 
 let audioIndicator = document.getElementById('audio-indicator');
 let nameForm = document.querySelector("#name-form");
@@ -1260,11 +1264,6 @@ function join() {
       join();
     }
   }
-
-  let dc;
-  let ndc;
-  let nirc;
-  let nac;
   ws.addEventListener("open", event => {
     currentWebSocket = ws;
   });
@@ -1369,20 +1368,20 @@ function join() {
     });
 
     // chat
-    addChatMessage(null,
-        "* This is a demo app built with Cloudflare Workers Durable Objects. The source code " +
-        "can be found at: https://github.com/cloudflare/workers-chat-demo");
-    addChatMessage(null,
-        "* WARNING: Participants in this chat are random people on the internet. " +
-        "Names are not authenticated; anyone can pretend to be anyone. The people " +
-        "you are chatting with are NOT Cloudflare employees. Chat history is saved.");
-    if (roomname.length == 64) {
-      addChatMessage(null,
-          "* This is a private room. You can invite someone to the room by sending them the URL.");
-    } else {
+    // addChatMessage(null,
+    //     "* This is a demo app built with Cloudflare Workers Durable Objects. The source code " +
+    //     "can be found at: https://github.com/cloudflare/workers-chat-demo");
+    // addChatMessage(null,
+    //     "* WARNING: Participants in this chat are random people on the internet. " +
+    //     "Names are not authenticated; anyone can pretend to be anyone. The people " +
+    //     "you are chatting with are NOT Cloudflare employees. Chat history is saved.");
+    // if (roomname.length == 64) {
+    //   addChatMessage(null,
+    //       "* This is a private room. You can invite someone to the room by sending them the URL.");
+    // } else {
       addChatMessage(null,
           "* Welcome to #" + roomname + ". Say hi!");
-    }
+    // }
     {
       const div = document.createElement('div');
       div.innerHTML = `<a href="#">Record</a>`;
