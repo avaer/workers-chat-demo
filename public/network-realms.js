@@ -57,53 +57,112 @@ const makeTransactionHandler = () => {
 
 //
 
+class VirtualPlayersArray extends EventTarget {
+
+}
+
+//
+
+class VirtualEntityMap extends EventTarget {
+
+}
+
 class VirtualEntityArray extends EventTarget {
-  constructor(arrayId, {
-    listenOnArray = true,
-  } = {}) {
+  constructor(arrayId, parent) {
     super();
 
     this.arrayId = arrayId;
-    this.listenOnArray = listenOnArray;
+    this.parent = parent;
 
-    this.dcArray = null;
+    this.dataClients = new Map();
+    this.kingDataClient = null;
+    this.virtualMaps = new Map();
     this.dcCleanupFns = new Map();
   }
-  link(dataClient) {
-    this.dcArray = dataClient.getArray(this.arrayId);
+  addEntity(val) {
+    const {
+      map,
+      update,
+    } = this.kingDataClient.add(val);
+    this.kingDataClient.emitUpdate(update);
+    return map;
+  }
+  #getKingDataClient() {
+    let king = null;
+    let kingPlayerId = '';
+    for (const [playerId, dcArray] of this.dataClients) {
+      if (king === null || playerId.localeCompare(kingPlayerId) > 0) {
+        king = dcArray;
+        kingPlayerId = playerId;
+      }
+    }
+    return king;
+  }
+  updateKingDataClient() {
+    const newKing = this.#getKingDataClient();
+    if (newKing !== this.kingDataClient) {
+      const oldKing = this.kingDataClient;
+      this.kingDataClient = newKing;
+      this.dispatchEvent(new MessageEvent('kingchange', {
+        oldKing,
+        newKing,
+      }));
+    }
+  }
+  getOrCreateVirtualMap(arrayIndexId) {
+    let virtualMap = this.virtualMaps.get(arrayIndexId);
+    if (!virtualMap) {
+      virtualMap = new VirtualEntityMap(this);
+      this.virtualMaps.set(arrayIndexId, virtualMap);
+    
+      this.dispatchEvent(new MessageEvent('entityadd', {
+        data: {
+          id: arrayIndexId,
+          entity: virtualMap,
+        },
+      }));
 
-    if (this.listenOnArray) {
-      const listeners = new Map();
-      this.dcArray.addEventListener('add', e => {
-        const {arrayIndexId, map} = e.data;
-        listeners.set(arrayIndexId, map);
-        this.dispatchEvent(new MessageEvent('entityadd', {
-          data: {
-            id: arrayIndexId,
-            entity: map,
-          },
-        }));
-      });
-      this.dcArray.addEventListener('remove', e => {
-        const {arrayIndexId} = e.data;
+      virtualMap.addEventListener('garbagecollect', e => {
         this.dispatchEvent(new MessageEvent('entityremove', {
           data: {
             arrayIndexId,
           },
         }));
       });
-      listeners.set(null, this.dcArray);
-      
-      this.dcCleanupFns.set(dataClient, () => {
-        for (const listener of listeners.values()) {
-          listener.unlisten();
-        }
-      });
     }
+    return virtualMap;
   }
-  unlink(dataClient) {
-    const cleanupFn = this.dcCleanupFns.get(dataClient);
-    cleanupFn();
+  link(networkedDataClient) {
+    this.dataClients.set(networkedDataClient.playerId, networkedDataClient.dataClient);
+
+    // bind virtual maps
+    const dcArray = networkedDataClient.dataClient.getArray(this.arrayId);
+    const localVirtualMaps = new Map();
+    dcArray.addEventListener('add', e => {
+      const {arrayIndexId, map} = e.data;
+      const virtualMap = this.getOrCreateVirtualMap(arrayIndexId);
+      virtualMap.link(networkedDataClient, map);
+      localVirtualMaps.set(arrayIndexId, virtualMap);
+    });
+    dcArray.addEventListener('remove', e => {
+      const {arrayIndexId} = e.data;
+      const virtualMap = this.virtualMaps.get(arrayIndexId);
+      virtualMap.unlink(networkedDataClient);
+      localVirtualMaps.delete(arrayIndexId);
+    });
+    
+    this.dcCleanupFns.set(networkedDataClient, () => {
+      dcArray.unlisten();
+      for (const localVirtualMap of localVirtualMaps.values()) {
+        localVirtualMap.unlink(networkedDataClient);
+      }
+      
+      this.dataClients.delete(networkedDataClient.playerId);
+    });
+  }
+  unlink(networkedDataClient) {
+    this.dcCleanupFns.get(networkedDataClient)();
+    this.dcCleanupFns.delete(networkedDataClient);
   }
 }
 
@@ -150,10 +209,8 @@ export class NetworkRealms extends EventTarget {
     this.playerId = playerId;
 
     this.lastPosition = [NaN, NaN, NaN];
-    this.players = new VirtualEntityArray('players', {
-      listenOnArray: true,
-    });
-    this.world = new VirtualEntityArray('world');
+    this.players = new VirtualPlayersArray();
+    this.world = new VirtualEntityArray('world', this);
     this.connectedRealms = new Set();
     this.tx = makeTransactionHandler();
   }
@@ -205,7 +262,7 @@ export class NetworkRealms extends EventTarget {
             const connectPromise = (async () => {
               await realm.connect();
               this.connectedRealms.add(realm);
-              this.world.link(realm.dataClient);
+              this.world.link(realm.networkedDataClient);
               this.dispatchEvent(new MessageEvent('realmjoin', {
                 data: {
                   realm,
@@ -221,7 +278,7 @@ export class NetworkRealms extends EventTarget {
         const oldRealms = [];
         for (const connectedRealm of this.connectedRealms) {
           if (!candidateRealms.find(candidateRealm => candidateRealm.key === connectedRealm.key)) {
-            this.world.unlink(connectedRealm.dataClient);
+            this.world.unlink(connectedRealm.networkedDataClient);
             connectedRealm.disconnect();
             this.connectedRealms.delete(connectedRealm);
             oldRealms.push(connectedRealm);

@@ -316,24 +316,24 @@ z-index: 2;
 
   // items
   const virtualWorld = realms.getVirtualWorld();
-  virtualWorld.addEventListener('appadd', e => {
+  virtualWorld.addEventListener('entityadd', e => {
     console.log('add virtual world app', e.data);
   });
-  virtualWorld.addEventListener('appremove', e => {
+  virtualWorld.addEventListener('entityremove', e => {
     console.log('remove virtual world app', e.data);
   });
   const virtualPlayers = realms.getVirtualPlayers();
-  virtualPlayers.addEventListener('add', e => {
+  virtualPlayers.addEventListener('playeradd', e => {
     const player = e.data;
-    player.addEventListener('appadd', e => {
+    player.addEventListener('entityadd', e => {
       console.log('add virtual player app', e.data);
     });
-    player.addEventListener('appremove', e => {
+    player.addEventListener('entityremove', e => {
       console.log('remove virtual player app', e.data);
     });
     console.log('add virtual player', player);
   });
-  virtualPlayers.addEventListener('remove', e => {
+  virtualPlayers.addEventListener('playerremove', e => {
     console.log('remove virtual player', e.data);
   });
 
