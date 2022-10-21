@@ -70,9 +70,6 @@ class VirtualEntityArray extends EventTarget {
     this.dcCleanupFns = new Map();
   }
   link(dataClient) {
-    if (!dataClient) {
-      debugger;
-    }
     this.dcArray = dataClient.getArray(this.arrayId);
 
     if (this.listenOnArray) {

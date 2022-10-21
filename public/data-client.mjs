@@ -216,9 +216,6 @@ export class DCMap extends EventTarget {
       this.cleanupFn = null;
     }
   }
-  destroy() {
-    this.unlisten();
-  }
 }
 export class DCArray extends EventTarget {
   constructor(arrayId, dataClient) {
@@ -295,9 +292,6 @@ export class DCArray extends EventTarget {
       this.cleanupFn();
       this.cleanupFn = null;
     }
-  }
-  destroy() {
-    this.unlisten();
   }
 }
 export class DataClient extends EventTarget {
