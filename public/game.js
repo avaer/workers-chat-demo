@@ -1,5 +1,7 @@
 import {ensureAudioContext} from './wsrtc/ws-audio-context.js';
 
+import {NetworkRealms} from "./network-realms.js";
+
 const frameSize = 64;
 class GamePlayerCanvas {
   constructor(spriteImg) {
@@ -13,12 +15,12 @@ class GamePlayerCanvas {
     this.cancelFn = null;
 
     this.position = [0, 0, 0];
-    this.direction = [0, 0];
+    this.direction = [0, 0, 0];
   }
   move() {
     const speed = 3;
     this.position[0] += this.direction[0] * speed;
-    this.position[2] += this.direction[1] * speed;
+    this.position[2] += this.direction[2] * speed;
   }
   draw() {
     let row;
@@ -26,7 +28,7 @@ class GamePlayerCanvas {
       row = 1;
     } else if (this.direction[0] === 1) {
       row = 2;
-    } else if (this.direction[1] === -1) {
+    } else if (this.direction[2] === -1) {
       row = 3;
     } else {
       row = 0;
@@ -87,6 +89,22 @@ class GamePlayerCanvas {
     });
   }
 }
+
+//
+
+const realmSize = 300;
+const realmsSize = realmSize * 3;
+class GameRealmsCanvas {
+  constructor() {
+    this.canvas = document.createElement('canvas');
+    this.canvas.width = realmsSize;
+    this.canvas.height = realmsSize;
+    this.ctx = this.canvas.getContext('2d');
+  }
+}
+
+//
+
 export const startGame = async () => {
   const localPlayerCanvas = await GamePlayerCanvas.loadFromUrl('/public/images/fire-mage.png');
   localPlayerCanvas.canvas.style.cssText = `\
@@ -109,7 +127,7 @@ z-index: 1;
       // WASD
       switch (e.code) {
         case 'KeyW': {
-          localPlayerCanvas.direction[1] = -1;
+          localPlayerCanvas.direction[2] = -1;
           break;
         }
         case 'KeyA': {
@@ -117,7 +135,7 @@ z-index: 1;
           break;
         }
         case 'KeyS': {
-          localPlayerCanvas.direction[1] = 1;
+          localPlayerCanvas.direction[2] = 1;
           break;
         }
         case 'KeyD': {
@@ -130,7 +148,7 @@ z-index: 1;
   window.addEventListener('keyup', e => {
     switch (e.code) {
       case 'KeyW': {
-        localPlayerCanvas.direction[1] = 0;
+        localPlayerCanvas.direction[2] = 0;
         break;
       }
       case 'KeyA': {
@@ -138,7 +156,7 @@ z-index: 1;
         break;
       }
       case 'KeyS': {
-        localPlayerCanvas.direction[1] = 0;
+        localPlayerCanvas.direction[2] = 0;
         break;
       }
       case 'KeyD': {
@@ -150,6 +168,13 @@ z-index: 1;
   localPlayerCanvas.canvas.tabIndex = -1;
   document.body.appendChild(localPlayerCanvas.canvas);
   
+  // realms
+  const realms = new NetworkRealms();
+
+  // realms canvas
+  const realmsCanvas = new GameRealmsCanvas(realmSize);
+  document.body.appendChild(realmsCanvas.canvas);
+
   // focus tracking
   localPlayerCanvas.canvas.focus();
   document.body.addEventListener("click", event => {
@@ -164,6 +189,8 @@ z-index: 1;
     localPlayerCanvas.draw();
     localPlayerCanvas.canvas.style.left = localPlayerCanvas.position[0] + 'px';
     localPlayerCanvas.canvas.style.top = localPlayerCanvas.position[2] + 'px';
+
+    realms.updatePosition(localPlayerCanvas.position, realmSize);
   };
   _recurse();
 };
