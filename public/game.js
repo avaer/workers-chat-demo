@@ -19,7 +19,7 @@ class GamePlayerCanvas {
     this.direction = [0, 0, 1];
   }
   move() {
-    const speed = 3;
+    const speed = 5;
     this.position[0] += this.velocity[0] * speed;
     this.position[2] += this.velocity[2] * speed;
     
