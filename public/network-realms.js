@@ -1,6 +1,6 @@
 import {DataClient, NetworkedDataClient, DCMap, DCArray} from './data-client.mjs';
 import {NetworkedIrcClient} from './irc-client.js';
-// import {NetworkedAudioClient} from './audio-client.js';
+import {NetworkedAudioClient} from './audio-client.js';
 import {createWs, makePromise} from './util.mjs';
 
 //
@@ -63,32 +63,132 @@ const makeTransactionHandler = () => {
 
 //
 
-class VirtualPlayersArray extends EventTarget {
-  constructor() {
+class VirtualPlayer extends EventTarget {
+  constructor(playerId, parent) {
     super();
 
+    this.playerId = playerId;
+    this.parent = parent;
+
+    this.refCount = 0;
+  }
+  link(player) {
+    this.refCount++;
+  }
+  unlink(player) {
+    this.refCount--;
+  }
+  // getApps() {
+  // }
+  add(val) {
+    // this.setKeyValue('object', o);
+  }
+  setKeyValue(key, value) {
+    return;
+    throw new Error('not implemented');
+    const update = this.map.setKeyValueUpdate(key, value); // XXX need to locate the current map binding via head tracker class
+    this.dataClient.emitUpdate(update);
+    this.ndc.emitUpdate(update);
+  }
+}
+
+class VirtualPlayersArray extends EventTarget {
+  constructor(arrayId, parent) {
+    super();
+
+    this.arrayId = arrayId;
+    this.parent = parent;
+    this.virtualPlayers = new Map();
     this.cleanupFns = new Map();
   }
-  link(networkedIrcClient) {
-    // const players = networkedDataClient.dataClient.getArray('players');
-
-    const onjoin = e => {
-      console.log('got virtual player base join', e);
-    };
-    networkedIrcClient.addEventListener('join', onjoin);
-    const onleave = e => {
-      console.log('got virtual player base leave', e);
-    };
-    networkedIrcClient.addEventListener('got virtual player base leave', onleave);
-
-    this.cleanupFns.set(networkedIrcClient, () => {
-      networkedIrcClient.removeEventListener('join', onjoin);
-      networkedIrcClient.removeEventListener('leave', onleave);
-    });
+  getVirtualPlayer(playerId) {
+    return this.virtualPlayers.get(playerId);
   }
-  unlink(networkedIrcClient) {
+  getOrCreateVirtualPlayer(playerId) {
+    let virtualPlayer = this.virtualPlayers.get(playerId);
+    if (!virtualPlayer) {
+      virtualPlayer = new VirtualPlayer(playerId, this);
+      this.virtualPlayers.set(playerId, virtualPlayer);
+    }
+    return virtualPlayer;
+  }
+  removeVirtualPlayer(playerId) {
+    this.virtualPlayers.delete(playerId);
+  }
+  link(networkedIrcClient, networkedAudioClient) {
+    const _linkIrc = () => {
+      const onjoin = e => {
+        const {playerId} = e.data;
+        const virtualPlayer = this.getOrCreateVirtualPlayer(playerId);
+        virtualPlayer.addRef();
+        if (virtualPlayer.refCount === 1) {
+          this.dispatchEvent(new MessageEvent('join', {
+            data: {
+              player: virtualPlayer,
+              playerId,
+            },
+          }));
+        }
+      };
+      networkedIrcClient.addEventListener('join', onjoin);
+      const onleave = e => {
+        const {playerId} = e.data;
+        const virtualPlayer = this.getOrVirtualPlayer(playerId);
+        if (virtualPlayer) {
+          virtualPlayer.removeRef();
+          if (virtualPlayer.refCount === 0) {
+            this.removeVirtualPlayer(playerId);
+            
+            virtualPlayer.dispatchEvent(new MessageEvent('leave'));
+            this.dispatchEvent(new MessageEvent('leave', {
+              data: {
+                player: virtualPlayer,
+                playerId,
+              },
+            }));
+          }
+        } else {
+          console.warn('removing nonexistent player', playerId, this.players);
+        }
+      };
+      networkedIrcClient.addEventListener('leave', onleave);
+
+      this.cleanupFns.set(networkedIrcClient, () => {
+        networkedIrcClient.removeEventListener('join', onjoin);
+        networkedIrcClient.removeEventListener('leave', onleave);
+      });
+    };
+    _linkIrc();
+    const _linkAudio = () => {
+      const audiostreamstart = e => {
+        this.dispatchEvent(new MessageEvent('audiostreamstart', {
+          data: e.data,
+        }));
+      };
+      if (!networkedAudioClient) {
+        debugger;
+      }
+      networkedAudioClient.addEventListener('audiostreamstart', audiostreamstart);
+      const audiostreamend = e => {
+        this.dispatchEvent(new MessageEvent('audiostreamend', {
+          data: e.data,
+        }));
+      };
+      networkedAudioClient.addEventListener('audiostreamend', audiostreamend);
+
+      this.cleanupFns.set(networkedIrcClient, () => {
+        networkedAudioClient.removeEventListener('audiostreamstart');
+        networkedAudioClient.removeEventListener('audiostreamend');
+      });
+    };
+    _linkAudio();
+  }
+  unlink(networkedIrcClient, networkedAudioClient) {
     this.cleanupFns.get(networkedIrcClient)();
     this.cleanupFns.delete(networkedIrcClient);
+
+    this.cleanupFns.get(networkedAudioClient)();
+    this.cleanupFns.delete(networkedAudioClient);
   }
 }
 
@@ -101,15 +201,15 @@ class VirtualEntityMap extends EventTarget {
     this.arrayIndexId = arrayIndexId;
     this.virtualArray = virtualArray;
 
-    this.maps = new Set(); // for computing the head data client
-    this.headDataClient = null; // the currently bound data client, changed when a new link opens or
+    this.maps = new Set(); // set of bound dc maps
+    this.headDataClient = null; // the currently bound data client, changed when the network is reconfigured
     this.cleanupFns = new Map();
   }
   get(key) {
-
+    throw new Error('not implemented');
   }
   set(key, val) {
-
+    throw new Error('not implemented');
   }
   link(map) {
     // listen
@@ -144,7 +244,8 @@ class VirtualEntityMap extends EventTarget {
 
     // garbage collect
     if (this.maps.size === 0) {
-      this.virtualArray.remove(this.arrayIndexId);
+      // this.virtualArray.remove(this.arrayIndexId);
+      this.dispatchEvent(new MessageEvent('garbagecollect'));
     }
   }
   updateHeadDataClient() {
@@ -199,7 +300,7 @@ class VirtualEntityArray extends EventTarget {
     
       this.dispatchEvent(new MessageEvent('entityadd', {
         data: {
-          id: arrayIndexId,
+          entityId: arrayIndexId,
           entity: virtualMap,
         },
       }));
@@ -207,7 +308,8 @@ class VirtualEntityArray extends EventTarget {
       virtualMap.addEventListener('garbagecollect', e => {
         this.dispatchEvent(new MessageEvent('entityremove', {
           data: {
-            arrayIndexId,
+            entityId: arrayIndexId,
+            entity: virtualMap,
           },
         }));
       });
@@ -228,7 +330,7 @@ class VirtualEntityArray extends EventTarget {
     dcArray.addEventListener('remove', e => {
       const {arrayIndexId} = e.data;
       const virtualMap = this.virtualMaps.get(arrayIndexId);
-      virtualMap.unlink(arrayIndexId);
+      virtualMap.unlink();
       localVirtualMaps.delete(arrayIndexId);
     });
     
@@ -271,6 +373,7 @@ export class NetworkRealm {
       },
     });
     this.networkedIrcClient = new NetworkedIrcClient();
+    this.networkedAudioClient = new NetworkedAudioClient();
   }
   async connect() {
     const ws1 = createWs('realm:' + this.key, this.parent.playerId);
@@ -279,6 +382,7 @@ export class NetworkRealm {
     await Promise.all([
       this.networkedDataClient.connect(ws1),
       this.networkedIrcClient.connect(ws1),
+      this.networkedAudioClient.connect(ws1),
     ]);
   }
   disconnect() {
@@ -301,7 +405,8 @@ export class NetworkRealms extends EventTarget {
     this.playerId = playerId;
 
     this.lastPosition = [NaN, NaN, NaN];
-    this.players = new VirtualPlayersArray();
+    this.players = new VirtualPlayersArray('players', this);
+    this.localPlayer = new VirtualPlayer(this.playerId, this);
     this.world = new VirtualEntityArray('world', this);
     this.connectedRealms = new Set();
     this.tx = makeTransactionHandler();
@@ -368,13 +473,13 @@ export class NetworkRealms extends EventTarget {
             }));
 
             const connectPromise = (async () => {
-              this.players.link(realm.networkedIrcClient);
+              this.players.link(realm.networkedIrcClient, realm.networkedAudioClient);
               this.world.link(realm.networkedDataClient);
               
               try {
                 await realm.connect();
               } catch(err) {
-                this.players.unlink(realm.networkedIrcClient);
+                this.players.unlink(realm.networkedIrcClient, realm.networkedAudioClient);
                 this.world.unlink(realm.networkedDataClient);
                 throw err;
               }

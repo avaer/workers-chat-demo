@@ -1,6 +1,7 @@
 // import {ensureAudioContext} from './wsrtc/ws-audio-context.js';
 import {makeId} from './util.mjs';
 
+import {RemotePlayerHtmlRenderer, LocalPlayerHtmlRenderer} from "./renderers/html-renderer.js";
 import {NetworkRealms} from "./network-realms.js";
 
 const frameSize = 64;
@@ -24,9 +25,6 @@ class GamePlayerCanvas {
     this.position[0] += this.velocity[0] * speed;
     this.position[2] += this.velocity[2] * speed;
     
-    // this.direction[0] = 0;
-    // this.direction[1] = 0;
-    // this.direction[2] = 0;
     if (this.velocity[2] < 0) {
       this.direction[0] = 0;
       this.direction[2] = -1;
@@ -317,45 +315,131 @@ z-index: 2;
     document.body.appendChild(canvas);
   }
 
-  // items
-  const virtualWorld = realms.getVirtualWorld();
-  virtualWorld.addEventListener('entityadd', e => {
-    console.log('add virtual world app', e.data);
-  });
-  virtualWorld.addEventListener('entityremove', e => {
-    console.log('remove virtual world app', e.data);
-  });
-  const virtualPlayers = realms.getVirtualPlayers();
-  virtualPlayers.addEventListener('playeradd', e => {
-    const player = e.data;
-    player.addEventListener('entityadd', e => {
-      console.log('add virtual player app', e.data);
-    });
-    player.addEventListener('entityremove', e => {
-      console.log('remove virtual player app', e.data);
-    });
-    console.log('add virtual player', player);
-  });
-  virtualPlayers.addEventListener('playerremove', e => {
-    console.log('remove virtual player', e.data);
-  });
-
-  // focus tracking
-  localPlayerCanvas.canvas.focus();
-  document.body.addEventListener("click", event => {
+  const _initUi = () => {
+    // focus tracking
     localPlayerCanvas.canvas.focus();
-  });
-  
-  // start frame loop
-  let frame;
-  const _recurse = () => {
-    frame = requestAnimationFrame(_recurse);
-    localPlayerCanvas.move();
-    localPlayerCanvas.draw();
-    localPlayerCanvas.canvas.style.left = localPlayerCanvas.position[0] + 'px';
-    localPlayerCanvas.canvas.style.top = localPlayerCanvas.position[2] + 'px';
-
-    realms.updatePosition(localPlayerCanvas.position, realmSize);
+    document.body.addEventListener("click", event => {
+      localPlayerCanvas.canvas.focus();
+    });
   };
-  _recurse();
+  _initUi();
+
+  const _initLogic = () => {
+    // world
+    const virtualWorld = realms.getVirtualWorld();
+    virtualWorld.addEventListener('entityadd', e => {
+      console.log('add virtual world app', e.data);
+    });
+    virtualWorld.addEventListener('entityremove', e => {
+      console.log('remove virtual world app', e.data);
+    });
+
+    // players
+    const playerRenderers = [];
+    const virtualPlayers = realms.getVirtualPlayers();
+    virtualPlayers.addEventListener('playeradd', e => {
+      console.log('add virtual player', e.data);
+      const player = e.data;
+
+      // bind
+      player.addEventListener('entityadd', e => {
+        console.log('add virtual player app', e.data);
+      });
+      player.addEventListener('entityremove', e => {
+        console.log('remove virtual player app', e.data);
+      });
+
+      // render
+      let p = document.createElement("p");
+      p.classList.add('player');
+      p.innerHTML = `<img src="/public/images/audio.svg" class="audio-icon"><span class="name">${e.data.playerId}</span>`;
+      roster.appendChild(p);
+
+      const playerRenderer = new RemotePlayerHtmlRenderer(e.data.playerId, playerId, dc);
+      playerRenderers.push(playerRenderer);
+    });
+    virtualPlayers.addEventListener('playerremove', e => {
+      console.log('remove virtual player', e.data);
+      const {playerId} = e.data;
+
+      for (let i = 0; i < roster.children.length; i++) {
+        let p = roster.children[i];
+        if (p.innerText === playerId) {
+          roster.removeChild(p);
+          break;
+        }
+      }
+
+      for (let i = 0; i < playerRenderers.length; i++) {
+        const playerRenderer = playerRenderers[i];
+        if (playerRenderer.remotePlayerId === playerId) {
+          playerRenderers.splice(i, 1);
+          playerRenderer.destroy();
+          break;
+        }
+      }
+    });
+
+    // chat
+    realms.addEventListener('chat', e => {
+      const {playerId, message} = e.data;
+      addChatMessage(playerId, message);
+    });
+    
+    // audio
+    const _enableAudioOutput = playerId => {
+      for (let i = 0; i < roster.children.length; i++) {
+        let p = roster.children[i];
+        const textNode = p.children[1];
+        if (textNode.innerText === playerId) {
+          // console.log('swap on');
+          p.classList.add('speaking');
+          break;
+        }
+      }
+    };
+    const _disableAudioOutput = playerId => {
+      for (let i = 0; i < roster.children.length; i++) {
+        let p = roster.children[i];
+        const textNode = p.children[1];
+        if (textNode.innerText === playerId) {
+          // console.log('swap off');
+          p.classList.remove('speaking');
+          break;
+        }
+      }
+    };
+    realms.addEventListener('audiostreamstart', e => {
+      const {playerId} = e.data;
+      // console.log('stream start', playerId);
+      _enableAudioOutput(playerId);
+    });
+    realms.addEventListener('audiostreamend', e => {
+      const {playerId} = e.data;
+      // console.log('stream end', playerId);
+      _disableAudioOutput(playerId);
+    });
+
+    // local player renderer
+    const localPlayerRenderer = new LocalPlayerHtmlRenderer(realms);
+    // ws.addEventListener('close', e => {
+    //   localPlayerRenderer.destroy();
+    // });
+  };
+  _initLogic();
+
+  const _startFrameLoop = () => {
+    let frame;
+    const _recurse = () => {
+      frame = requestAnimationFrame(_recurse);
+      localPlayerCanvas.move();
+      localPlayerCanvas.draw();
+      localPlayerCanvas.canvas.style.left = localPlayerCanvas.position[0] + 'px';
+      localPlayerCanvas.canvas.style.top = localPlayerCanvas.position[2] + 'px';
+
+      realms.updatePosition(localPlayerCanvas.position, realmSize);
+    };
+    _recurse();
+  };
+  _startFrameLoop();
 };

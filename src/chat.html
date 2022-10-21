@@ -305,10 +305,6 @@ import {startGame} from './public/game.js';
 
 //
 
-startGame();
-
-//
-
 const _makeEmptyCrdt = () => {
   return new Map([
     ['players', {}],
@@ -978,84 +974,6 @@ function makeid(length) {
 
 //
 
-class RemotePlayerHtmlRenderer {
-  constructor(remotePlayerId, localPlayerId, dataClient) {
-    this.remotePlayerId = remotePlayerId;
-    this.localPlayerId = localPlayerId;
-    this.dataClient = dataClient;
-
-    const div = document.createElement('div');
-    div.style.cssText = `\
-      position: fixed;
-      top: 0;
-      left: 0;
-      background-color: ${this.remotePlayerId === this.localPlayerId ? 'blue' : 'red'};
-      width: 10px;
-      height: 10px;
-      z-index: 100;
-      pointer-events: none;
-    `;
-    document.body.appendChild(div);
-
-    const map = this.dataClient.getArrayMap('players', this.remotePlayerId);
-    map.addEventListener('update', e => {
-      const {val} = e.data;
-      const [x, y, z] = val;
-      div.style.left = `${x}px`;
-      div.style.top = `${y}px`;
-
-      // console.log('got update', e.data);
-    });
-
-    this.cleanupFn = () => {
-      document.body.removeChild(div);
-    };
-  }
-  destroy() {
-    this.cleanupFn();
-  }
-}
-class LocalPlayerRenderer {
-  constructor(playerId, dataClient, ndc) {
-    this.playerId = playerId;
-    this.dataClient = dataClient;
-    this.ndc = ndc;
-
-    const players = this.dataClient.getArray('players');
-    const {map: player, update: playerAddUpdate} = players.addAt(this.playerId, {
-      name: this.playerId,
-      position: Float32Array.from([0, 0, 0]),
-    });
-
-    this.ndc.send(serializeMessage(playerAddUpdate));
-
-    /* player.addEventListener('update', e => {
-      console.log('got update', e.data);
-      // this._update();
-    }); */
-
-    const mousemove = e => {
-      // console.log('mousemove', e.clientX, e.clientY);
-
-      const update = player.setKeyValueUpdate('position', Float32Array.from([e.clientX, e.clientY, 0]));
-      const updateBuffer = serializeMessage(update);
-      this.dataClient.emitUpdate(update);
-      // console.log('emit update', update, player.arrayIndexId);
-      this.ndc.send(updateBuffer);
-    };
-    window.addEventListener('mousemove', mousemove);
-
-    this.cleanupFn = () => {
-      window.removeEventListener('mousemove', mousemove);
-    };
-  }
-  destroy() {
-    this.cleanupFn();
-  }
-}
-
-//
-
 let username;
 let roomname;
 let playerId = makeid(5);
@@ -1268,104 +1186,9 @@ function join() {
     currentWebSocket = ws;
   });
   (async () => {
+    // connect
     console.log('connecting...');
-    const dc = new DataClient({
-      crdt: _makeEmptyCrdt(),
-    });
-    ws.binaryType = 'arraybuffer';
-    ndc = new NetworkedDataClient(dc, ws);
-    nirc = new NetworkedIrcClient(playerId);
-    nac = new NetworkedAudioClient(playerId);
-
-    // chat
-    nirc.addEventListener('chat', e => {
-      const {playerId, message} = e.data;
-      addChatMessage(playerId, message);
-    });
-
-    // audio
-    const _enableAudioOutput = playerId => {
-      for (let i = 0; i < roster.children.length; i++) {
-        let p = roster.children[i];
-        const textNode = p.children[1];
-        if (textNode.innerText === playerId) {
-          // console.log('swap on');
-          p.classList.add('speaking');
-          break;
-        }
-      }
-    };
-    const _disableAudioOutput = playerId => {
-      for (let i = 0; i < roster.children.length; i++) {
-        let p = roster.children[i];
-        const textNode = p.children[1];
-        if (textNode.innerText === playerId) {
-          // console.log('swap off');
-          p.classList.remove('speaking');
-          break;
-        }
-      }
-    };
-    nac.addEventListener('audiostreamstart', e => {
-      const {playerId} = e.data;
-      // console.log('stream start', playerId);
-      _enableAudioOutput(playerId);
-    });
-    nac.addEventListener('audiostreamend', e => {
-      const {playerId} = e.data;
-      // console.log('stream end', playerId);
-      _disableAudioOutput(playerId);
-    });
-
-    // remote players
-    const playerRenderers = [];
-    nirc.addEventListener('join', e => {
-      // console.log('player join', e.data);
-
-      let p = document.createElement("p");
-      p.classList.add('player');
-      p.innerHTML = `<img src="/public/images/audio.svg" class="audio-icon"><span class="name">${e.data.playerId}</span>`;
-      roster.appendChild(p);
-
-      const playerRenderer = new RemotePlayerHtmlRenderer(e.data.playerId, playerId, dc);
-      playerRenderers.push(playerRenderer);
-    });
-    nirc.addEventListener('leave', e => {
-      // console.log('player leave', e.data);
-
-      const {playerId} = e.data;
-      for (let i = 0; i < roster.children.length; i++) {
-        let p = roster.children[i];
-        if (p.innerText === playerId) {
-          roster.removeChild(p);
-          break;
-        }
-      }
-
-      for (let i = 0; i < playerRenderers.length; i++) {
-        const playerRenderer = playerRenderers[i];
-        if (playerRenderer.remotePlayerId === playerId) {
-          playerRenderers.splice(i, 1);
-          playerRenderer.destroy();
-          break;
-        }
-      }
-    });
-    
-    // wait for connection
-    await Promise.all([
-      ndc.connect(ws),
-      nirc.connect(ws),
-      nac.connect(ws),
-    ]);
-
-    console.log('connected!');
-
-    // local player renderer
-    const localPlayerRenderer = new LocalPlayerRenderer(playerId, dc, ndc);
-    ws.addEventListener('close', e => {
-      localPlayerRenderer.destroy();
-    });
+    await startGame();
 
     // chat
     // addChatMessage(null,
@@ -1379,8 +1202,7 @@ function join() {
     //   addChatMessage(null,
     //       "* This is a private room. You can invite someone to the room by sending them the URL.");
     // } else {
-      addChatMessage(null,
-          "* Welcome to #" + roomname + ". Say hi!");
+    addChatMessage(null, "* Welcome to #" + roomname + ". Say hi!");
     // }
     {
       const div = document.createElement('div');
