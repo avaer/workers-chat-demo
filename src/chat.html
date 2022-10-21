@@ -932,7 +932,7 @@ function makeid(length) {
 
 //
 
-class RemotePlayerRenderer {
+class RemotePlayerHtmlRenderer {
   constructor(remotePlayerId, localPlayerId, dataClient) {
     this.remotePlayerId = remotePlayerId;
     this.localPlayerId = localPlayerId;
@@ -1293,7 +1293,7 @@ function join() {
       p.innerHTML = `<img src="/public/images/audio.svg" class="audio-icon"><span class="name">${e.data.playerId}</span>`;
       roster.appendChild(p);
 
-      const playerRenderer = new RemotePlayerRenderer(e.data.playerId, playerId, dc1);
+      const playerRenderer = new RemotePlayerHtmlRenderer(e.data.playerId, playerId, dc1);
       playerRenderers.push(playerRenderer);
     });
     nirc1.addEventListener('leave', e => {
