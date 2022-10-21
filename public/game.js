@@ -302,12 +302,34 @@ z-index: 2;
     }
     // console.log('leave canvas', canvas);
   });
-
   // realms canvas
   const realmsCanvases = new GameRealmsCanvases(realmSize);
   for (const canvas of realmsCanvases.canvases) {
     document.body.appendChild(canvas);
   }
+
+  // items
+  const virtualWorld = realms.getVirtualWorld();
+  virtualWorld.addEventListener('appadd', e => {
+    console.log('add virtual world app', e.data);
+  });
+  virtualWorld.addEventListener('appremove', e => {
+    console.log('remove virtual world app', e.data);
+  });
+  const virtualPlayers = realms.getVirtualPlayers();
+  virtualPlayers.addEventListener('add', e => {
+    const player = e.data;
+    player.addEventListener('appadd', e => {
+      console.log('add virtual player app', e.data);
+    });
+    player.addEventListener('appremove', e => {
+      console.log('remove virtual player app', e.data);
+    });
+    console.log('add virtual player', player);
+  });
+  virtualPlayers.addEventListener('remove', e => {
+    console.log('remove virtual player', e.data);
+  });
 
   // focus tracking
   localPlayerCanvas.canvas.focus();
