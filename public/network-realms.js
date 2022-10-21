@@ -174,10 +174,17 @@ export class NetworkRealm {
   async connect() {
     const dc1 = new DataClient({
       crdt: new Map(),
+      userData: {
+        realm: this,
+      },
     });
     const ws1 = createWs('realm:' + this.key, this.parent.playerId);
     ws1.binaryType = 'arraybuffer';
-    const ndc1 = new NetworkedDataClient(dc1, ws1);
+    const ndc1 = new NetworkedDataClient(dc1, ws1, {
+      userData: {
+        realm: this,
+      },
+    });
 
     this.ws = ws1;
     this.dataClient = dc1;

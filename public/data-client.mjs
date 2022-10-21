@@ -297,10 +297,12 @@ export class DCArray extends EventTarget {
 export class DataClient extends EventTarget {
   constructor({
     crdt = null,
+    userData = null,
   } = {}) {
     super();
 
     this.crdt = crdt;
+    this.userData = userData;
   }
 
   // for both client and server
@@ -688,11 +690,14 @@ export class DataClient extends EventTarget {
 //
 
 export class NetworkedDataClient extends EventTarget {
-  constructor(dataClient, ws) {
+  constructor(dataClient, ws, {
+    userData = {},
+  } = {}) {
     super();
 
     this.dataClient = dataClient;
     this.ws = ws;
+    this.userData = userData;
   }
   static handlesMethod(method) {
     return [
@@ -765,12 +770,6 @@ export class NetworkedDataClient extends EventTarget {
             console.warn('rollback', rollback);
             throw new Error('unexpected rollback');
           }
-
-          /* this.dispatchEvent(new MessageEvent('update', {
-            data: {
-              update,
-            },
-          })); */
 
           this.dataClient.emitUpdate(update);
 
