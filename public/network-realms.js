@@ -71,13 +71,14 @@ class NetworkRealmMap {
 //
 
 export class NetworkRealm {
-  constructor(min, size) {
+  constructor(min, size, parent) {
     this.min = min;
     this.size = size;
+    this.parent = parent;
 
-    this.key = min.join(',');
+    this.key = min.join(':');
     
-    this.ws = [];
+    this.ws = null;
     this.dataClient = null;
     this.networkedDataClient = null;
   }
@@ -85,7 +86,7 @@ export class NetworkRealm {
     const dc1 = new DataClient({
       crdt: new Map(),
     });
-    const ws1 = createWs();
+    const ws1 = createWs('realm:' + this.key, this.parent.playerId);
     ws1.binaryType = 'arraybuffer';
     const ndc1 = new NetworkedDataClient(dc1, ws1);
 
@@ -126,13 +127,16 @@ class VirtualEntityArray extends EventTarget {
 }
 
 export class NetworkRealms extends EventTarget {
-  constructor() {
+  constructor(playerId) {
     super();
+
+    this.playerId = playerId;
 
     this.lastPosition = [NaN, NaN, NaN];
     this.players = new VirtualEntityArray('players', {
       listenOnArray: true,
     });
+    this.world = new VirtualEntityArray('world');
     this.connectedRealms = new Set();
     this.tx = makeTransactionHandler();
   }
@@ -140,8 +144,7 @@ export class NetworkRealms extends EventTarget {
     return this.players;
   }
   getVirtualWorld() {
-    const virtualWorld = new VirtualEntityArray('world');
-    return virtualWorld;
+    return this.world;
   }
   async updatePosition(position, realmSize) {
     const snappedPosition = position.map(v => Math.floor(v / realmSize) * realmSize);
@@ -159,7 +162,7 @@ export class NetworkRealms extends EventTarget {
               0,
               Math.floor((position[2] + dz * realmSize) / realmSize) * realmSize,
             ];
-            const realm = new NetworkRealm(min, realmSize);
+            const realm = new NetworkRealm(min, realmSize, this);
             candidateRealms.push(realm);
           }
         }
