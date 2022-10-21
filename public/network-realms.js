@@ -69,27 +69,26 @@ class VirtualPlayersArray extends EventTarget {
 
     this.cleanupFns = new Map();
   }
-  link(networkedDataClient) {
-    const players = networkedDataClient.dataClient.getArray('players');
+  link(networkedIrcClient) {
+    // const players = networkedDataClient.dataClient.getArray('players');
 
-    const onadd = e => {
-      console.log('got virtual player base add', e);
+    const onjoin = e => {
+      console.log('got virtual player base join', e);
     };
-    players.addEventListener('add', onadd);
-    const onremove = e => {
-      console.log('got on remove', e);
+    networkedIrcClient.addEventListener('join', onjoin);
+    const onleave = e => {
+      console.log('got virtual player base leave', e);
     };
-    players.addEventListener('got virtual player base remove', onremove);
+    networkedIrcClient.addEventListener('got virtual player base leave', onleave);
 
-    this.cleanupFns.set(networkedDataClient, () => {
-      players.removeEventListener('add', onadd);
-      players.removeEventListener('remove', onremove);
-      players.unlisten();
+    this.cleanupFns.set(networkedIrcClient, () => {
+      networkedIrcClient.removeEventListener('join', onjoin);
+      networkedIrcClient.removeEventListener('leave', onleave);
     });
   }
-  unlink(networkedDataClient) {
-    this.cleanupFns.get(networkedDataClient)();
-    this.cleanupFns.delete(networkedDataClient);
+  unlink(networkedIrcClient) {
+    this.cleanupFns.get(networkedIrcClient)();
+    this.cleanupFns.delete(networkedIrcClient);
   }
 }
 
@@ -265,18 +264,22 @@ export class NetworkRealm {
       },
     });
     this.dataClient = dc1;
+    this.ws = null;
     this.networkedDataClient = new NetworkedDataClient(dc1, {
       userData: {
         realm: this,
       },
     });
-    this.ws = null;
+    this.networkedIrcClient = new NetworkedIrcClient();
   }
   async connect() {
     const ws1 = createWs('realm:' + this.key, this.parent.playerId);
     ws1.binaryType = 'arraybuffer';
-    await this.networkedDataClient.connect(ws1);
     this.ws = ws1;
+    await Promise.all([
+      this.networkedDataClient.connect(ws1),
+      this.networkedIrcClient.connect(ws1),
+    ]);
   }
   disconnect() {
     console.warn('disconnect');
@@ -365,13 +368,13 @@ export class NetworkRealms extends EventTarget {
             }));
 
             const connectPromise = (async () => {
-              this.players.link(realm.networkedDataClient);
+              this.players.link(realm.networkedIrcClient);
               this.world.link(realm.networkedDataClient);
               
               try {
                 await realm.connect();
               } catch(err) {
-                this.players.unlink(realm.networkedDataClient);
+                this.players.unlink(realm.networkedIrcClient);
                 this.world.unlink(realm.networkedDataClient);
                 throw err;
               }
