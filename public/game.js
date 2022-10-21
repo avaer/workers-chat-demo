@@ -1,4 +1,5 @@
 // import {ensureAudioContext} from './wsrtc/ws-audio-context.js';
+import {makeId} from './util.mjs';
 
 import {NetworkRealms} from "./network-realms.js";
 
@@ -158,6 +159,8 @@ z-index: 1;
 //
 
 export const startGame = async () => {
+  const playerId = makeId();
+
   const localPlayerCanvas = await GamePlayerCanvas.loadFromUrl('/public/images/fire-mage.png');
   localPlayerCanvas.canvas.style.cssText = `\
 position: fixed;
@@ -276,7 +279,7 @@ z-index: 2;
   };
   
   // realms
-  const realms = new NetworkRealms();
+  const realms = new NetworkRealms(playerId);
   realms.addEventListener('realmconnecting', e => {
     const {realm} = e.data;
     const canvas = realmsCanvases.canvases.find(canvas => {
