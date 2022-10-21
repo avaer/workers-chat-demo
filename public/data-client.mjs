@@ -225,9 +225,9 @@ export class DCArray extends EventTarget {
 
     this.cleanupFn = null;
   }
-  getMap(arrayIndexId) {
+  getMap(arrayIndexId, {listen = true} = {}) {
     const map = new DCMap(this.arrayId, arrayIndexId, this.dataClient);
-    map.listen();
+    listen && map.listen();
     return map;
   }
   toArray() {
@@ -594,21 +594,21 @@ export class DataClient extends EventTarget {
   }
   
   // for client
-  getArray(arrayId) {
+  getArray(arrayId, {listen = true} = {}) {
     const array = new DCArray(arrayId, this);
-    array.listen();
+    listen && array.listen();
     return array;
   }
-  getArrayMap(arrayId, arrayIndexId) {
+  getArrayMap(arrayId, arrayIndexId, {listen = true} = {}) {
     const map = new DCMap(arrayId, arrayIndexId, this);
-    map.listen();
+    listen && map.listen();
     return map;
   }
-  createArrayMapElement(arrayId, val = {}) {
+  createArrayMapElement(arrayId, val, opts) {
     const arrayIndexId = makeId();
-    return this.addArrayMapElement(arrayId, arrayIndexId, val);
+    return this.addArrayMapElement(arrayId, arrayIndexId, val, opts);
   }
-  addArrayMapElement(arrayId, arrayIndexId, val = {}) {
+  addArrayMapElement(arrayId, arrayIndexId, val = {}, {listen = true} = {}) {
     const crdtVal = convertValToCrdtVal(val);
     this.crdt.set(arrayIndexId, crdtVal);
     
@@ -618,13 +618,9 @@ export class DataClient extends EventTarget {
       this.crdt.set(arrayId, array);
     }
     array[arrayIndexId] = true;
-    // console.log('add map element', {array, arrayIndexId});
 
     const map = new DCMap(arrayId, arrayIndexId, this);
-    map.listen();
-
-    // const o = map.toObject();
-    // console.log('add map element readback', {array, arrayIndexId, o, val});
+    listen && map.listen();
 
     const update = new MessageEvent('add.' + arrayId, {
       data: {
