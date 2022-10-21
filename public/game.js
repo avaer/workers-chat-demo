@@ -265,6 +265,12 @@ z-index: 2;
         item.style.left = `${targetPosition[0]}px`;
         item.style.top = `${targetPosition[2]}px`;
         world.appendChild(item);
+
+        const entity = virtualWorld.addEntity({
+          name: 'rock',
+          position: targetPosition.slice(),
+        });
+        console.log('add rock', entity);
       }
     }
   };
