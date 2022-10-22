@@ -315,6 +315,10 @@ z-index: 2;
     document.body.appendChild(canvas);
   }
 
+  // local objects
+  const virtualWorld = realms.getVirtualWorld();
+  const virtualPlayers = realms.getVirtualPlayers();
+
   const _initUi = () => {
     // focus tracking
     localPlayerCanvas.canvas.focus();
@@ -326,7 +330,6 @@ z-index: 2;
 
   const _initLogic = () => {
     // world
-    const virtualWorld = realms.getVirtualWorld();
     virtualWorld.addEventListener('entityadd', e => {
       console.log('add virtual world app', e.data);
     });
@@ -336,7 +339,6 @@ z-index: 2;
 
     // players
     const playerRenderers = [];
-    const virtualPlayers = realms.getVirtualPlayers();
     virtualPlayers.addEventListener('playeradd', e => {
       console.log('add virtual player', e.data);
       const player = e.data;
