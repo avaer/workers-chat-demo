@@ -173,6 +173,24 @@ z-index: 1;
 
 //
 
+const zstringify = o => {
+  let result = '';
+  for (const k in o) {
+    const v = o[k];
+    if (v instanceof Float32Array) {
+      result += `${k}: Float32Array(${v.join(',')})\n`;
+    } else {
+      const s = JSON.stringify(v);
+      if (s.length >= 20 && v instanceof Object && v !== null) {
+        result += `${k}: ${zstringify(v)}`;
+      } else {
+        result += `${k}: ${s}\n`;
+      }
+    }
+  }
+  return result;
+};
+
 export const startGame = async () => {
   const playerId = makeId();
 
@@ -320,11 +338,11 @@ z-index: 2;
       
       const onadd = e => {
         console.log('game players array add', realm.key, e.data, playersArray.toArray());
-        
+
         // const {player, playerId} = e.data;
         // players.add(playerId);
         // console.log('add player', playerId);
-        // el.setText(JSON.stringify(players, null, 2));
+        el.setText(zstringify(playersArray.toArray()));
       };
       playersArray.addEventListener('add', onadd);
 
@@ -334,6 +352,7 @@ z-index: 2;
 
         // const {player, playerId} = e.data;
         // players.delete(playerId);
+        el.setText(zstringify(playersArray.toArray()));
       };
       playersArray.addEventListener('remove', onremove);
   
