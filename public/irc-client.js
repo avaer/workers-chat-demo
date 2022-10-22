@@ -75,7 +75,7 @@ export class NetworkedIrcClient extends EventTarget {
 
     // console.log('irc listen');
     this.ws.addEventListener('message', e => {
-      console.log('got irc data', e.data);
+      // console.log('got irc data', e.data);
       if (e.data instanceof ArrayBuffer && e.data.byteLength > 0) {
         const updateBuffer = e.data;
         // console.log('irc data', e.data);
@@ -84,7 +84,7 @@ export class NetworkedIrcClient extends EventTarget {
 
         const {method, args} = updateObject;
         // console.log('irc handles method', method, NetworkedIrcClient.handlesMethod(method));
-        console.log('irc client handles method', method, args, NetworkedIrcClient.handlesMethod(method));
+        // console.log('irc client handles method', method, args, NetworkedIrcClient.handlesMethod(method));
         if (NetworkedIrcClient.handlesMethod(method)) {
           this.handleUpdateObject(updateObject);
         }
@@ -100,7 +100,7 @@ export class NetworkedIrcClient extends EventTarget {
 
       for (let i = 0; i < playerIds.length; i++) {
         const playerId = playerIds[i];
-        console.log('dispatch join', playerId);
+        // console.log('dispatch join', playerId);
         this.dispatchEvent(new MessageEvent('join', {
           data: {
             playerId,

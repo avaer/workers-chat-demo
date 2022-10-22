@@ -71,10 +71,13 @@ class VirtualPlayer extends EventTarget {
     this.arrayIndexId = arrayIndexId;
     // this.parent = parent;
 
+    this.headPosition = [NaN, NaN, NaN];
     this.connectedRealms = new Set();
   }
   initialize(o) {
-    const headRealm = this.#getHeadRealm(o.position);
+    this.setHeadPosition(o.position);
+
+    const headRealm = this.#getHeadRealm();
     const {dataClient, networkedDataClient} = headRealm;
     const playersArray = dataClient.getArray(this.arrayId, {
       listen: false,
@@ -88,7 +91,12 @@ class VirtualPlayer extends EventTarget {
     dataClient.emitUpdate(update);
     networkedDataClient.emitUpdate(update);
   }
-  #getHeadRealm(position) {
+  setHeadPosition(position) {
+    this.headPosition[0] = position[0];
+    this.headPosition[1] = position[1];
+    this.headPosition[2] = position[2];
+  }
+  #getHeadRealm() {
     if (this.isLinked()) {
       let closestRealm = null;
       let closestRealmDistance = Infinity;
@@ -98,7 +106,7 @@ class VirtualPlayer extends EventTarget {
           realm.min[1] + realm.size/2,
           realm.min[2] + realm.size/2,
         ];
-        const distance = distanceTo(position, realmCenter);
+        const distance = distanceTo(this.headPosition, realmCenter);
         if (distance < closestRealmDistance) {
           closestRealm = realm;
           closestRealmDistance = distance;
@@ -113,17 +121,26 @@ class VirtualPlayer extends EventTarget {
     return this.connectedRealms.size > 0;
   }
   link(realm) {
+    console.log('link', realm, new Error().stack);
     this.connectedRealms.add(realm);
   }
   unlink(realm) {
+    console.log('unlink', realm);
     this.connectedRealms.delete(realm);
   }
-  setKeyValue(key, value) {
-    return;
-    throw new Error('not implemented');
-    const update = this.map.setKeyValueUpdate(key, value); // XXX need to locate the current map binding via head tracker class
-    this.dataClient.emitUpdate(update);
-    this.ndc.emitUpdate(update);
+  setKeyValue(key, val) {
+    if (key === positionKey) {
+      this.setHeadPosition(val);
+    }
+
+    const headRealm = this.#getHeadRealm();
+    const {dataClient, networkedDataClient} = headRealm;
+    const valueMap = dataClient.getArrayMap(this.arrayId, this.arrayIndexId, {
+      listen: false,
+    });
+    const update = valueMap.setKeyValueUpdate(key, val);
+    dataClient.emitUpdate(update);
+    networkedDataClient.emitUpdate(update);
   }
 }
 
@@ -135,9 +152,6 @@ class VirtualPlayersArray extends EventTarget {
     this.parent = parent;
     this.virtualPlayers = new Map();
     this.cleanupFns = new Map();
-  }
-  getVirtualPlayer(playerId) {
-    return this.virtualPlayers.get(playerId);
   }
   getOrCreateVirtualPlayer(playerId) {
     let virtualPlayer = this.virtualPlayers.get(playerId);
@@ -153,7 +167,6 @@ class VirtualPlayersArray extends EventTarget {
     const _linkIrc = () => {
       const onjoin = e => {
         const {playerId} = e.data;
-        // console.log('got join', playerId);
         const virtualPlayer = this.getOrCreateVirtualPlayer(playerId);
         const playerMap = networkedDataClient.dataClient.getArrayMap('players', playerId);
         virtualPlayer.link(playerId, playerMap);
@@ -169,7 +182,7 @@ class VirtualPlayersArray extends EventTarget {
       networkedIrcClient.addEventListener('join', onjoin);
       const onleave = e => {
         const {playerId} = e.data;
-        const virtualPlayer = this.getOrVirtualPlayer(playerId);
+        const virtualPlayer = this.virtualPlayers.get(playerId);
         if (virtualPlayer) {
           virtualPlayer.unlink(playerId);
           if (!virtualPlayer.isLinked()) {
@@ -424,7 +437,7 @@ export class NetworkRealm {
     ]);
   }
   disconnect() {
-    console.warn('disconnect');
+    console.warn('realm disconnect', this.key);
     this.ws.close();
     this.ws = null;
   }
@@ -566,6 +579,9 @@ export class NetworkRealms extends EventTarget {
             },
           }));
         }
+
+        // emit the fact that the network was reconfigured
+        this.dispatchEvent(new MessageEvent('networkreconfigure'));
       });
     }
   }

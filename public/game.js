@@ -425,6 +425,13 @@ z-index: 2;
     // ws.addEventListener('close', e => {
     //   localPlayerRenderer.destroy();
     // });
+
+    realms.addEventListener('networkreconfigure', e => {
+      const mousemove = e => {
+        realms.localPlayer.setKeyValue('position', Float32Array.from([e.clientX, e.clientY, 0]));
+      };
+      window.addEventListener('mousemove', mousemove);
+    }, {once: true});
   };
   _initLogic();
 

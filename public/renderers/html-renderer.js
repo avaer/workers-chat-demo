@@ -46,15 +46,6 @@ export class LocalPlayerHtmlRenderer { // XXX can be moved to controllers instea
       position: Float32Array.from([0, 0, 0]),
     });
     this.ndc.send(serializeMessage(playerAddUpdate)); */
-
-    const mousemove = e => {
-      localPlayer.setKeyValue('position', Float32Array.from([e.clientX, e.clientY, 0]));
-    };
-    window.addEventListener('mousemove', mousemove);
-
-    this.cleanupFn = () => {
-      window.removeEventListener('mousemove', mousemove);
-    };
   }
   destroy() {
     this.cleanupFn();
