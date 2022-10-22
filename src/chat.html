@@ -1189,10 +1189,10 @@ function join() {
       div.childNodes[0].addEventListener('click', e => {
         if (!recording) {
           div.childNodes[0].innerText = 'Stop';
-          nac.enableMic();
+          realms.enableMic();
         } else {
           div.childNodes[0].innerText = 'Record';
-          nac.disableMic();
+          realms.disableMic();
         }
         recording = !recording;
       });
