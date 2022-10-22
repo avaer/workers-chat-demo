@@ -1,8 +1,8 @@
 export class RemotePlayerHtmlRenderer {
-  constructor(remotePlayerId, localPlayerId, dataClient) {
+  constructor(remotePlayerId, localPlayerId, virtualPlayer) {
     this.remotePlayerId = remotePlayerId;
     this.localPlayerId = localPlayerId;
-    this.dataClient = dataClient;
+    this.virtualPlayer = virtualPlayer;
 
     const div = document.createElement('div');
     div.style.cssText = `\
@@ -17,8 +17,10 @@ export class RemotePlayerHtmlRenderer {
     `;
     document.body.appendChild(div);
 
-    const map = this.dataClient.getArrayMap('players', this.remotePlayerId);
-    map.addEventListener('update', e => {
+    // const map = this.dataClient.getArrayMap('players', this.remotePlayerId);
+    // console.log('listen for player', virtualPlayer);
+    virtualPlayer.addEventListener('update', e => {
+      // console.log('got player map update', e.data);
       const {val} = e.data;
       const [x, y, z] = val;
       div.style.left = `${x}px`;

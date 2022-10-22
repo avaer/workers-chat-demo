@@ -339,9 +339,10 @@ z-index: 2;
 
     // players
     const playerRenderers = [];
-    virtualPlayers.addEventListener('playeradd', e => {
+    // console.log('listen to players', virtualPlayers);
+    virtualPlayers.addEventListener('join', e => {
       console.log('add virtual player', e.data);
-      const player = e.data;
+      const {player} = e.data;
 
       // bind
       player.addEventListener('entityadd', e => {
@@ -357,10 +358,10 @@ z-index: 2;
       p.innerHTML = `<img src="/public/images/audio.svg" class="audio-icon"><span class="name">${e.data.playerId}</span>`;
       roster.appendChild(p);
 
-      const playerRenderer = new RemotePlayerHtmlRenderer(e.data.playerId, playerId, dc);
+      const playerRenderer = new RemotePlayerHtmlRenderer(e.data.playerId, playerId, player);
       playerRenderers.push(playerRenderer);
     });
-    virtualPlayers.addEventListener('playerremove', e => {
+    virtualPlayers.addEventListener('leave', e => {
       console.log('remove virtual player', e.data);
       const {playerId} = e.data;
 
@@ -422,17 +423,15 @@ z-index: 2;
       _disableAudioOutput(playerId);
     });
 
-    // local player renderer
-    const localPlayerRenderer = new LocalPlayerHtmlRenderer(realms);
-    // ws.addEventListener('close', e => {
-    //   localPlayerRenderer.destroy();
-    // });
-
+    // wait for the network to be ready befor binding controls
     realms.addEventListener('networkreconfigure', e => {
-      const mousemove = e => {
-        realms.localPlayer.setKeyValue('position', Float32Array.from([e.clientX, e.clientY, 0]));
+      const _bindControls = () => {
+        const mousemove = e => {
+          realms.localPlayer.setKeyValue('cursorPosition', Float32Array.from([e.clientX, e.clientY, 0]));
+        };
+        window.addEventListener('mousemove', mousemove);
       };
-      window.addEventListener('mousemove', mousemove);
+      _bindControls();
     }, {once: true});
   };
   _initLogic();

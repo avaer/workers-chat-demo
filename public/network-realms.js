@@ -83,15 +83,16 @@ const _getHeadRealm = (position, realms) => {
   return closestRealm;
 }
 class VirtualPlayer extends EventTarget {
-  constructor(arrayId, arrayIndexId/*, parent*/) {
+  constructor(arrayId, arrayIndexId, parent) {
     super();
 
     this.arrayId = arrayId;
     this.arrayIndexId = arrayIndexId;
-    // this.parent = parent;
+    this.parent = parent;
 
     this.headPosition = [NaN, NaN, NaN];
     this.connectedRealms = new Set();
+    this.cleanupMapFns = new Map();
   }
   initialize(o) {
     this.setHeadPosition(o.position);
@@ -128,10 +129,30 @@ class VirtualPlayer extends EventTarget {
   link(realm) {
     // console.log('link', realm);
     this.connectedRealms.add(realm);
+
+    const {dataClient} = realm;
+    if (!dataClient) {
+      debugger;
+    }
+    const map = dataClient.getArrayMap(this.arrayId, this.arrayIndexId);
+    const update = e => {
+      this.dispatchEvent(new MessageEvent('update', {
+        data: e.data,
+      }));
+    };
+    map.addEventListener('update', update);
+
+    this.cleanupMapFns.set(realm, () => {
+      map.unlisten();
+      map.removeEventListener('update', update);
+    });
   }
   unlink(realm) {
     // console.log('unlink', realm);
     this.connectedRealms.delete(realm);
+
+    this.cleanupMapFns.get(realm)();
+    this.cleanupMapFns.delete(realm);
   }
   setKeyValue(key, val) {
     if (key === positionKey) {
@@ -172,10 +193,12 @@ class VirtualPlayersArray extends EventTarget {
     const _linkIrc = () => {
       const onjoin = e => {
         const {playerId} = e.data;
+        const created = !this.virtualPlayers.has(playerId);
         const virtualPlayer = this.getOrCreateVirtualPlayer(playerId);
         const playerMap = networkedDataClient.dataClient.getArrayMap('players', playerId);
-        virtualPlayer.link(playerId, playerMap);
-        if (virtualPlayer.refCount === 1) {
+        virtualPlayer.link(realm);
+        // console.log('dispatch join', {player: virtualPlayer, playerId});
+        if (created) {
           this.dispatchEvent(new MessageEvent('join', {
             data: {
               player: virtualPlayer,
@@ -188,12 +211,17 @@ class VirtualPlayersArray extends EventTarget {
       const onleave = e => {
         const {playerId} = e.data;
         const virtualPlayer = this.virtualPlayers.get(playerId);
+        // console.log('got leave player 0', {virtualPlayer, playerId});
         if (virtualPlayer) {
-          virtualPlayer.unlink(playerId);
+          // console.log('got leave player 1', {virtualPlayer, playerId});
+          virtualPlayer.unlink(realm);
+          // console.log('got leave player 2', {virtualPlayer, playerId});
           if (!virtualPlayer.isLinked()) {
+            // console.log('got leave player 3', {virtualPlayer, playerId});
             this.virtualPlayers.delete(playerId);
             
             virtualPlayer.dispatchEvent(new MessageEvent('leave'));
+            // console.log('dispatch leave', {player: virtualPlayer});
             this.dispatchEvent(new MessageEvent('leave', {
               data: {
                 player: virtualPlayer,
@@ -581,6 +609,7 @@ export class NetworkRealms extends EventTarget {
         if (oldNumConnectedRealms === 0 && connectPromises.length > 0) {
           this.localPlayer.initialize({
             position,
+            cursorPosition: new Float32Array(3),
             name: 'Hanna',
           });
         }
