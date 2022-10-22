@@ -89,16 +89,20 @@ class VirtualPlayer extends EventTarget {
     this.arrayId = arrayId;
     this.arrayIndexId = arrayIndexId;
     this.parent = parent;
+    this.name = name;
 
     this.headPosition = [NaN, NaN, NaN];
+    this.headRealm = null;
     this.connectedRealms = new Set();
     this.cleanupMapFns = new Map();
-    this.name = name;
+
+    this.migrating = false;
+    this.migrateTo = null;
 
     console.log('new virtual player', this, new Error().stack);
   }
   initialize(o) {
-    this.setHeadPosition(o.position);
+    // this.setHeadPosition(o.position);
 
     const headRealm = this.#getHeadRealm();
     const {dataClient, networkedDataClient} = headRealm;
@@ -117,6 +121,59 @@ class VirtualPlayer extends EventTarget {
     this.headPosition[0] = position[0];
     this.headPosition[1] = position[1];
     this.headPosition[2] = position[2];
+
+    // console.log('set head position', this.name, position);
+
+    this.#updateHeadRealm();
+  }
+  #updateHeadRealm() {
+    if (isNaN(this.headPosition[0]) || isNaN(this.headPosition[1]) || isNaN(this.headPosition[2])) {
+      throw new Error('try to update head realm for unpositioned player: ' + this.playerId + ' ' + this.headPosition.join(','));
+    }
+
+    if (this.isLinked()) {
+      const newHeadRealm = _getHeadRealm(this.headPosition, this.connectedRealms);
+      console.log('update head realm', this.name);
+      if (!this.headRealm) {
+        this.headRealm = newHeadRealm;
+      } else {
+        const oldHeadRealm = this.headRealm;
+        if (newHeadRealm.key !== oldHeadRealm.key) {
+          this.#migrateTo(newHeadRealm);
+        }
+      }
+    } else {
+      throw new Error('try to get head realm for fully unlinked player ' + this.playerId);
+    }
+  }
+  #migrateTo(newHeadRealm) {
+    if (!this.migrating) {
+      this.migrating = true;
+      this.migrateTo = newHeadRealm;
+
+      const realms = this.parent;
+      const _tickMigration = async () => {
+        while (this.migrateTo) {
+          await realms.tx(async () => {
+            const newHeadRealm = this.migrateTo;
+            this.migrateTo = null;
+
+            // XXX do the actual migration to newHeadRealm:
+            // - lock the transaction (already done)
+            // - lock the map with dead hand
+            // - create in the new array
+            // - delete from the old array
+            // - unlock the transaction (end of this function)
+            debugger;
+          });
+        }
+
+        this.migrating = false;
+      };
+      _tickMigration();
+    } else {
+      this.migrateTo = newHeadRealm;
+    }
   }
   #getHeadRealm() {
     if (this.isLinked()) {
@@ -133,9 +190,6 @@ class VirtualPlayer extends EventTarget {
     this.connectedRealms.add(realm);
 
     const {dataClient} = realm;
-    /* if (!dataClient) {
-      debugger;
-    } */
     const map = dataClient.getArrayMap(this.arrayId, this.arrayIndexId);
     const update = e => {
       console.log('virtual player map got update', this.name, e);
@@ -159,9 +213,9 @@ class VirtualPlayer extends EventTarget {
   }
   setKeyValue(key, val) {
     // console.log('set ke value', key, val, new Error().stack)
-    if (key === positionKey) {
+    /* if (key === positionKey) {
       this.setHeadPosition(val);
-    }
+    } */
 
     const headRealm = this.#getHeadRealm();
     // console.log('head realm key', headRealm.key);
@@ -608,16 +662,13 @@ export class NetworkRealms extends EventTarget {
   disableMic() {
     throw new Error('not implemented');
   }
-  /* sendRegisterMessage() {
-    const headRealm = _getHeadRealm(this.localPlayer.headPosition, this.connectedRealms);
-    headRealm.sendRegisterMessage();
-  } */
   sendChatMessage(message) {
     const headRealm = _getHeadRealm(this.localPlayer.headPosition, this.connectedRealms);
     headRealm.sendChatMessage(message);
   }
   async updatePosition(position, realmSize) {
     position = position.slice();
+
     const snappedPosition = position.map(v => Math.floor(v / realmSize) * realmSize);
     if (!arrayEquals(snappedPosition, this.lastPosition)) {
       this.lastPosition[0] = snappedPosition[0];
@@ -694,6 +745,7 @@ export class NetworkRealms extends EventTarget {
 
         // if this is the first network configuration, initialize the local player
         if (oldNumConnectedRealms === 0 && connectPromises.length > 0) {
+          this.localPlayer.setHeadPosition(position);
           this.localPlayer.initialize({
             position,
             cursorPosition: new Float32Array(3),
@@ -726,6 +778,8 @@ export class NetworkRealms extends EventTarget {
         // emit the fact that the network was reconfigured
         this.dispatchEvent(new MessageEvent('networkreconfigure'));
       });
+
+      this.localPlayer.setHeadPosition(position);
     }
   }
 }
