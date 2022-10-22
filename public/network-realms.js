@@ -131,9 +131,9 @@ class VirtualPlayer extends EventTarget {
     this.connectedRealms.add(realm);
 
     const {dataClient} = realm;
-    if (!dataClient) {
+    /* if (!dataClient) {
       debugger;
-    }
+    } */
     const map = dataClient.getArrayMap(this.arrayId, this.arrayIndexId);
     const update = e => {
       this.dispatchEvent(new MessageEvent('update', {
@@ -195,9 +195,7 @@ class VirtualPlayersArray extends EventTarget {
         const {playerId} = e.data;
         const created = !this.virtualPlayers.has(playerId);
         const virtualPlayer = this.getOrCreateVirtualPlayer(playerId);
-        // const playerMap = networkedDataClient.dataClient.getArrayMap('players', playerId);
         virtualPlayer.link(realm);
-        // console.log('dispatch join', {player: virtualPlayer, playerId});
         if (created) {
           this.dispatchEvent(new MessageEvent('join', {
             data: {
@@ -211,17 +209,12 @@ class VirtualPlayersArray extends EventTarget {
       const onleave = e => {
         const {playerId} = e.data;
         const virtualPlayer = this.virtualPlayers.get(playerId);
-        // console.log('got leave player 0', {virtualPlayer, playerId});
         if (virtualPlayer) {
-          // console.log('got leave player 1', {virtualPlayer, playerId});
           virtualPlayer.unlink(realm);
-          // console.log('got leave player 2', {virtualPlayer, playerId});
           if (!virtualPlayer.isLinked()) {
-            // console.log('got leave player 3', {virtualPlayer, playerId});
             this.virtualPlayers.delete(playerId);
             
             virtualPlayer.dispatchEvent(new MessageEvent('leave'));
-            // console.log('dispatch leave', {player: virtualPlayer});
             this.dispatchEvent(new MessageEvent('leave', {
               data: {
                 player: virtualPlayer,
