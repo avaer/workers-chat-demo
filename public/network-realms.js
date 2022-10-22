@@ -83,7 +83,7 @@ const _getHeadRealm = (position, realms) => {
   return closestRealm;
 }
 class VirtualPlayer extends EventTarget {
-  constructor(arrayId, arrayIndexId, parent) {
+  constructor(arrayId, arrayIndexId, parent, name) {
     super();
 
     this.arrayId = arrayId;
@@ -93,6 +93,9 @@ class VirtualPlayer extends EventTarget {
     this.headPosition = [NaN, NaN, NaN];
     this.connectedRealms = new Set();
     this.cleanupMapFns = new Map();
+    this.name = name;
+
+    console.log('new virtual player', this, new Error().stack);
   }
   initialize(o) {
     this.setHeadPosition(o.position);
@@ -108,8 +111,7 @@ class VirtualPlayer extends EventTarget {
     } = playersArray.addAt(this.arrayIndexId, o, {
       listen: false,
     });
-    dataClient.emitUpdate(update);
-    networkedDataClient.emitUpdate(update);
+    headRealm.emitUpdate(update);
   }
   setHeadPosition(position) {
     this.headPosition[0] = position[0];
@@ -136,6 +138,7 @@ class VirtualPlayer extends EventTarget {
     } */
     const map = dataClient.getArrayMap(this.arrayId, this.arrayIndexId);
     const update = e => {
+      console.log('virtual player map got update', this.name, e);
       this.dispatchEvent(new MessageEvent('update', {
         data: e.data,
       }));
@@ -155,18 +158,19 @@ class VirtualPlayer extends EventTarget {
     this.cleanupMapFns.delete(realm);
   }
   setKeyValue(key, val) {
+    // console.log('set ke value', key, val, new Error().stack)
     if (key === positionKey) {
       this.setHeadPosition(val);
     }
 
     const headRealm = this.#getHeadRealm();
+    // console.log('head realm key', headRealm.key);
     const {dataClient, networkedDataClient} = headRealm;
     const valueMap = dataClient.getArrayMap(this.arrayId, this.arrayIndexId, {
       listen: false,
     });
     const update = valueMap.setKeyValueUpdate(key, val);
-    dataClient.emitUpdate(update);
-    networkedDataClient.emitUpdate(update);
+    headRealm.emitUpdate(update);
   }
 }
 
@@ -182,7 +186,7 @@ class VirtualPlayersArray extends EventTarget {
   getOrCreateVirtualPlayer(playerId) {
     let virtualPlayer = this.virtualPlayers.get(playerId);
     if (!virtualPlayer) {
-      virtualPlayer = new VirtualPlayer(this.arrayId, playerId, this);
+      virtualPlayer = new VirtualPlayer(this.arrayId, playerId, this, 'remote');
       this.virtualPlayers.set(playerId, virtualPlayer);
     }
     return virtualPlayer;
@@ -307,9 +311,9 @@ class VirtualPlayersArray extends EventTarget {
           data: e.data,
         }));
       };
-      if (!networkedAudioClient) {
+      /* if (!networkedAudioClient) {
         debugger;
-      }
+      } */
       networkedAudioClient.addEventListener('audiostreamstart', audiostreamstart);
       const audiostreamend = e => {
         this.dispatchEvent(new MessageEvent('audiostreamend', {
@@ -558,6 +562,7 @@ export class NetworkRealm extends EventTarget {
     this.connected = false;
   }
   emitUpdate(update) {
+    console.log('emit update to realm', this.key, update);
     this.dataClient.emitUpdate(update);
     this.networkedDataClient.emitUpdate(update);
   }
@@ -573,7 +578,7 @@ export class NetworkRealms extends EventTarget {
 
     this.lastPosition = [NaN, NaN, NaN];
     this.players = new VirtualPlayersArray('players', this);
-    this.localPlayer = new VirtualPlayer('players', this.playerId, this);
+    this.localPlayer = new VirtualPlayer('players', this.playerId, this, 'local');
     this.world = new VirtualEntityArray('world', this);
     this.connectedRealms = new Set();
     this.tx = makeTransactionHandler();

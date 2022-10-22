@@ -434,6 +434,7 @@ export class DataClient extends EventTarget {
       }
       case UPDATE_METHODS.SET: {
         const [arrayId, arrayIndexId, key, epoch, val] = args;
+        console.log('apply update', {arrayId, arrayIndexId, key, epoch, val});
         const arrayMap = new DCMap(arrayId, arrayIndexId, this);
         let oldObject;
         if (force) {
@@ -841,6 +842,7 @@ export class NetworkedDataClient extends EventTarget {
     this.ws.send(msg);
   }
   emitUpdate(update) {
+    // console.log('emit update on network', update, new Error().stack);
     this.send(this.dataClient.serializeMessage(update));
   }
 }

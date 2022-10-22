@@ -18,19 +18,24 @@ export class RemotePlayerHtmlRenderer {
     document.body.appendChild(div);
 
     // const map = this.dataClient.getArrayMap('players', this.remotePlayerId);
-    // console.log('listen for player', virtualPlayer);
-    virtualPlayer.addEventListener('update', e => {
-      // console.log('got player map update', e.data);
+    // console.log('virtual player update listen');
+    const update = e => {
+      // console.log('html renderer got player map update', e.data);
+
       const {val} = e.data;
       const [x, y, z] = val;
       div.style.left = `${x}px`;
       div.style.top = `${y}px`;
 
       // console.log('got update', e.data);
-    });
+    };
+    virtualPlayer.addEventListener('update', update);
 
     this.cleanupFn = () => {
       document.body.removeChild(div);
+
+      // console.log('virtual player update unlisten');
+      virtualPlayer.removeEventListener('update', update);
     };
   }
   destroy() {
