@@ -191,7 +191,8 @@ class VirtualPlayersArray extends EventTarget {
     const {networkedDataClient, networkedIrcClient, networkedAudioClient} = realm;
     
     const _linkIrc = () => {
-      const onjoin = e => {
+      // XXX instead of this, attach to the players array in the data client
+      /* const onjoin = e => {
         const {playerId} = e.data;
         const created = !this.virtualPlayers.has(playerId);
         const virtualPlayer = this.getOrCreateVirtualPlayer(playerId);
@@ -226,7 +227,7 @@ class VirtualPlayersArray extends EventTarget {
           console.warn('removing nonexistent player', playerId, this.players);
         }
       };
-      networkedIrcClient.addEventListener('leave', onleave);
+      networkedIrcClient.addEventListener('leave', onleave); */
 
       // note: this is not a good place for this, since it doesn't have to do with players
       // it's here for convenience
@@ -238,12 +239,68 @@ class VirtualPlayersArray extends EventTarget {
       networkedIrcClient.addEventListener('chat', onchat);
 
       this.cleanupFns.set(networkedIrcClient, () => {
-        networkedIrcClient.removeEventListener('join', onjoin);
-        networkedIrcClient.removeEventListener('leave', onleave);
+        // networkedIrcClient.removeEventListener('join', onjoin);
+        // networkedIrcClient.removeEventListener('leave', onleave);
         networkedIrcClient.removeEventListener('chat', onchat);
       });
     };
     _linkIrc();
+
+    const _linkData = () => {
+      const playersArray = networkedDataClient.dataClient.getArray(this.arrayId);
+
+      const onadd = e => {
+        // console.log('got player add', e.data);
+        const {arrayIndexId, map, val} = e.data;
+        const playerId = arrayIndexId;
+
+        const created = !this.virtualPlayers.has(playerId);
+        const virtualPlayer = this.getOrCreateVirtualPlayer(playerId);
+        virtualPlayer.link(realm);
+        if (created) {
+          this.dispatchEvent(new MessageEvent('join', {
+            data: {
+              player: virtualPlayer,
+              playerId,
+            },
+          }));
+        }
+      };
+      playersArray.addEventListener('add', onadd);
+
+      const onremove = e => {
+        // console.log('got player remove', e.data);
+        const {arrayId, arrayIndexId} = e.data;
+        const playerId = arrayIndexId;
+
+        const virtualPlayer = this.virtualPlayers.get(playerId);
+        if (virtualPlayer) {
+          virtualPlayer.unlink(realm);
+          if (!virtualPlayer.isLinked()) {
+            this.virtualPlayers.delete(playerId);
+            
+            virtualPlayer.dispatchEvent(new MessageEvent('leave'));
+            this.dispatchEvent(new MessageEvent('leave', {
+              data: {
+                player: virtualPlayer,
+                playerId,
+              },
+            }));
+          }
+        } else {
+          console.warn('removing nonexistent player', playerId, this.players);
+        }
+      };
+      playersArray.addEventListener('remove', onremove);
+
+      this.cleanupFns.set(networkedDataClient, () => {
+        playersArray.unlisten();
+        playersArray.removeEventListener('add', onadd);
+        playersArray.removeEventListener('remove', onremove);
+      });
+    };
+    _linkData();
+
     const _linkAudio = () => {
       const audiostreamstart = e => {
         this.dispatchEvent(new MessageEvent('audiostreamstart', {
@@ -269,7 +326,10 @@ class VirtualPlayersArray extends EventTarget {
     _linkAudio();
   }
   unlink(realm) {
-    const {networkedIrcClient, networkedAudioClient} = realm;
+    const {networkedDataClient, networkedIrcClient, networkedAudioClient} = realm;
+
+    this.cleanupFns.get(networkedDataClient)();
+    this.cleanupFns.delete(networkedDataClient);
 
     this.cleanupFns.get(networkedIrcClient)();
     this.cleanupFns.delete(networkedIrcClient);
