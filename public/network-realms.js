@@ -29,6 +29,13 @@ const distanceTo = (a, b) => {
   const dz = za - zb;
   return Math.sqrt(dx*dx + dy*dy + dz*dz);
 };
+const boxContains = (box, point) => {
+  const {min, max} = box;
+  const [x, y, z] = point;
+  return x >= min[0] && x < max[0] &&
+    y >= min[1] && y < max[1] &&
+    z >= min[2] && z < max[2];
+};
 const makeTransactionHandler = () => {
   const queue = [];
   async function handle(fn) {
@@ -64,23 +71,25 @@ const makeTransactionHandler = () => {
 //
 
 const _getHeadRealm = (position, realms) => {
-  let closestRealm = null;
-  let closestRealmDistance = Infinity;
   for (const realm of realms) {
     if (realm.connected) {
-      const realmCenter = [
-        realm.min[0] + realm.size/2,
-        realm.min[1] + realm.size/2,
-        realm.min[2] + realm.size/2,
-      ];
-      const distance = distanceTo(position, realmCenter);
-      if (distance < closestRealmDistance) {
-        closestRealm = realm;
-        closestRealmDistance = distance;
+      const box = {
+        min: realm.min,
+        max: [
+          realm.min[0] + realm.size,
+          realm.min[1] + realm.size,
+          realm.min[2] + realm.size,
+        ],
+      };
+      // console.log('check box', box.min, box.max, position);
+      if (boxContains(box, position)) {
+        // console.log('got head', realm.min);
+        return realm;
       }
     }
   }
-  return closestRealm;
+  debugger;
+  return null;
 }
 class VirtualPlayer extends EventTarget {
   constructor(arrayId, arrayIndexId, parent, name) {
@@ -99,7 +108,6 @@ class VirtualPlayer extends EventTarget {
     console.log('new virtual player', this, new Error().stack);
   }
   initialize(o) {
-
     const headRealm = this.#getHeadRealm();
     const {dataClient, networkedDataClient} = headRealm;
     const playersArray = dataClient.getArray(this.arrayId, {
@@ -125,7 +133,7 @@ class VirtualPlayer extends EventTarget {
 
     if (this.isLinked()) {
       const newHeadRealm = _getHeadRealm(this.headPosition, this.connectedRealms);
-      // console.log('update head realm', this.name, newHeadRealm);
+      // console.log('update head realm', this.name, this.headRealm, newHeadRealm);
       if (!this.headRealm) {
         this.headRealm = newHeadRealm;
       } else {
@@ -154,7 +162,7 @@ class VirtualPlayer extends EventTarget {
       listen: false,
     });
 
-    console.log('move realm ', oldHeadRealm.key, ' -> ', newHeadRealm.key);
+    // console.log('move realm ', oldHeadRealm.key, ' -> ', newHeadRealm.key);
 
     // XXX do the actual migration to newHeadRealm:
     // - lock the transaction (already done)
@@ -173,7 +181,7 @@ class VirtualPlayer extends EventTarget {
     
     // - delete from the old array
     const oldRemoveUpdate = oldPlayerMap.removeUpdate();
-    // console.log('removed old', oldRemoveUpdate);
+    console.log('emit remove old', oldHeadRealm.key, oldRemoveUpdate, oldRemoveUpdate.type);
     oldHeadRealm.emitUpdate(oldRemoveUpdate);
   }
   #getHeadRealm() {
@@ -199,10 +207,19 @@ class VirtualPlayer extends EventTarget {
       }));
     };
     map.addEventListener('update', update);
+    
+    const remove = e => {
+      const {arrayIndexId} = e.data;
+      console.log('virtual player got underlying remove', e.data);
+      // XXX
+    };
+    map.addEventListener('remove', remove);
 
     this.cleanupMapFns.set(realm, () => {
       map.unlisten();
+
       map.removeEventListener('update', update);
+      map.removeEventListener('remove', remove);
     });
   }
   unlink(realm) {
@@ -604,12 +621,12 @@ export class NetworkRealm extends EventTarget {
     this.connected = true;
   }
   disconnect() {
-    console.log('realm disconnect', new Error().stack)
     this.ws.close();
-    const updates = this.dataClient.clearUpdates();
+    /* const updates = this.dataClient.clearUpdates();
+    console.log('realm disconnect', updates);
     for (const update of updates) {
       this.dataClient.emitUpdate(update);
-    }
+    } */
     this.connected = false;
   }
   emitUpdate(update) {

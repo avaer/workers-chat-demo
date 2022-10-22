@@ -165,14 +165,14 @@ export class DCMap extends EventTarget {
     }
     delete array[this.arrayIndexId];
     
-    return new MessageEvent('remove.' + this.arrayId + '.' + this.arrayIndexId, {
+    return new MessageEvent('remove.' + this.arrayId, {
       data: {
         arrayIndexId: this.arrayIndexId, // XXX is this needed?
       },
     });
   }
   clearUpdate() {
-    return new MessageEvent('remove.' + this.arrayId + '.' + this.arrayIndexId, {
+    return new MessageEvent('remove.' + this.arrayId, {
       data: {
         arrayIndexId: this.arrayIndexId, // XXX is this needed?
       },
@@ -218,7 +218,7 @@ export class DCMap extends EventTarget {
     };
     this.dataClient.addEventListener(setKey, setFn);
 
-    const removeKey = 'remove.' + this.arrayId + '.' + this.arrayIndexId;
+    const removeKey = 'remove.' + this.arrayId;
     const removeFn = e => {
       const {arrayIndexId} = e.data;
       if (arrayIndexId === this.arrayIndexId) {
@@ -313,6 +313,7 @@ export class DCArray extends EventTarget {
       const {
         arrayIndexId,
       } = e.data;
+      // console.log('data client remove', {arrayId: this.arrayId, arrayIndexId});
       this.dispatchEvent(new MessageEvent('remove', {
         data: {
           arrayIndexId,

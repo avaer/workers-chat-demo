@@ -314,24 +314,36 @@ z-index: 2;
       el.classList.add('connected');
       el.classList.remove('connecting');
 
-      const {networkedIrcClient} = realm;
-      
-      const players = new Set();
-      const onjoin = e => {
-        const {player, playerId} = e.data;
-        players.add(playerId);
-      };
-      networkedIrcClient.addEventListener('join', onjoin);
+      const {dataClient} = realm;
 
-      const onleave = e => {
-        const {player, playerId} = e.data;
-        players.delete(playerId);
+      const playersArray = dataClient.getArray('players');
+      
+      const onadd = e => {
+        console.log('game players array add', realm.key, e.data, playersArray.toArray());
+        
+        // const {player, playerId} = e.data;
+        // players.add(playerId);
+        // console.log('add player', playerId);
+        // el.setText(JSON.stringify(players, null, 2));
       };
-      networkedIrcClient.addEventListener('leave', onleave);
+      playersArray.addEventListener('add', onadd);
+
+      // console.log('game players array listen on realm', realm.key);
+      const onremove = e => {
+        console.log('game players array remove', realm.key, e.data, playersArray.toArray());
+
+        // const {player, playerId} = e.data;
+        // players.delete(playerId);
+      };
+      playersArray.addEventListener('remove', onremove);
   
       realmCleanupFns.set(realm, () => {
-        networkedIrcClient.removeEventListener('join', onjoin);
-        networkedIrcClient.removeEventListener('leave', onleave);
+        dataClient.removeEventListener('add', onadd);
+        dataClient.removeEventListener('remove', onremove);
+
+        playersArray.unlisten();
+
+        // console.log('game players array cancel on realm', realm.key);
       });
     }
   });
@@ -343,8 +355,10 @@ z-index: 2;
     if (el) {
       el.classList.remove('connected');
       el.classList.remove('connecting');
+
+      realmCleanupFns.get(realm)();
+      realmCleanupFns.delete(realm);
     }
-    // console.log('leave canvas', canvas);
   });
   // realms canvas
   const realmsCanvases = new GameRealmsCanvases(realmSize);
