@@ -449,4 +449,6 @@ z-index: 2;
     _recurse();
   };
   _startFrameLoop();
+
+  return realms;
 };

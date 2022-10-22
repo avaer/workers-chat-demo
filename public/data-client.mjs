@@ -135,16 +135,28 @@ export class DCMap extends EventTarget {
       }
     });
   }
-  removeUpdate() {
+  /* removeUpdate() {
     this.dataClient.crdt.delete(this.arrayIndexId);
 
     let array = this.dataClient.crdt.get(this.arrayId);
     if (!array) {
-      throw new Error('remove from nonexistent array!');
+      console.log('snapshot 1', structuredClone(this.dataClient.crdt));
+      throw new Error('remove from nonexistent array: ' + this.arrayId);
+    }
+    if (array[this.arrayIndexId] === undefined) {
+      console.log('snapshot 2', structuredClone(this.dataClient.crdt));
+      throw new Error('remove from nonexistent array index: ' + this.arrayId + ' ' + this.arrayIndexId);
     }
     delete array[this.arrayIndexId];
     
     return new MessageEvent('remove.' + this.arrayId, {
+      data: {
+        arrayIndexId: this.arrayIndexId,
+      },
+    });
+  } */
+  clearUpdate() {
+    return new MessageEvent('remove.' + this.arrayId + '.' + this.arrayIndexId, {
       data: {
         arrayIndexId: this.arrayIndexId,
       },
@@ -190,10 +202,9 @@ export class DCMap extends EventTarget {
     };
     this.dataClient.addEventListener(setKey, setFn);
 
-    const removeKey = 'remove.' + this.arrayId;
+    const removeKey = 'remove.' + this.arrayId + '.' + this.arrayIndexId;
     const removeFn = e => {
       const {arrayIndexId} = e.data;
-      // console.log('player check remove', arrayIndexId, this.arrayIndexId);
       if (arrayIndexId === this.arrayIndexId) {
         this.dispatchEvent(new MessageEvent('remove', {
           data: {
@@ -203,11 +214,17 @@ export class DCMap extends EventTarget {
       }
     };
     this.dataClient.addEventListener(removeKey, removeFn);
+
+    // listener
+    this.dataClient.arrayMapListeners.set(this.arrayIndexId, this);
     
     this.cleanupFn = () => {
       // console.log('map unlink', setKey);
       this.dataClient.removeEventListener(setKey, setFn);
       this.dataClient.removeEventListener(removeKey, removeFn);
+
+      // listener
+      this.dataClient.arrayMapListeners.delete(this.arrayIndexId);
     };
   }
   unlisten() {
@@ -217,6 +234,9 @@ export class DCMap extends EventTarget {
     }
   }
 }
+
+//
+
 export class DCArray extends EventTarget {
   constructor(arrayId, dataClient) {
     super();
@@ -251,6 +271,9 @@ export class DCArray extends EventTarget {
   addAt(arrayIndexId, val) {
     return this.dataClient.addArrayMapElement(this.arrayId, arrayIndexId, val);
   }
+  removeAt(arrayIndexId) {
+    return this.dataClient.removeArrayMapElement(this.arrayId, arrayIndexId);
+  }
   listen() {
     const addKey = 'add.' + this.arrayId;
     const addFn = e => {
@@ -282,9 +305,15 @@ export class DCArray extends EventTarget {
     };
     this.dataClient.addEventListener(removeKey, removeFn);
 
+    // listener
+    this.dataClient.arrayListeners.set(this.arrayId, this);
+
     this.cleanupFn = () => {
       this.dataClient.removeEventListener(addKey, addFn);
       this.dataClient.removeEventListener(removeKey, removeFn);
+
+      // listener
+      this.dataClient.arrayListeners.delete(this.arrayId);
     };
   }
   unlisten() {
@@ -303,6 +332,9 @@ export class DataClient extends EventTarget {
 
     this.crdt = crdt;
     this.userData = userData;
+
+    this.arrayListeners = new Map();
+    this.arrayMapListeners = new Map();
   }
 
   // for both client and server
@@ -658,6 +690,22 @@ export class DataClient extends EventTarget {
       throw new Error('array index not found in array');
     }
   }
+  clearUpdates() {
+    // console.log('clearing', Array.from(this.arrayListeners.entries()), Array.from(this.arrayMapListeners.entries()));
+    const updates = [];
+    for (const map of this.arrayMapListeners.values()) {
+      const update = map.clearUpdate();
+      // this.emitUpdate(update);
+      updates.push(update);
+    }
+    // currently, arrays cannot be removed
+    // XXX in that case, we don't need to track this.arrayListeners?
+    // for (const array of this.arrayListeners.values()) {
+    //   const update = array.clearUpdate();
+    //   this.emitUpdate(update);
+    // }
+    return updates;
+  }
   readBinding(arrayNames) {
     let arrays = {};
     let arrayMaps = {};
@@ -697,6 +745,7 @@ export class NetworkedDataClient extends EventTarget {
 
     this.dataClient = dataClient;
     this.userData = userData;
+    
     this.ws = null;
   }
   static handlesMethod(method) {
@@ -785,6 +834,8 @@ export class NetworkedDataClient extends EventTarget {
       }
     };
     this.ws.addEventListener('message', mainMessage);
+  }
+  disconnect() {
   }
   send(msg) {
     this.ws.send(msg);

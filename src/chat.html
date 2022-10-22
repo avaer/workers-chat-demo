@@ -915,10 +915,7 @@ const test = async () => {
 globalThis.test = test;
 
 let currentWebSocket = null;
-let dc;
-let ndc;
-let nirc;
-let nac;
+let realms;
 
 let audioIndicator = document.getElementById('audio-indicator');
 let nameForm = document.querySelector("#name-form");
@@ -1084,7 +1081,7 @@ function startChat() {
   chatroom.addEventListener("submit", event => {
     event.preventDefault();
 
-    if (currentWebSocket && chatInput.value) {
+    if (realms && chatInput.value) {
       /* console.log('send chat', {
         playerId,
         message: chatInput.value,
@@ -1099,7 +1096,7 @@ function startChat() {
       }));
       currentWebSocket.send(JSON.stringify({message: chatInput.value})); */
 
-      nirc.sendChatMessage(chatInput.value);
+      realms.sendChatMessage(chatInput.value);
       chatInput.value = '';
 
       // Scroll to bottom whenever sending a message.
@@ -1161,34 +1158,10 @@ function join() {
   let rejoined = false;
   let startTime = Date.now();
 
-  let rejoin = async () => {
-    if (!rejoined) {
-      rejoined = true;
-      currentWebSocket = null;
-
-      // Clear the roster.
-      while (roster.firstChild) {
-        roster.removeChild(roster.firstChild);
-      }
-
-      // Don't try to reconnect too rapidly.
-      let timeSinceLastJoin = Date.now() - startTime;
-      if (timeSinceLastJoin < 10000) {
-        // Less than 10 seconds elapsed since last join. Pause a bit.
-        await new Promise(resolve => setTimeout(resolve, 10000 - timeSinceLastJoin));
-      }
-
-      // OK, reconnect now!
-      join();
-    }
-  }
-  ws.addEventListener("open", event => {
-    currentWebSocket = ws;
-  });
   (async () => {
     // connect
     console.log('connecting...');
-    await startGame();
+    realms = await startGame();
 
     // chat
     // addChatMessage(null,

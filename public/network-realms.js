@@ -63,6 +63,25 @@ const makeTransactionHandler = () => {
 
 //
 
+const _getHeadRealm = (position, realms) => {
+  let closestRealm = null;
+  let closestRealmDistance = Infinity;
+  for (const realm of realms) {
+    if (realm.connected) {
+      const realmCenter = [
+        realm.min[0] + realm.size/2,
+        realm.min[1] + realm.size/2,
+        realm.min[2] + realm.size/2,
+      ];
+      const distance = distanceTo(position, realmCenter);
+      if (distance < closestRealmDistance) {
+        closestRealm = realm;
+        closestRealmDistance = distance;
+      }
+    }
+  }
+  return closestRealm;
+}
 class VirtualPlayer extends EventTarget {
   constructor(arrayId, arrayIndexId/*, parent*/) {
     super();
@@ -98,21 +117,7 @@ class VirtualPlayer extends EventTarget {
   }
   #getHeadRealm() {
     if (this.isLinked()) {
-      let closestRealm = null;
-      let closestRealmDistance = Infinity;
-      for (const realm of this.connectedRealms) {
-        const realmCenter = [
-          realm.min[0] + realm.size/2,
-          realm.min[1] + realm.size/2,
-          realm.min[2] + realm.size/2,
-        ];
-        const distance = distanceTo(this.headPosition, realmCenter);
-        if (distance < closestRealmDistance) {
-          closestRealm = realm;
-          closestRealmDistance = distance;
-        }
-      }
-      return closestRealm;
+      return _getHeadRealm(this.headPosition, this.connectedRealms);
     } else {
       throw new Error('try to get head realm for fully unlinked player ' + this.playerId);
     }
@@ -121,11 +126,11 @@ class VirtualPlayer extends EventTarget {
     return this.connectedRealms.size > 0;
   }
   link(realm) {
-    console.log('link', realm, new Error().stack);
+    // console.log('link', realm);
     this.connectedRealms.add(realm);
   }
   unlink(realm) {
-    console.log('unlink', realm);
+    // console.log('unlink', realm);
     this.connectedRealms.delete(realm);
   }
   setKeyValue(key, val) {
@@ -152,6 +157,8 @@ class VirtualPlayersArray extends EventTarget {
     this.parent = parent;
     this.virtualPlayers = new Map();
     this.cleanupFns = new Map();
+    // this.allCleanupFns = new Map();
+    // this.linkedRealms = new Map();
   }
   getOrCreateVirtualPlayer(playerId) {
     let virtualPlayer = this.virtualPlayers.get(playerId);
@@ -225,22 +232,36 @@ class VirtualPlayersArray extends EventTarget {
       };
       networkedAudioClient.addEventListener('audiostreamend', audiostreamend);
 
-      this.cleanupFns.set(networkedIrcClient, () => {
-        networkedAudioClient.removeEventListener('audiostreamstart');
-        networkedAudioClient.removeEventListener('audiostreamend');
+      this.cleanupFns.set(networkedAudioClient, () => {
+        networkedAudioClient.removeEventListener('audiostreamstart', audiostreamstart);
+        networkedAudioClient.removeEventListener('audiostreamend', audiostreamend);
       });
+      // this.allCleanupFns.set(networkedAudioClient, true);
     };
     _linkAudio();
+
+    // this.linkedRealms.set(realm, true);
   }
   unlink(realm) {
     const {networkedIrcClient, networkedAudioClient} = realm;
+
+    // console.log('had', this.allCleanupFns.get(networkedIrcClient), this.cleanupFns.get(networkedIrcClient), this.linkedRealms.get(realm));
 
     this.cleanupFns.get(networkedIrcClient)();
     this.cleanupFns.delete(networkedIrcClient);
 
     this.cleanupFns.get(networkedAudioClient)();
     this.cleanupFns.delete(networkedAudioClient);
+
+    // this.linkedRealms.delete(realm);
   }
+  /* clear() {
+    const entries = Array.from(this.virtualPlayers.entries());
+    for (const [playerId, virtualPlayer] of entries) {
+      virtualPlayer.unlink(playerId);
+      this.virtualPlayers.delete(playerId);
+    }
+  } */
 }
 
 //
@@ -409,6 +430,7 @@ export class NetworkRealm {
     this.parent = parent;
 
     this.key = min.join(':');
+    this.connected = false;
     
     const dc1 = new DataClient({
       crdt: new Map(),
@@ -426,6 +448,9 @@ export class NetworkRealm {
     this.networkedIrcClient = new NetworkedIrcClient();
     this.networkedAudioClient = new NetworkedAudioClient();
   }
+  sendChatMessage(message) {
+    this.networkedIrcClient.sendChatMessage(message);
+  }
   async connect() {
     const ws1 = createWs('realm:' + this.key, this.parent.playerId);
     ws1.binaryType = 'arraybuffer';
@@ -435,11 +460,15 @@ export class NetworkRealm {
       this.networkedIrcClient.connect(ws1),
       this.networkedAudioClient.connect(ws1),
     ]);
+    this.connected = true;
   }
   disconnect() {
-    console.warn('realm disconnect', this.key);
     this.ws.close();
-    this.ws = null;
+    const updates = this.dataClient.clearUpdates();
+    for (const update of updates) {
+      this.dataClient.emitUpdate(update);
+    }
+    this.connected = false;
   }
   emitUpdate(update) {
     this.dataClient.emitUpdate(update);
@@ -479,6 +508,10 @@ export class NetworkRealms extends EventTarget {
       }
     }
     return closestRealm;
+  }
+  sendChatMessage(message) {
+    const headRealm = _getHeadRealm(this.localPlayer.headPosition, this.connectedRealms);
+    headRealm.sendChatMessage(message);
   }
   async updatePosition(position, realmSize) {
     position = position.slice();
@@ -527,10 +560,10 @@ export class NetworkRealms extends EventTarget {
             }));
 
             const connectPromise = (async () => {
+              // try to connect
               this.players.link(realm);
               this.localPlayer.link(realm);
               this.world.link(realm.networkedDataClient);
-              
               try {
                 await realm.connect();
               } catch(err) {
@@ -540,9 +573,8 @@ export class NetworkRealms extends EventTarget {
                 throw err;
               }
               this.connectedRealms.add(realm);
-              // if (arrayEquals(realm.min, snappedPosition)) {
-              //   this.centerRealm = realm;
-              // }
+
+              // emit event
               this.dispatchEvent(new MessageEvent('realmjoin', {
                 data: {
                   realm,
@@ -566,7 +598,10 @@ export class NetworkRealms extends EventTarget {
         const oldRealms = [];
         for (const connectedRealm of this.connectedRealms) {
           if (!candidateRealms.find(candidateRealm => candidateRealm.key === connectedRealm.key)) {
+            this.players.unlink(connectedRealm);
+            this.localPlayer.unlink(connectedRealm);
             this.world.unlink(connectedRealm.networkedDataClient);
+
             connectedRealm.disconnect();
             this.connectedRealms.delete(connectedRealm);
             oldRealms.push(connectedRealm);
