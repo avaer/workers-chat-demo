@@ -235,9 +235,19 @@ class VirtualPlayersArray extends EventTarget {
       };
       networkedIrcClient.addEventListener('leave', onleave);
 
+      // note: this is not a good place for this, since it doesn't have to do with players
+      // it's here for convenience
+      const onchat = e => {
+        this.parent.dispatchEvent(new MessageEvent('chat', {
+          data: e.data,
+        }));
+      };
+      networkedIrcClient.addEventListener('chat', onchat);
+
       this.cleanupFns.set(networkedIrcClient, () => {
         networkedIrcClient.removeEventListener('join', onjoin);
         networkedIrcClient.removeEventListener('leave', onleave);
+        networkedIrcClient.removeEventListener('chat', onchat);
       });
     };
     _linkIrc();

@@ -1163,6 +1163,11 @@ function join() {
     console.log('connecting...');
     realms = await startGame();
 
+    realms.addEventListener('chat', e => {
+      const {playerId, message} = e.data;
+      addChatMessage(playerId, message);
+    });
+
     // chat
     // addChatMessage(null,
     //     "* This is a demo app built with Cloudflare Workers Durable Objects. The source code " +

@@ -382,12 +382,6 @@ z-index: 2;
         }
       }
     });
-
-    // chat
-    realms.addEventListener('chat', e => {
-      const {playerId, message} = e.data;
-      addChatMessage(playerId, message);
-    });
     
     // audio
     const _enableAudioOutput = playerId => {
