@@ -125,7 +125,7 @@ class VirtualPlayer extends EventTarget {
 
     if (this.isLinked()) {
       const newHeadRealm = _getHeadRealm(this.headPosition, this.connectedRealms);
-      console.log('update head realm', this.name, newHeadRealm);
+      // console.log('update head realm', this.name, newHeadRealm);
       if (!this.headRealm) {
         this.headRealm = newHeadRealm;
       } else {
