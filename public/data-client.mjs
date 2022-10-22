@@ -155,10 +155,26 @@ export class DCMap extends EventTarget {
       },
     });
   } */
+  removeUpdate() {
+    this.dataClient.crdt.delete(this.arrayIndexId);
+    let array = this.dataClient.crdt.get(this.arrayId);
+    if (!array) {
+      throw new Error('remove from nonexistent array!');
+      // array = {};
+      // this.crdt.set(arrayId, array);
+    }
+    delete array[this.arrayIndexId];
+    
+    return new MessageEvent('remove.' + this.arrayId + '.' + this.arrayIndexId, {
+      data: {
+        arrayIndexId: this.arrayIndexId, // XXX is this needed?
+      },
+    });
+  }
   clearUpdate() {
     return new MessageEvent('remove.' + this.arrayId + '.' + this.arrayIndexId, {
       data: {
-        arrayIndexId: this.arrayIndexId,
+        arrayIndexId: this.arrayIndexId, // XXX is this needed?
       },
     });
   }

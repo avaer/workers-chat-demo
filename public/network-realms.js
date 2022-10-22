@@ -147,22 +147,46 @@ class VirtualPlayer extends EventTarget {
     }
   }
   #migrateTo(newHeadRealm) {
+    this.migrateTo = newHeadRealm;
+
     if (!this.migrating) {
       this.migrating = true;
-      this.migrateTo = newHeadRealm;
 
       const realms = this.parent;
       const _tickMigration = async () => {
-        while (this.migrateTo) {
+        while (this.migrateTo && this.migrateTo !== this.headRealm) {
           await realms.tx(async () => {
+            const oldHeadRealm = this.headRealm;
             const newHeadRealm = this.migrateTo;
+            this.headRealm = newHeadRealm;
             this.migrateTo = null;
+
+            const oldPlayersArray = oldHeadRealm.dataClient.getArray(this.arrayId, {
+              listen: false,
+            });
+            const oldPlayerMap = oldPlayersArray.getMap(this.arrayIndexId, {
+              listen: false,
+            });
 
             // XXX do the actual migration to newHeadRealm:
             // - lock the transaction (already done)
             // - lock the map with dead hand
             // - create in the new array
+            const newPlayersArray = newHeadRealm.dataClient.getArray(this.arrayId, {
+              listen: false,
+            });
+            const newPlayerMap = newPlayersArray.addAt(this.arrayIndexId, oldPlayerMap.data, {
+              listen: false,
+            });
+
+            const oldPlayerJson = oldPlayerMap.toObject();
+            const newAddUpdate = newPlayersArray.addAt(this.arrayIndexId, oldPlayerJson);
+            console.log('added json', oldPlayerJson, newAddUpdate);
+            
             // - delete from the old array
+            const oldRemoveUpdate = oldPlayerMap.removeUpdate();
+            console.log('removed old', oldRemoveUpdate);
+            
             // - unlock the transaction (end of this function)
             debugger;
           });
@@ -171,8 +195,6 @@ class VirtualPlayer extends EventTarget {
         this.migrating = false;
       };
       _tickMigration();
-    } else {
-      this.migrateTo = newHeadRealm;
     }
   }
   #getHeadRealm() {
