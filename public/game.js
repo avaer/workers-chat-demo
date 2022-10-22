@@ -168,11 +168,11 @@ z-index: 2;
   localPlayerCanvas.canvas.classList.add('player-sprite');
   let localPlayerFocused = false;
   localPlayerCanvas.canvas.addEventListener('focus', e => {
-    console.log('character focus 1');
+    // console.log('character focus 1');
     localPlayerFocused = true;
   });
   localPlayerCanvas.canvas.addEventListener('blur', e => {
-    console.log('character blur 1');
+    // console.log('character blur 1');
     localPlayerFocused = false;
   });
   window.addEventListener('keydown', e => {
