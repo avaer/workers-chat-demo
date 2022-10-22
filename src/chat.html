@@ -1200,7 +1200,7 @@ function join() {
     }
   })();
 
-  ws.addEventListener("message-NEVER", event => {
+  /* ws.addEventListener("message-NEVER", event => {
     // console.log('got event', event.data);
     if (event.data instanceof ArrayBuffer) {
       // console.log('client got binary data', event.data);
@@ -1244,7 +1244,7 @@ function join() {
         lastSeenTimestamp = data.timestamp;
       }
     }
-  });
+  }); */
 
   const interval = setInterval(() => {
     ws.send(JSON.stringify({method: 'ping'}));
