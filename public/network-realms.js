@@ -30,11 +30,10 @@ const distanceTo = (a, b) => {
   return Math.sqrt(dx*dx + dy*dy + dz*dz);
 };
 const makeTransactionHandler = () => {
-  let running = false;
   const queue = [];
   async function handle(fn) {
-    if (!running) {
-      running = true;
+    if (!handle.running) {
+      handle.running = true;
       let result;
       let error;
       try {
@@ -42,7 +41,7 @@ const makeTransactionHandler = () => {
       } catch (err) {
         error = err;
       }
-      running = false;
+      handle.running = false;
       if (queue.length > 0) {
         queue.shift()();
       }
@@ -58,6 +57,7 @@ const makeTransactionHandler = () => {
       return handle(fn);
     }
   }
+  handle.running = false; 
   return handle;
 };
 
@@ -96,13 +96,9 @@ class VirtualPlayer extends EventTarget {
     this.connectedRealms = new Set();
     this.cleanupMapFns = new Map();
 
-    this.migrating = false;
-    this.migrateTo = null;
-
     console.log('new virtual player', this, new Error().stack);
   }
   initialize(o) {
-    // this.setHeadPosition(o.position);
 
     const headRealm = this.#getHeadRealm();
     const {dataClient, networkedDataClient} = headRealm;
@@ -121,19 +117,15 @@ class VirtualPlayer extends EventTarget {
     this.headPosition[0] = position[0];
     this.headPosition[1] = position[1];
     this.headPosition[2] = position[2];
-
-    // console.log('set head position', this.name, position);
-
-    this.#updateHeadRealm();
   }
-  #updateHeadRealm() {
+  updateHeadRealm() {
     if (isNaN(this.headPosition[0]) || isNaN(this.headPosition[1]) || isNaN(this.headPosition[2])) {
       throw new Error('try to update head realm for unpositioned player: ' + this.playerId + ' ' + this.headPosition.join(','));
     }
 
     if (this.isLinked()) {
       const newHeadRealm = _getHeadRealm(this.headPosition, this.connectedRealms);
-      console.log('update head realm', this.name);
+      console.log('update head realm', this.name, newHeadRealm);
       if (!this.headRealm) {
         this.headRealm = newHeadRealm;
       } else {
@@ -147,60 +139,42 @@ class VirtualPlayer extends EventTarget {
     }
   }
   #migrateTo(newHeadRealm) {
-    this.migrateTo = newHeadRealm;
-
-    if (!this.migrating) {
-      this.migrating = true;
-
-      const realms = this.parent;
-      const _tickMigration = async () => {
-        while (this.migrateTo && this.migrateTo !== this.headRealm) {
-          await realms.tx(async () => {
-            const oldHeadRealm = this.headRealm;
-            const newHeadRealm = this.migrateTo;
-            this.headRealm = newHeadRealm;
-            this.migrateTo = null;
-
-            const oldPlayersArray = oldHeadRealm.dataClient.getArray(this.arrayId, {
-              listen: false,
-            });
-            const oldPlayerMap = oldPlayersArray.getMap(this.arrayIndexId, {
-              listen: false,
-            });
-
-            // XXX do the actual migration to newHeadRealm:
-            // - lock the transaction (already done)
-            // - lock the map with dead hand
-            // - create in the new array
-            const newPlayersArray = newHeadRealm.dataClient.getArray(this.arrayId, {
-              listen: false,
-            });
-            // const newPlayerMap = newPlayersArray.addAt(this.arrayIndexId, oldPlayerMap.data, {
-            //   listen: false,
-            // });
-
-            const oldPlayerJson = oldPlayerMap.toObject();
-            const {
-              map: newPlayerMap,
-              update: newAddUpdate,
-            } = newPlayersArray.addAt(this.arrayIndexId, oldPlayerJson);
-            // console.log('added json', oldPlayerJson, newPlayerMap, newAddUpdate);
-            newHeadRealm.emitUpdate(newAddUpdate);
-            
-            // - delete from the old array
-            const oldRemoveUpdate = oldPlayerMap.removeUpdate();
-            // console.log('removed old', oldRemoveUpdate);
-            oldHeadRealm.emitUpdate(oldRemoveUpdate);
-            
-            // - unlock the transaction (end of this function)
-            // debugger;
-          });
-        }
-
-        this.migrating = false;
-      };
-      _tickMigration();
+    const realms = this.parent;
+    if (!realms.tx.running) {
+      throw new Error('migration happening outside of a lock -- wrap in realms.tx()')
     }
+
+    const oldHeadRealm = this.headRealm;
+    this.headRealm = newHeadRealm;
+
+    const oldPlayersArray = oldHeadRealm.dataClient.getArray(this.arrayId, {
+      listen: false,
+    });
+    const oldPlayerMap = oldPlayersArray.getMap(this.arrayIndexId, {
+      listen: false,
+    });
+
+    console.log('move realm ', oldHeadRealm.key, ' -> ', newHeadRealm.key);
+
+    // XXX do the actual migration to newHeadRealm:
+    // - lock the transaction (already done)
+    // - lock the map with dead hand
+    // - create in the new array
+    const newPlayersArray = newHeadRealm.dataClient.getArray(this.arrayId, {
+      listen: false,
+    });
+    const oldPlayerJson = oldPlayerMap.toObject();
+    const {
+      map: newPlayerMap,
+      update: newAddUpdate,
+    } = newPlayersArray.addAt(this.arrayIndexId, oldPlayerJson);
+    // console.log('added json', oldPlayerJson, newPlayerMap, newAddUpdate);
+    newHeadRealm.emitUpdate(newAddUpdate);
+    
+    // - delete from the old array
+    const oldRemoveUpdate = oldPlayerMap.removeUpdate();
+    // console.log('removed old', oldRemoveUpdate);
+    oldHeadRealm.emitUpdate(oldRemoveUpdate);
   }
   #getHeadRealm() {
     if (this.isLinked()) {
@@ -219,7 +193,7 @@ class VirtualPlayer extends EventTarget {
     const {dataClient} = realm;
     const map = dataClient.getArrayMap(this.arrayId, this.arrayIndexId);
     const update = e => {
-      console.log('virtual player map got update', this.name, e);
+      // console.log('virtual player map got update', this.name, e);
       this.dispatchEvent(new MessageEvent('update', {
         data: e.data,
       }));
@@ -239,11 +213,6 @@ class VirtualPlayer extends EventTarget {
     this.cleanupMapFns.delete(realm);
   }
   setKeyValue(key, val) {
-    // console.log('set ke value', key, val, new Error().stack)
-    /* if (key === positionKey) {
-      this.setHeadPosition(val);
-    } */
-
     const headRealm = this.#getHeadRealm();
     // console.log('head realm key', headRealm.key);
     const {dataClient, networkedDataClient} = headRealm;
@@ -635,6 +604,7 @@ export class NetworkRealm extends EventTarget {
     this.connected = true;
   }
   disconnect() {
+    console.log('realm disconnect', new Error().stack)
     this.ws.close();
     const updates = this.dataClient.clearUpdates();
     for (const update of updates) {
@@ -643,7 +613,7 @@ export class NetworkRealm extends EventTarget {
     this.connected = false;
   }
   emitUpdate(update) {
-    console.log('emit update to realm', this.key, update);
+    // console.log('emit update to realm', this.key, update);
     this.dataClient.emitUpdate(update);
     this.networkedDataClient.emitUpdate(update);
   }
@@ -770,15 +740,20 @@ export class NetworkRealms extends EventTarget {
         }
         await Promise.all(connectPromises);
 
-        // if this is the first network configuration, initialize the local player
         if (oldNumConnectedRealms === 0 && connectPromises.length > 0) {
+          // if this is the first network configuration, initialize the local player
           this.localPlayer.setHeadPosition(position);
+          this.localPlayer.updateHeadRealm();
           this.localPlayer.initialize({
             position,
             cursorPosition: new Float32Array(3),
             name: 'Hanna',
           });
           // this.sendRegisterMessage();
+        } else {
+          // else if we're just moving around, update the local player's position
+          this.localPlayer.setHeadPosition(position);
+          this.localPlayer.updateHeadRealm();
         }
 
         // check if we need to disconnect from any realms
@@ -805,8 +780,6 @@ export class NetworkRealms extends EventTarget {
         // emit the fact that the network was reconfigured
         this.dispatchEvent(new MessageEvent('networkreconfigure'));
       });
-
-      this.localPlayer.setHeadPosition(position);
     }
   }
 }
