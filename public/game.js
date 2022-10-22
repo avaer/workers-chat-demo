@@ -124,31 +124,48 @@ const _drawRectangle = (ctx, color) => {
 };
 class GameRealmsCanvases {
   constructor() {
-    this.canvases = [];
+    this.elements = [];
     for (let dx = -1; dx <= 1; dx++) {
       for (let dz = -1; dz <= 1; dz++) {
         const canvas = document.createElement('canvas');
-        canvas.className = 'network-realm';
+        canvas.className = 'canvas';
         canvas.width = realmSize;
         canvas.height = realmSize;
+        const ctx = canvas.getContext('2d');
+        _drawRectangle(ctx, '#CCC');
+
+        const text = document.createElement('div');
+        text.className = 'text';
+        const text1 = document.createElement('div');
+        text1.textContent = `${dx}:${dz}`;
+        text.appendChild(text1);
+        const text2 = document.createElement('div');
+        // text2.textContent = `${dx}:${dz}`;
+        text.appendChild(text2);
+
         const x = dx + 1;
         const z = dz + 1;
-        canvas.style.cssText = `\
+
+        const div = document.createElement('div');
+        div.className = 'network-realm';
+        div.style.cssText = `\
 position: fixed;
 left: ${realmSize * x}px;
 top: ${realmSize * z}px;
 z-index: 1;
-        `
-        const ctx = canvas.getContext('2d');
-        _drawRectangle(ctx, '#CCC');
-
-        canvas.min = [x * realmSize, 0, z * realmSize];
-        canvas.size = realmSize;
-        canvas.setColor = color => {
+        `;
+        div.appendChild(canvas);
+        div.appendChild(text);
+        div.min = [x * realmSize, 0, z * realmSize];
+        div.size = realmSize;
+        div.setColor = color => {
           _drawRectangle(ctx, color);
         };
+        div.setText = text => {
+          text2.innerText = text;
+        };
         
-        this.canvases.push(canvas);
+        this.elements.push(div);
       }
     }
   }
@@ -280,39 +297,39 @@ z-index: 2;
   const realms = new NetworkRealms(playerId);
   realms.addEventListener('realmconnecting', e => {
     const {realm} = e.data;
-    const canvas = realmsCanvases.canvases.find(canvas => {
-      return canvas.min[0] === realm.min[0] && canvas.min[2] === realm.min[2];
+    const el = realmsCanvases.elements.find(el => {
+      return el.min[0] === realm.min[0] && el.min[2] === realm.min[2];
     });
-    if (canvas) {
-      canvas.classList.add('connecting');
+    if (el) {
+      el.classList.add('connecting');
     }
   });
   realms.addEventListener('realmjoin', e => {
     const {realm} = e.data;
-    const canvas = realmsCanvases.canvases.find(canvas => {
-      return canvas.min[0] === realm.min[0] && canvas.min[2] === realm.min[2];
+    const el = realmsCanvases.elements.find(el => {
+      return el.min[0] === realm.min[0] && el.min[2] === realm.min[2];
     });
-    if (canvas) {
-      canvas.classList.add('connected');
-      canvas.classList.remove('connecting');
+    if (el) {
+      el.classList.add('connected');
+      el.classList.remove('connecting');
     }
     // console.log('join canvas', canvas);
   });
   realms.addEventListener('realmleave', e => {
     const {realm} = e.data;
-    const canvas = realmsCanvases.canvases.find(canvas => {
-      return canvas.min[0] === realm.min[0] && canvas.min[2] === realm.min[2];
+    const el = realmsCanvases.elements.find(el => {
+      return el.min[0] === realm.min[0] && el.min[2] === realm.min[2];
     });
-    if (canvas) {
-      canvas.classList.remove('connected');
-      canvas.classList.remove('connecting');
+    if (el) {
+      el.classList.remove('connected');
+      el.classList.remove('connecting');
     }
     // console.log('leave canvas', canvas);
   });
   // realms canvas
   const realmsCanvases = new GameRealmsCanvases(realmSize);
-  for (const canvas of realmsCanvases.canvases) {
-    document.body.appendChild(canvas);
+  for (const el of realmsCanvases.elements) {
+    document.body.appendChild(el);
   }
 
   // local objects
