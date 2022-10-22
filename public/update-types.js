@@ -7,7 +7,8 @@ export const UPDATE_METHODS = {
   NETWORK_INIT: 6,
   JOIN: 7,
   LEAVE: 8,
-  CHAT: 9,
-  AUDIO: 10,
-  AUDIO_END: 11,
+  REGISTER: 9,
+  CHAT: 10,
+  AUDIO: 11,
+  AUDIO_END: 12,
 };

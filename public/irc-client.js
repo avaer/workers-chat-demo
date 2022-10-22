@@ -22,6 +22,7 @@ export class NetworkedIrcClient extends EventTarget {
       UPDATE_METHODS.NETWORK_INIT,
       UPDATE_METHODS.JOIN,
       UPDATE_METHODS.LEAVE,
+      UPDATE_METHODS.REGISTER,
       UPDATE_METHODS.CHAT,
     ].includes(method);
   }
@@ -134,9 +135,27 @@ export class NetworkedIrcClient extends EventTarget {
           playerId,
         },
       }));
+    } else if (method === UPDATE_METHODS.REGISTER) {
+      const [playerId] = args;
+      const index = this.playerIds.indexOf(playerId);
+      this.playerIds.splice(index, 1);
+      this.dispatchEvent(new MessageEvent('register', {
+        data: {
+          playerId,
+        },
+      }));
     } else {
       console.warn('unhandled irc method', {method, args});
     }
+  }
+  sendRegisterMessage() {
+    const buffer = zbencode({
+      method: UPDATE_METHODS.REGISTER,
+      args: [
+        this.playerId,
+      ],
+    });
+    this.ws.send(buffer);
   }
   sendChatMessage(message) {
     const buffer = zbencode({

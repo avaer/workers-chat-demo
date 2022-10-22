@@ -103,7 +103,7 @@ class VirtualPlayer extends EventTarget {
       listen: false,
     });
     const {
-      map,
+      // map,
       update,
     } = playersArray.addAt(this.arrayIndexId, o, {
       listen: false,
@@ -195,7 +195,7 @@ class VirtualPlayersArray extends EventTarget {
         const {playerId} = e.data;
         const created = !this.virtualPlayers.has(playerId);
         const virtualPlayer = this.getOrCreateVirtualPlayer(playerId);
-        const playerMap = networkedDataClient.dataClient.getArrayMap('players', playerId);
+        // const playerMap = networkedDataClient.dataClient.getArrayMap('players', playerId);
         virtualPlayer.link(realm);
         // console.log('dispatch join', {player: virtualPlayer, playerId});
         if (created) {
@@ -452,8 +452,10 @@ class VirtualEntityArray extends EventTarget {
 
 //
 
-export class NetworkRealm {
+export class NetworkRealm extends EventTarget {
   constructor(min, size, parent) {
+    super();
+    
     this.min = min;
     this.size = size;
     this.parent = parent;
@@ -477,6 +479,9 @@ export class NetworkRealm {
     this.networkedIrcClient = new NetworkedIrcClient(this.parent.playerId);
     this.networkedAudioClient = new NetworkedAudioClient(this.parent.playerId);
   }
+  /* sendRegisterMessage() {
+    this.networkedIrcClient.sendRegisterMessage();
+  } */
   sendChatMessage(message) {
     this.networkedIrcClient.sendChatMessage(message);
   }
@@ -545,6 +550,10 @@ export class NetworkRealms extends EventTarget {
   disableMic() {
     throw new Error('not implemented');
   }
+  /* sendRegisterMessage() {
+    const headRealm = _getHeadRealm(this.localPlayer.headPosition, this.connectedRealms);
+    headRealm.sendRegisterMessage();
+  } */
   sendChatMessage(message) {
     const headRealm = _getHeadRealm(this.localPlayer.headPosition, this.connectedRealms);
     headRealm.sendChatMessage(message);
@@ -589,6 +598,7 @@ export class NetworkRealms extends EventTarget {
             //   this.centerRealm = foundRealm;
             // }
           } else {
+            realm.dispatchEvent(new Event('connecting'));
             this.dispatchEvent(new MessageEvent('realmconnecting', {
               data: {
                 realm,
@@ -600,6 +610,7 @@ export class NetworkRealms extends EventTarget {
               this.players.link(realm);
               this.localPlayer.link(realm);
               this.world.link(realm.networkedDataClient);
+              
               try {
                 await realm.connect();
               } catch(err) {
@@ -611,6 +622,7 @@ export class NetworkRealms extends EventTarget {
               this.connectedRealms.add(realm);
 
               // emit event
+              realm.dispatchEvent(new Event('connect'));
               this.dispatchEvent(new MessageEvent('realmjoin', {
                 data: {
                   realm,
@@ -629,6 +641,7 @@ export class NetworkRealms extends EventTarget {
             cursorPosition: new Float32Array(3),
             name: 'Hanna',
           });
+          // this.sendRegisterMessage();
         }
 
         // check if we need to disconnect from any realms

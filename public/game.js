@@ -295,6 +295,7 @@ z-index: 2;
   
   // realms
   const realms = new NetworkRealms(playerId);
+  const realmCleanupFns = new Map();
   realms.addEventListener('realmconnecting', e => {
     const {realm} = e.data;
     const el = realmsCanvases.elements.find(el => {
@@ -312,8 +313,27 @@ z-index: 2;
     if (el) {
       el.classList.add('connected');
       el.classList.remove('connecting');
+
+      const {networkedIrcClient} = realm;
+      
+      const players = new Set();
+      const onjoin = e => {
+        const {player, playerId} = e.data;
+        players.add(playerId);
+      };
+      networkedIrcClient.addEventListener('join', onjoin);
+
+      const onleave = e => {
+        const {player, playerId} = e.data;
+        players.delete(playerId);
+      };
+      networkedIrcClient.addEventListener('leave', onleave);
+  
+      realmCleanupFns.set(realm, () => {
+        networkedIrcClient.removeEventListener('join', onjoin);
+        networkedIrcClient.removeEventListener('leave', onleave);
+      });
     }
-    // console.log('join canvas', canvas);
   });
   realms.addEventListener('realmleave', e => {
     const {realm} = e.data;
