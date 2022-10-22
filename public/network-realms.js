@@ -175,20 +175,25 @@ class VirtualPlayer extends EventTarget {
             const newPlayersArray = newHeadRealm.dataClient.getArray(this.arrayId, {
               listen: false,
             });
-            const newPlayerMap = newPlayersArray.addAt(this.arrayIndexId, oldPlayerMap.data, {
-              listen: false,
-            });
+            // const newPlayerMap = newPlayersArray.addAt(this.arrayIndexId, oldPlayerMap.data, {
+            //   listen: false,
+            // });
 
             const oldPlayerJson = oldPlayerMap.toObject();
-            const newAddUpdate = newPlayersArray.addAt(this.arrayIndexId, oldPlayerJson);
-            console.log('added json', oldPlayerJson, newAddUpdate);
+            const {
+              map: newPlayerMap,
+              update: newAddUpdate,
+            } = newPlayersArray.addAt(this.arrayIndexId, oldPlayerJson);
+            // console.log('added json', oldPlayerJson, newPlayerMap, newAddUpdate);
+            newHeadRealm.emitUpdate(newAddUpdate);
             
             // - delete from the old array
             const oldRemoveUpdate = oldPlayerMap.removeUpdate();
-            console.log('removed old', oldRemoveUpdate);
+            // console.log('removed old', oldRemoveUpdate);
+            oldHeadRealm.emitUpdate(oldRemoveUpdate);
             
             // - unlock the transaction (end of this function)
-            debugger;
+            // debugger;
           });
         }
 
