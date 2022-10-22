@@ -480,13 +480,6 @@ export class NetworkRealm {
   sendChatMessage(message) {
     this.networkedIrcClient.sendChatMessage(message);
   }
-  enableMic() {
-    // XXX this needs to be a per-realm thing
-    throw new Error('not implemented');
-  }
-  disableMic() {
-    throw new Error('not implemented');
-  }
   async connect() {
     const ws1 = createWs('realm:' + this.key, this.parent.playerId);
     ws1.binaryType = 'arraybuffer';
@@ -544,6 +537,13 @@ export class NetworkRealms extends EventTarget {
       }
     }
     return closestRealm;
+  }
+  enableMic() {
+    // XXX this needs to be a per-realm thing
+    throw new Error('not implemented');
+  }
+  disableMic() {
+    throw new Error('not implemented');
   }
   sendChatMessage(message) {
     const headRealm = _getHeadRealm(this.localPlayer.headPosition, this.connectedRealms);
