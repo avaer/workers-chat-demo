@@ -474,8 +474,8 @@ export class NetworkRealm {
         realm: this,
       },
     });
-    this.networkedIrcClient = new NetworkedIrcClient();
-    this.networkedAudioClient = new NetworkedAudioClient();
+    this.networkedIrcClient = new NetworkedIrcClient(this.parent.playerId);
+    this.networkedAudioClient = new NetworkedAudioClient(this.parent.playerId);
   }
   sendChatMessage(message) {
     this.networkedIrcClient.sendChatMessage(message);

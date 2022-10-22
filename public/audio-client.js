@@ -98,6 +98,7 @@ async function createMicrophoneSource() {
 export class NetworkedAudioClient extends EventTarget {
   constructor(playerId = makeId()) {
     super();
+    
     this.playerId = playerId;
 
     this.audioStreams = new Map();
