@@ -64,24 +64,59 @@ const makeTransactionHandler = () => {
 //
 
 class VirtualPlayer extends EventTarget {
-  constructor(playerId, parent) {
+  constructor(arrayId, arrayIndexId/*, parent*/) {
     super();
 
-    this.playerId = playerId;
-    this.parent = parent;
+    this.arrayId = arrayId;
+    this.arrayIndexId = arrayIndexId;
+    // this.parent = parent;
 
-    this.refCount = 0;
+    this.connectedRealms = new Set();
   }
-  link(player) {
-    this.refCount++;
+  initialize(o) {
+    const headRealm = this.#getHeadRealm(o.position);
+    const {dataClient, networkedDataClient} = headRealm;
+    const playersArray = dataClient.getArray(this.arrayId, {
+      listen: false,
+    });
+    const {
+      map,
+      update,
+    } = playersArray.addAt(this.arrayIndexId, o, {
+      listen: false,
+    });
+    dataClient.emitUpdate(update);
+    networkedDataClient.emitUpdate(update);
   }
-  unlink(player) {
-    this.refCount--;
+  #getHeadRealm(position) {
+    if (this.isLinked()) {
+      let closestRealm = null;
+      let closestRealmDistance = Infinity;
+      for (const realm of this.connectedRealms) {
+        const realmCenter = [
+          realm.min[0] + realm.size/2,
+          realm.min[1] + realm.size/2,
+          realm.min[2] + realm.size/2,
+        ];
+        const distance = distanceTo(position, realmCenter);
+        if (distance < closestRealmDistance) {
+          closestRealm = realm;
+          closestRealmDistance = distance;
+        }
+      }
+      return closestRealm;
+    } else {
+      throw new Error('try to get head realm for fully unlinked player ' + this.playerId);
+    }
   }
-  // getApps() {
-  // }
-  add(val) {
-    // this.setKeyValue('object', o);
+  isLinked() {
+    return this.connectedRealms.size > 0;
+  }
+  link(realm) {
+    this.connectedRealms.add(realm);
+  }
+  unlink(realm) {
+    this.connectedRealms.delete(realm);
   }
   setKeyValue(key, value) {
     return;
@@ -107,20 +142,21 @@ class VirtualPlayersArray extends EventTarget {
   getOrCreateVirtualPlayer(playerId) {
     let virtualPlayer = this.virtualPlayers.get(playerId);
     if (!virtualPlayer) {
-      virtualPlayer = new VirtualPlayer(playerId, this);
+      virtualPlayer = new VirtualPlayer(this.arrayId, playerId, this);
       this.virtualPlayers.set(playerId, virtualPlayer);
     }
     return virtualPlayer;
   }
-  removeVirtualPlayer(playerId) {
-    this.virtualPlayers.delete(playerId);
-  }
-  link(networkedIrcClient, networkedAudioClient) {
+  link(realm) {
+    const {networkedDataClient, networkedIrcClient, networkedAudioClient} = realm;
+    
     const _linkIrc = () => {
       const onjoin = e => {
         const {playerId} = e.data;
+        // console.log('got join', playerId);
         const virtualPlayer = this.getOrCreateVirtualPlayer(playerId);
-        virtualPlayer.addRef();
+        const playerMap = networkedDataClient.dataClient.getArrayMap('players', playerId);
+        virtualPlayer.link(playerId, playerMap);
         if (virtualPlayer.refCount === 1) {
           this.dispatchEvent(new MessageEvent('join', {
             data: {
@@ -135,9 +171,9 @@ class VirtualPlayersArray extends EventTarget {
         const {playerId} = e.data;
         const virtualPlayer = this.getOrVirtualPlayer(playerId);
         if (virtualPlayer) {
-          virtualPlayer.removeRef();
-          if (virtualPlayer.refCount === 0) {
-            this.removeVirtualPlayer(playerId);
+          virtualPlayer.unlink(playerId);
+          if (!virtualPlayer.isLinked()) {
+            this.virtualPlayers.delete(playerId);
             
             virtualPlayer.dispatchEvent(new MessageEvent('leave'));
             this.dispatchEvent(new MessageEvent('leave', {
@@ -183,7 +219,9 @@ class VirtualPlayersArray extends EventTarget {
     };
     _linkAudio();
   }
-  unlink(networkedIrcClient, networkedAudioClient) {
+  unlink(realm) {
+    const {networkedIrcClient, networkedAudioClient} = realm;
+
     this.cleanupFns.get(networkedIrcClient)();
     this.cleanupFns.delete(networkedIrcClient);
 
@@ -255,12 +293,12 @@ class VirtualEntityMap extends EventTarget {
       const position = map.getKey('position');
       const {dataClient} = map;
       const {realm} = dataClient.userData;
-      const center = [
-        realm.min[0] + realm.size[0]/2,
-        realm.min[1] + realm.size[1]/2,
-        realm.min[2] + realm.size[2]/2,
+      const realmCenter = [
+        realm.min[0] + realm.size/2,
+        realm.min[1] + realm.size/2,
+        realm.min[2] + realm.size/2,
       ];
-      const distance = distanceTo(position, center);
+      const distance = distanceTo(position, realmCenter);
       if (distance < headDataClientDistance) {
         headDataClient = map;
         headDataClientDistance = distance;
@@ -406,7 +444,7 @@ export class NetworkRealms extends EventTarget {
 
     this.lastPosition = [NaN, NaN, NaN];
     this.players = new VirtualPlayersArray('players', this);
-    this.localPlayer = new VirtualPlayer(this.playerId, this);
+    this.localPlayer = new VirtualPlayer('players', this.playerId, this);
     this.world = new VirtualEntityArray('world', this);
     this.connectedRealms = new Set();
     this.tx = makeTransactionHandler();
@@ -430,6 +468,7 @@ export class NetworkRealms extends EventTarget {
     return closestRealm;
   }
   async updatePosition(position, realmSize) {
+    position = position.slice();
     const snappedPosition = position.map(v => Math.floor(v / realmSize) * realmSize);
     if (!arrayEquals(snappedPosition, this.lastPosition)) {
       this.lastPosition[0] = snappedPosition[0];
@@ -437,6 +476,8 @@ export class NetworkRealms extends EventTarget {
       this.lastPosition[2] = snappedPosition[2];
 
       await this.tx(async () => {
+        const oldNumConnectedRealms = this.connectedRealms.size;
+
         const candidateRealms = [];
         for (let dz = -1; dz <= 1; dz++) {
           for (let dx = -1; dx <= 1; dx++) {
@@ -473,13 +514,15 @@ export class NetworkRealms extends EventTarget {
             }));
 
             const connectPromise = (async () => {
-              this.players.link(realm.networkedIrcClient, realm.networkedAudioClient);
+              this.players.link(realm);
+              this.localPlayer.link(realm);
               this.world.link(realm.networkedDataClient);
               
               try {
                 await realm.connect();
               } catch(err) {
-                this.players.unlink(realm.networkedIrcClient, realm.networkedAudioClient);
+                this.players.unlink(realm);
+                this.localPlayer.unlink(realm);
                 this.world.unlink(realm.networkedDataClient);
                 throw err;
               }
@@ -497,6 +540,14 @@ export class NetworkRealms extends EventTarget {
           }
         }
         await Promise.all(connectPromises);
+
+        // if this is the first network configuration, initialize the local player
+        if (oldNumConnectedRealms === 0 && connectPromises.length > 0) {
+          this.localPlayer.initialize({
+            position,
+            name: 'Hanna',
+          });
+        }
 
         // check if we need to disconnect from any realms
         const oldRealms = [];
