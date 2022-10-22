@@ -157,8 +157,6 @@ class VirtualPlayersArray extends EventTarget {
     this.parent = parent;
     this.virtualPlayers = new Map();
     this.cleanupFns = new Map();
-    // this.allCleanupFns = new Map();
-    // this.linkedRealms = new Map();
   }
   getOrCreateVirtualPlayer(playerId) {
     let virtualPlayer = this.virtualPlayers.get(playerId);
@@ -236,24 +234,17 @@ class VirtualPlayersArray extends EventTarget {
         networkedAudioClient.removeEventListener('audiostreamstart', audiostreamstart);
         networkedAudioClient.removeEventListener('audiostreamend', audiostreamend);
       });
-      // this.allCleanupFns.set(networkedAudioClient, true);
     };
     _linkAudio();
-
-    // this.linkedRealms.set(realm, true);
   }
   unlink(realm) {
     const {networkedIrcClient, networkedAudioClient} = realm;
-
-    // console.log('had', this.allCleanupFns.get(networkedIrcClient), this.cleanupFns.get(networkedIrcClient), this.linkedRealms.get(realm));
 
     this.cleanupFns.get(networkedIrcClient)();
     this.cleanupFns.delete(networkedIrcClient);
 
     this.cleanupFns.get(networkedAudioClient)();
     this.cleanupFns.delete(networkedAudioClient);
-
-    // this.linkedRealms.delete(realm);
   }
   /* clear() {
     const entries = Array.from(this.virtualPlayers.entries());
