@@ -401,11 +401,41 @@ export class ChatRoom {
     // send import
     webSocket.send(dataClient.serializeMessage(dataClient.getImportMessage()));
     // send network init
-    // try {
-      webSocket.send(serializeMessage(networkClient.getNetworkInitMessage()));
-    // } catch(err) {
-    //   console.warn(err.stack);
-    // }
+    webSocket.send(serializeMessage(networkClient.getNetworkInitMessage()));
+
+    // set up dead hands tracking
+    const deadHands = new Map();
+    const _triggerDeadHands = () => {
+      for (const [key, {arrayId, arrayIndexId}] of deadHands) {
+        const map = dataClient.getArrayMap(arrayId, arrayIndexId, {
+          listen: false,
+        });
+        const removeUpdate = map.removeUpdate();
+        // console.log('removing dead', arrayId, arrayIndexId);
+        const removeUpdateBuffer = dataClient.serializeMessage(removeUpdate);
+        proxyMessageToPeers(removeUpdateBuffer);
+      }
+    };
+
+    dataClient.addEventListener('deadhand', e => {
+      const {arrayId, arrayIndexId, deadHand} = e.data;
+      if (deadHand === playerId) {
+        const key = `${arrayId}:${arrayIndexId}`;
+        deadHands.set(key, {
+          arrayId,
+          arrayIndexId,
+        });
+        // console.log('register dead hand', e.data, {arrayId, arrayIndexId, deadHand});
+      }
+    });
+    dataClient.addEventListener('livehand', e => {
+      const {arrayId, arrayIndexId, liveHand} = e.data;
+      if (liveHand === playerId) {
+        const key = `${arrayId}:${arrayIndexId}`;
+        deadHands.delete(key);
+        // console.log('register live hand', e.data, {arrayId, arrayIndexId, liveHand});
+      }
+    });
 
     // Set up our rate limiter client.
     // let limiterId = this.env.limiters.idFromName(ip);
@@ -625,7 +655,10 @@ export class ChatRoom {
       session.quit = true;
       this.sessions = this.sessions.filter(member => member !== session);
       
+      _triggerDeadHands();
+
       _sendLeaveMessage();
+      
       /* if (session.name) {
         this.broadcast({quit: session.name});
       } */
