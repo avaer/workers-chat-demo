@@ -175,18 +175,6 @@ class HeadTrackedEntity extends EventTarget {
     // console.log('emit remove old', oldHeadRealm.key, oldRemoveUpdate, oldRemoveUpdate.type);
     oldHeadRealm.emitUpdate(oldRemoveUpdate);
   }
-  /* #getHeadRealm() {
-    if (this.isLinked()) {
-      // return _getHeadRealm(this.headPosition, this.connectedRealms);
-      if (this.headRealm) {
-        return this.headRealm;
-      } else {
-        throw new Error('no head realm for linked player');
-      }
-    } else {
-      throw new Error('try to get head realm for fully unlinked player ' + this.playerId);
-    }
-  } */
 }
 
 class VirtualPlayer extends HeadTrackedEntity {
