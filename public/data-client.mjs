@@ -1,6 +1,6 @@
 import {zbencode, zbdecode} from "./encoding.mjs";
 import {UPDATE_METHODS} from "./update-types.js";
-import {parseUpdateObject, makeId} from "./util.mjs";
+import {parseUpdateObject, makeId, serializeMessage} from "./util.mjs";
 
 //
 
@@ -419,6 +419,32 @@ export class DataClient extends EventTarget {
           ],
         });
       }
+      case 'deadhand': {
+        // console.log('serialize dead hand');
+        // debugger;
+        const {arrayId, arrayIndexId, deadHand} = m.data;
+        return zbencode({
+          method: UPDATE_METHODS.DEAD_HAND,
+          args: [
+            arrayId,
+            arrayIndexId,
+            deadHand,
+          ],
+        });
+      }
+      case 'livehand': {
+        // console.log('serialize live hand');
+        // debugger;
+        const {arrayId, arrayIndexId, liveHand} = m.data;
+        return zbencode({
+          method: UPDATE_METHODS.LIVE_HAND,
+          args: [
+            arrayId,
+            arrayIndexId,
+            liveHand,
+          ],
+        });
+      }
     }
   }
   getImportMessage() {
@@ -427,6 +453,24 @@ export class DataClient extends EventTarget {
     return new MessageEvent('import', {
       data: {
         crdtExport,
+      },
+    });
+  }
+  deadHandArrayMap(arrayId, arrayIndexId, deadHand) {
+    return new MessageEvent('deadhand', {
+      data: {
+        arrayId,
+        arrayIndexId,
+        deadHand,
+      },
+    });
+  }
+  liveHandArrayMap(arrayId, arrayIndexId, liveHand) {
+    return new MessageEvent('livehand', {
+      data: {
+        arrayId,
+        arrayIndexId,
+        liveHand,
       },
     });
   }
@@ -551,6 +595,30 @@ export class DataClient extends EventTarget {
 
         break;
       }
+      case UPDATE_METHODS.DEAD_HAND: {
+        const [arrayId, arrayIndexId, deadHand] = args;
+        // console.log('handle dead hand', {arrayId, arrayIndexId, deadHand});
+        this.dispatchEvent(new MessageEvent('deadhand', {
+          data: {
+            arrayId,
+            arrayIndexId,
+            deadHand,
+          },
+        }));
+        break;
+      }
+      case UPDATE_METHODS.LIVE_HAND: {
+        const [arrayId, arrayIndexId, liveHand] = args;
+        // console.log('handle live hand', {arrayId, arrayIndexId, liveHand});
+        this.dispatchEvent(new MessageEvent('livehand', {
+          data: {
+            arrayId,
+            arrayIndexId,
+            liveHand,
+          },
+        }));
+        break;
+      }
     }
     // this.storage = zbdecode(new Uint8Array(arrayBuffer));
     // const rollbackUint8Array = new Uint8Array(0);
@@ -611,6 +679,22 @@ export class DataClient extends EventTarget {
             return {
               type: 'import',
               crdtExport: m.data.crdtExport,
+            };
+          } else if (m.type === 'deadhand') {
+            const {arrayId, arrayIndexId, deadHand} = m.data;
+            return {
+              type: 'deadhand',
+              arrayId,
+              arrayIndexId,
+              deadHand,
+            };
+          } else if (m.type === 'livehand') {
+            const {arrayId, arrayIndexId, liveHand} = m.data;
+            return {
+              type: 'livehand',
+              arrayId,
+              arrayIndexId,
+              liveHand,
             };
           } else {
             throw new Error('unrecognized message type: ' + m.type);
@@ -777,6 +861,8 @@ export class NetworkedDataClient extends EventTarget {
       UPDATE_METHODS.ADD,
       UPDATE_METHODS.REMOVE,
       UPDATE_METHODS.ROLLBACK,
+      UPDATE_METHODS.DEAD_HAND,
+      UPDATE_METHODS.LIVE_HAND,
     ].includes(method);
   }
   async connect(ws) {
