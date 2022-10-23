@@ -365,6 +365,7 @@ export class DataClient extends EventTarget {
     switch (type) {
       case 'import': {
         const {crdtExport} = parsedMessage;
+        // console.log('serialize import', crdtExport);
         return zbencode({
           method: UPDATE_METHODS.IMPORT,
           args: [
@@ -490,6 +491,7 @@ export class DataClient extends EventTarget {
         const [crdtExport] = args;
         // console.log('importing export', crdtExport, zbdecode(crdtExport));
         this.crdt = convertObjectToMap(zbdecode(crdtExport));
+        // console.log('crdt imported', this.crdt);
         update = new MessageEvent('import', {
           data: {
             crdtExport,
@@ -499,7 +501,7 @@ export class DataClient extends EventTarget {
       }
       case UPDATE_METHODS.SET: {
         const [arrayId, arrayIndexId, key, epoch, val] = args;
-        console.log('apply update', {arrayId, arrayIndexId, key, epoch, val});
+        // console.log('apply update', {arrayId, arrayIndexId, key, epoch, val});
         const arrayMap = new DCMap(arrayId, arrayIndexId, this);
         let oldObject;
         if (force) {
