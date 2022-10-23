@@ -1,7 +1,7 @@
-// import {ensureAudioContext} from './wsrtc/ws-audio-context.js';
 import {makeId} from './util.mjs';
+import {realmSize} from './constants.js';
 
-import {RemotePlayerCursorHtmlRenderer, LocalPlayerHtmlRenderer, WorldItemHtmlRenderer} from "./renderers/html-renderer.js";
+import {RemotePlayerCursorHtmlRenderer, GameRealmsCanvases, LocalPlayerHtmlRenderer, WorldItemHtmlRenderer} from "./renderers/html-renderer.js";
 import {NetworkRealms} from "./network-realms.js";
 
 const frameSize = 64;
@@ -110,121 +110,6 @@ class GamePlayerCanvas {
 }
 
 //
-
-const realmSize = 200;
-// const realmsSize = realmSize * 3;
-const _drawRectangle = (ctx, color) => {
-  const innerBorder = 3;
-  const borderWidth = 3;
-  ctx.fillStyle = color;
-  ctx.fillRect(innerBorder, innerBorder, realmSize - innerBorder * 2, borderWidth); // top
-  ctx.fillRect(innerBorder, realmSize - borderWidth - innerBorder, realmSize - innerBorder * 2, borderWidth); // bottom
-  ctx.fillRect(innerBorder, innerBorder, borderWidth, realmSize - innerBorder * 2); // left
-  ctx.fillRect(realmSize - borderWidth - innerBorder, innerBorder, borderWidth, realmSize - innerBorder * 2); // right
-};
-class GameRealmsCanvases {
-  constructor() {
-    this.elements = [];
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dz = -1; dz <= 1; dz++) {
-        const canvas = document.createElement('canvas');
-        canvas.className = 'canvas';
-        canvas.width = realmSize;
-        canvas.height = realmSize;
-        const ctx = canvas.getContext('2d');
-        _drawRectangle(ctx, '#CCC');
-        
-        const x = dx + 1;
-        const z = dz + 1;
-
-        const text = document.createElement('div');
-        text.className = 'text';
-        const text1 = document.createElement('div');
-        text1.textContent = `${x}:${z}`;
-        text.appendChild(text1);
-        const text2 = document.createElement('div');
-        // text2.textContent = `${dx}:${dz}`;
-        text.appendChild(text2);
-
-        const div = document.createElement('div');
-        div.className = 'network-realm';
-        div.style.cssText = `\
-position: fixed;
-left: ${realmSize * x}px;
-top: ${realmSize * z}px;
-z-index: 1;
-        `;
-        div.appendChild(canvas);
-        div.appendChild(text);
-        div.min = [x * realmSize, 0, z * realmSize];
-        div.size = realmSize;
-        div.setColor = color => {
-          _drawRectangle(ctx, color);
-        };
-        div.setText = text => {
-          text2.innerText = text;
-        };
-        div.updateText = dataClient => {
-          const playersArray = dataClient.getArray('players', {
-            listen: false,
-          });
-          const worldApps = dataClient.getArray('worldApps', {
-            listen: false,
-          });
-
-          const _updateText = () => {
-            let playersString = '';
-            if (playersArray.getSize() > 0) {
-              playersString = `players: [\n${zstringify(playersArray.toArray())}\n]`;
-            } else {
-              playersString = `players: []`;
-            }
-
-            let worldAppsString = '';
-            if (worldApps.getSize() > 0) {
-              worldAppsString = `worldApps: [\n${zstringify(worldApps.toArray())}\n]`;
-            } else {
-              worldAppsString = `worldApps: []`;
-            }
-
-            const s = [
-              playersString,
-              worldAppsString,
-            ].join('\n');
-            div.setText(s);
-          };
-          _updateText();
-        };
-        
-        this.elements.push(div);
-      }
-    }
-  }
-}
-
-//
-
-const zstringify = o => {
-  let result = '';
-  for (const k in o) {
-    if (result) {
-      result += '\n';
-    }
-
-    const v = o[k];
-    if (v instanceof Float32Array) {
-      result += `${JSON.stringify(k)}: Float32Array(${v.join(',')})`;
-    } else {
-      const s = JSON.stringify(v);
-      if (s.length >= 20 && v instanceof Object && v !== null) {
-        result += `${JSON.stringify(k)}:\n${zstringify(v)}`;
-      } else {
-        result += `${JSON.stringify(k)}: ${s}`;
-      }
-    }
-  }
-  return result;
-};
 
 export const startGame = async () => {
   const playerId = makeId();
@@ -338,8 +223,8 @@ z-index: 2;
       collidedItem.style.left = null;
       collidedItem.style.top = null; */
     } else {
-      const appsArray = realms.localPlayer.getAppsArray();
-      if (appsArray.getSize() > 0) {
+      console.log('got player apps', realms.localPlayer.playerApps.getSize());
+      if (realms.localPlayer.playerApps.getSize() > 0) {
         const firstApp = appsArray.getIndex(0, {
           listen: false,
         });
@@ -352,7 +237,7 @@ z-index: 2;
           const firstAppJson = firstApp.toObject();
           const {
             update,
-            map,
+            // map,
           } = worldApps.addAt(firstApp.arrayIndexId, firstAppJson, {
             listen: false,
           });
@@ -375,6 +260,9 @@ z-index: 2;
         item.style.top = `${targetPosition[2]}px`;
         item.arrayIndexId = entity.arrayIndexId;
         world.appendChild(item); */
+      } else {
+        console.warn('nothing to drop');
+        debugger;
       }
     }
   };
@@ -457,7 +345,7 @@ z-index: 2;
     }
   });
   // realms canvas
-  const realmsCanvases = new GameRealmsCanvases(realmSize);
+  const realmsCanvases = new GameRealmsCanvases();
   for (const el of realmsCanvases.elements) {
     document.body.appendChild(el);
   }

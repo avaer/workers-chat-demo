@@ -129,6 +129,9 @@ class HeadTrackedEntity extends EventTarget {
       throw new Error('try to get head realm for fully unlinked player ' + this.playerId);
     }
   }
+  setHeadRealm(realm) {
+    this.headRealm = realm;
+  }
   #migrateTo(newHeadRealm) {
     if (!this.realms.tx.running) {
       throw new Error('migration happening outside of a lock -- wrap in realms.tx()')
@@ -170,6 +173,13 @@ class HeadTrackedEntity extends EventTarget {
     });
     // console.log('added json', oldPlayerJson, newPlayerMap, newAddUpdate);
     newHeadRealm.emitUpdate(newAddUpdate);
+
+    // XXX render player apps as part of world
+    // XXX we need to also migrate our apps and actions, which come along with us
+    // XXX wait for sync before we finally disconnect, or else the message might not have been sent befor we disconnect
+    // XXX render apps in the realms box
+    // XXX render app icons on top of the player
+    // XXX add multi-deadhand/livehand support to server
     
     // - delete from the old array
     const oldRemoveUpdate = oldPlayerMap.removeUpdate();
@@ -187,9 +197,28 @@ class VirtualPlayer extends HeadTrackedEntity {
     this.realms = realms;
     this.name = name;
 
-    this.playerApps = new VirtualEntityArray('playerApps:' + this.arrayIndexId, this.realms);
-    this.playerActions = new VirtualEntityArray('playerActions:' + this.arrayIndexId, this.realms);
+    const getHeadRealm = () => this.headRealm;
+    this.playerApps = new VirtualEntityArray('playerApps:' + this.arrayIndexId, this.realms, {
+      getHeadRealm,
+    });
+    this.playerActions = new VirtualEntityArray('playerActions:' + this.arrayIndexId, this.realms, {
+      getHeadRealm,
+    });
     this.cleanupMapFns = new Map();
+
+    console.log('player apps listen');
+    this.playerApps.addEventListener('entityadd', e => {
+      console.log('add player app', e.data, this.playerApps.getSize());
+    });
+    this.playerApps.addEventListener('entityremove', e => {
+      console.log('remove player app', e.data);
+    });
+    this.playerActions.addEventListener('entityadd', e => {
+      console.log('add player action', e.data);
+    });
+    this.playerActions.addEventListener('entityremove', e => {
+      console.log('remove player action', e.data);
+    });
 
     // console.log('new virtual player', this, new Error().stack);
   }
@@ -206,8 +235,9 @@ class VirtualPlayer extends HeadTrackedEntity {
         const deadHandUpdate = this.headRealm.dataClient.deadHandArrayMap(this.playerApps.arrayId, appId);
         this.headRealm.emitUpdate(deadHandUpdate);
 
+        console.log('initialize player add player app 1', appVal, appId);
         const map = this.playerApps.addEntityAt(appId, appVal);
-        console.log('added player app', appVal, appId, map);
+        console.log('initialize player add player app 2', appVal, appId, map);
         // XXX listen for this in the local player renderer
       }
     };
@@ -258,10 +288,15 @@ class VirtualPlayer extends HeadTrackedEntity {
     };
     map.addEventListener('update', update);
 
+    this.playerApps.link(realm);
+    this.playerActions.link(realm);
+
     this.cleanupMapFns.set(realm, () => {
       map.unlisten();
-
       map.removeEventListener('update', update);
+
+      this.playerApps.unlink(realm);
+      this.playerActions.unlink(realm);
     });
   }
   unlink(realm) {
@@ -282,11 +317,13 @@ class VirtualPlayer extends HeadTrackedEntity {
 }
 
 class VirtualPlayersArray extends EventTarget {
-  constructor(arrayId, parent) {
+  constructor(arrayId, parent, opts = {}) {
     super();
 
     this.arrayId = arrayId;
     this.parent = parent;
+    this.opts = opts;
+
     this.virtualPlayers = new Map();
     this.cleanupFns = new Map();
   }
@@ -420,6 +457,9 @@ class VirtualEntityArray extends VirtualPlayersArray {
 
     return map;
   }
+  getSize() {
+    return this.virtualMaps.size;
+  }
   addEntity(val) {
     return this.addEntityAt(makeId(), val);
   }
@@ -458,14 +498,26 @@ class VirtualEntityArray extends VirtualPlayersArray {
     
     const localVirtualMaps = new Map();
     const onadd = e => {
+      console.log('VirtualEntityArray got entity add', e.data);
       const {arrayIndexId, map} = e.data;
       const had = localVirtualMaps.has(arrayIndexId);
       const virtualMap = _getOrCreateVirtualMap(arrayIndexId);
       virtualMap.link(arrayIndexId, map);
       if (!had) {
-        const initialPosition = map.getKey('position');
-        virtualMap.setHeadPosition(initialPosition);
-        virtualMap.updateHeadRealm();
+        // if attached to a parent which already has a head realm, use that
+        if (this.opts.getHeadRealm) {
+          const headRealm = this.opts.getHeadRealm();
+          virtualMap.setHeadRealm(headRealm);
+        } else {
+          // otherwise, use the closest realm to the app's "position"... it better have one
+          const initialPosition = map.getKey('position');
+          if (!initialPosition) {
+            console.warn('entity addition did not have a position', arrayIndexId, map);
+            debugger;
+          }
+          virtualMap.setHeadPosition(initialPosition);
+          virtualMap.updateHeadRealm();
+        }
       }
       localVirtualMaps.set(map, virtualMap);
     };

@@ -217,6 +217,28 @@ const makePromise = () => {
   return promise;
 }
 
+const zstringify = o => {
+  let result = '';
+  for (const k in o) {
+    if (result) {
+      result += '\n';
+    }
+
+    const v = o[k];
+    if (v instanceof Float32Array) {
+      result += `${JSON.stringify(k)}: Float32Array(${v.join(',')})`;
+    } else {
+      const s = JSON.stringify(v);
+      if (s.length >= 20 && v instanceof Object && v !== null) {
+        result += `${JSON.stringify(k)}:\n${zstringify(v)}`;
+      } else {
+        result += `${JSON.stringify(k)}: ${s}`;
+      }
+    }
+  }
+  return result;
+};
+
 export {
   alignN,
   align4,
@@ -226,4 +248,5 @@ export {
   serializeMessage,
   createWs,
   makePromise,
+  zstringify,
 };
