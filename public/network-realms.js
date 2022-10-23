@@ -446,7 +446,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
     const {
       map,
       update,
-    } = array.addAt(val, arrayIndexId);
+    } = array.addAt(arrayIndexId, val);
     realm.emitUpdate(update);
 
     return map;
