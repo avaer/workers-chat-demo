@@ -388,7 +388,6 @@ export class DataClient extends EventTarget {
     switch (type) {
       case 'import': {
         const {crdtExport} = parsedMessage;
-        // console.log('serialize import', crdtExport);
         return zbencode({
           method: UPDATE_METHODS.IMPORT,
           args: [
