@@ -403,11 +403,11 @@ class VirtualEntityArray extends VirtualPlayersArray {
 
     this.virtualMaps = new Map();
   }
-  addEntity(val) {
+  addEntityAt(arrayIndexId, val) {
     const position = val[positionKey] ?? [0, 0, 0];
     const realm = this.parent.getClosestRealm(position);
-    const arrayIndexId = makeId();
     
+    // XXX remove this to retain objects
     const deadHandUpdate = realm.dataClient.deadHandArrayMap(this.arrayId, arrayIndexId, this.parent.playerId);
     realm.emitUpdate(deadHandUpdate);
     
@@ -419,6 +419,9 @@ class VirtualEntityArray extends VirtualPlayersArray {
     realm.emitUpdate(update);
 
     return map;
+  }
+  addEntity(val) {
+    return this.addEntityAt(makeId(), val);
   }
   link(realm) {
     const {networkedDataClient} = realm;
@@ -813,13 +816,41 @@ export class NetworkRealms extends EventTarget {
         await Promise.all(connectPromises);
 
         if (oldNumConnectedRealms === 0 && connectPromises.length > 0) {
-          // if this is the first network configuration, initialize the local player
+          // if this is the first network configuration, initialize our local player
           this.localPlayer.setHeadPosition(position);
           this.localPlayer.updateHeadRealm();
-          this.localPlayer.initialize({
+          
+          const appVals = [
+            {
+              start_url: 'rock',
+              position: new Float32Array(3),
+            },
+            {
+              start_url: 'rock',
+              position: new Float32Array(3),
+            }
+          ];
+          const appIds = Array(appVals.length);
+          for (let i = 0; i < appIds.length; i++) {
+            appIds[i] = makeId();
+          }
+          this.localPlayer.initializePlayer({
             position,
             cursorPosition: new Float32Array(3),
             name: 'Hanna',
+          }, {
+            appVals,
+            appIds,
+            actionVals: [
+              {
+                action: 'wear',
+                appId: appIds[0],
+              },
+              {
+                action: 'wear',
+                appId: appIds[1],
+              },
+            ],
           });
           // this.sendRegisterMessage();
         } else {

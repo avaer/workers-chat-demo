@@ -1,7 +1,7 @@
 // import {ensureAudioContext} from './wsrtc/ws-audio-context.js';
 import {makeId} from './util.mjs';
 
-import {RemotePlayerHtmlRenderer, LocalPlayerHtmlRenderer} from "./renderers/html-renderer.js";
+import {RemotePlayerCursorHtmlRenderer, LocalPlayerHtmlRenderer, WorldItemHtmlRenderer} from "./renderers/html-renderer.js";
 import {NetworkRealms} from "./network-realms.js";
 
 const frameSize = 64;
@@ -320,27 +320,49 @@ z-index: 2;
         position[2] >= box.min[2] && position[2] <= box.max[2];
     };
     
-    const inventory = document.querySelector('#inventory');
-    const inventoryItems = Array.from(inventory.querySelectorAll('.realms-item'));
-    const world = document.querySelector('#world');
-    const worldItems = Array.from(world.querySelectorAll('.realms-item'));
-    const collidedItem = worldItems.find(item => _boxContains(targetBox, item.position));
-    if (collidedItem) {
+    const collidedVirtualMap = Array.from(virtualWorld.virtualMaps.values()).find(virtualMap => {
+      const position = virtualMap.get('position');
+      return _boxContains(targetBox, position);
+    });
+    // const inventory = document.querySelector('#inventory');
+    // const inventoryItems = Array.from(inventory.querySelectorAll('.realms-item'));
+    // const world = document.querySelector('#world');
+    // const worldItems = Array.from(world.querySelectorAll('.realms-item'));
+    // const collidedItem = worldItems.find(item => _boxContains(targetBox, item.position));
+    if (collidedVirtualMap) {
       // data layer
-      // console.log('get entity 1', virtualWorld, collidedItem.arrayIndexId);
-      const entity = virtualWorld.virtualMaps.get(collidedItem.arrayIndexId);
-      // console.log('get entity 2', entity);
-      const update = entity.remove();
-      // console.log('got update', update);
+      collidedVirtualMap.remove();
       
-      // render layer
+      /* // render layer
       inventory.appendChild(collidedItem);
       collidedItem.style.left = null;
-      collidedItem.style.top = null;
+      collidedItem.style.top = null; */
     } else {
-      if (inventoryItems.length > 0) {
-        // data layer
-        const entity = virtualWorld.addEntity({ // XXX make thisd return an update and emit it manually
+      const appsArray = realms.localPlayer.getAppsArray();
+      if (appsArray.getSize() > 0) {
+        const firstApp = appsArray.getIndex(0, {
+          listen: false,
+        });
+
+        const targetRealm = realms.getClosestRealm(targetPosition);
+        if (targetRealm) {
+          const worldApps = targetRealm.dataClient.getArray('worldApps', {
+            listen: false,
+          });
+          const firstAppJson = firstApp.toObject();
+          const {
+            update,
+            map,
+          } = worldApps.addAt(firstApp.arrayIndexId, firstAppJson, {
+            listen: false,
+          });
+          targetRealm.emitUpdate(update);
+        } else {
+          console.warn('no containing realm to drop to');
+        }
+        
+        /* // data layer
+        const entity = virtualWorld.addEntity({
           name: 'rock',
           position: targetPosition.slice(),
         });
@@ -352,7 +374,7 @@ z-index: 2;
         item.style.left = `${targetPosition[0]}px`;
         item.style.top = `${targetPosition[2]}px`;
         item.arrayIndexId = entity.arrayIndexId;
-        world.appendChild(item);
+        world.appendChild(item); */
       }
     }
   };

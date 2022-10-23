@@ -1,4 +1,35 @@
-export class RemotePlayerHtmlRenderer {
+export class LocalPlayerHtmlRenderer {
+  constructor(localPlayerId, virtualPlayer) {
+    this.localPlayerId = localPlayerId;
+    this.virtualPlayer = virtualPlayer;
+
+    const div = document.createElement('div');
+    div.id = 'inventory';
+    document.body.appendChild(div);
+
+    // const map = this.dataClient.getArrayMap('players', this.remotePlayerId);
+    // console.log('virtual player update listen');
+    const entityadd = e => {
+      const {val} = e.data;
+      const [x, y, z] = val;
+      div.style.left = `${x}px`;
+      div.style.top = `${y}px`;
+    };
+    virtualPlayer.addEventListener('entityadd', entityadd);
+
+    this.cleanupFn = () => {
+      document.body.removeChild(div);
+
+      // console.log('virtual player update unlisten');
+      virtualPlayer.removeEventListener('entityadd', entityadd);
+    };
+  }
+  destroy() {
+    this.cleanupFn();
+  }
+}
+
+export class RemotePlayerCursorHtmlRenderer {
   constructor(remotePlayerId, localPlayerId, virtualPlayer) {
     this.remotePlayerId = remotePlayerId;
     this.localPlayerId = localPlayerId;
@@ -42,17 +73,28 @@ export class RemotePlayerHtmlRenderer {
     this.cleanupFn();
   }
 }
-export class LocalPlayerHtmlRenderer { // XXX can be moved to controllers instead of renderers
-  constructor(realms) {
-    this.realms = realms;
 
-    const {localPlayer} = realms;
-    /* const players = this.dataClient.getArray('players');
-    const {map: player, update: playerAddUpdate} = players.addAt(this.playerId, {
-      name: this.playerId,
-      position: Float32Array.from([0, 0, 0]),
-    });
-    this.ndc.send(serializeMessage(playerAddUpdate)); */
+export class WorldItemHtmlRenderer {
+  constructor(virtualWorld) {
+    this.virtualWorld = virtualWorld;
+
+    const div = document.createElement('div');
+    div.id = 'world-items';
+    document.body.appendChild(div);
+
+    const entityadd = e => {
+      const {val} = e.data;
+      const [x, y, z] = val;
+      div.style.left = `${x}px`;
+      div.style.top = `${y}px`;
+    };
+    virtualWorld.addEventListener('entityadd', entityadd);
+
+    this.cleanupFn = () => {
+      document.body.removeChild(div);
+
+      virtualWorld.removeEventListener('entityadd', entityadd);
+    };
   }
   destroy() {
     this.cleanupFn();
