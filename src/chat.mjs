@@ -279,8 +279,18 @@ const schemaArrayNames = [
 ];
 
 const _pauseWebSocket = (ws) => {
+  const queue = [];
+  const onmessage = e => {
+    queue.push(e.data);
+  };
+  ws.addEventListener('message', onmessage);
   return () => {
-    // XXX
+    for (const data of queue) {
+      ws.dispatchEvent(new MessageEvent('message', {data}));
+    }
+    queue.length = 0;
+
+    ws.removeEventListener('message', onmessage);
   };
 };
 
