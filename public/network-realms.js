@@ -548,8 +548,7 @@ class VirtualEntityMap extends HeadTrackedEntity {
   }
   remove() {
     // throw new Error('not implemented'); // XXX
-    // this.parent.virtualMaps.delete(this.arrayIndexId);
-    console.log('remove from head realm', this.headRealm);
+    // console.log('remove from head realm', this.headRealm);
     const array = this.headRealm.dataClient.getArray(this.parent.arrayId, {
       listen: false,
     });
