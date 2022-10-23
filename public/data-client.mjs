@@ -395,6 +395,11 @@ export class DataClient extends EventTarget {
           ],
         });
       }
+      case 'sync': {
+        return zbencode({
+          method: UPDATE_METHODS.SYNC,
+        });
+      }
       case 'set': {
         const {key, epoch, val} = m.data;
         return zbencode({
@@ -481,6 +486,9 @@ export class DataClient extends EventTarget {
         crdtExport,
       },
     });
+  }
+  getSyncMessage() {
+    return new MessageEvent('sync');
   }
   deadHandArrayMap(arrayId, arrayIndexId, deadHand) {
     return new MessageEvent('deadhand', {
@@ -886,6 +894,7 @@ export class NetworkedDataClient extends EventTarget {
   static handlesMethod(method) {
     return [
       UPDATE_METHODS.IMPORT,
+      UPDATE_METHODS.SYNC,
       UPDATE_METHODS.SET,
       UPDATE_METHODS.ADD,
       UPDATE_METHODS.REMOVE,

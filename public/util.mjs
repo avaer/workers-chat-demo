@@ -86,6 +86,10 @@ function parseMessage(m) {
             type: 'leave',
             playerId: m.data.playerId,
           };
+        } else if (m.type === 'sync') {
+          return {
+            type: 'sync',
+          };
         } else {
           console.warn('failed to parse', m);
           throw new Error('unrecognized message type: ' + m.type);
@@ -106,6 +110,11 @@ function serializeMessage(m) {
         args: [
           crdtExport,
         ],
+      });
+    }
+    case 'sync': {
+      return zbencode({
+        method: UPDATE_METHODS.SYNC,
       });
     }
     case 'set': {

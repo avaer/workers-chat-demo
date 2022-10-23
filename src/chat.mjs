@@ -519,6 +519,11 @@ export class ChatRoom {
       if (NetworkedAudioClient.handlesMethod(method)) {
         proxyMessageToPeers(uint8Array);
       }
+      /* if (method === UPDATE_METHODS.SYNC) {
+        const syncMessage = dataClient.getSyncMessage();
+        const uint8Array = serializeMessage(syncMessage);
+        respondToSelf(uint8Array);
+      } */
     };
 
     const _sendJoinMessage = () => {
