@@ -213,12 +213,12 @@ async function handleApiRequest(path, request, env) {
       // Each Durable Object has a 256-bit unique ID. IDs can be derived from string names, or
       // chosen randomly by the system.
       let id;
-      if (name.match(/^[0-9a-f]{64}$/)) {
+      /* if (name.match(/^[0-9a-f]{64}$/)) {
         // The name is 64 hex digits, so let's assume it actually just encodes an ID. We use this
         // for private rooms. `idFromString()` simply parses the text as a hex encoding of the raw
         // ID (and verifies that this is a valid ID for this namespace).
         id = env.rooms.idFromString(name);
-      } else if (name.length <= 32) {
+      } else */if (name.length <= 32) {
         // Treat as a string room name (limited to 32 characters). `idFromName()` consistently
         // derives an ID from a string.
         id = env.rooms.idFromName(name);
