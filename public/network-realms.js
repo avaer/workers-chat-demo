@@ -181,7 +181,7 @@ class VirtualPlayer extends EventTarget {
     
     // - delete from the old array
     const oldRemoveUpdate = oldPlayerMap.removeUpdate();
-    console.log('emit remove old', oldHeadRealm.key, oldRemoveUpdate, oldRemoveUpdate.type);
+    // console.log('emit remove old', oldHeadRealm.key, oldRemoveUpdate, oldRemoveUpdate.type);
     oldHeadRealm.emitUpdate(oldRemoveUpdate);
   }
   #getHeadRealm() {
@@ -208,18 +208,18 @@ class VirtualPlayer extends EventTarget {
     };
     map.addEventListener('update', update);
     
-    const remove = e => {
+    /* const remove = e => {
       const {arrayIndexId} = e.data;
-      console.log('virtual player got underlying remove', e.data);
+      // console.log('virtual player got underlying remove', e.data);
       // XXX
     };
-    map.addEventListener('remove', remove);
+    map.addEventListener('remove', remove); */
 
     this.cleanupMapFns.set(realm, () => {
       map.unlisten();
 
       map.removeEventListener('update', update);
-      map.removeEventListener('remove', remove);
+      // map.removeEventListener('remove', remove);
     });
   }
   unlink(realm) {

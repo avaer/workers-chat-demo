@@ -176,15 +176,21 @@ z-index: 1;
 const zstringify = o => {
   let result = '';
   for (const k in o) {
+    if (result) {
+      result += '\n';
+    } else {
+      result += ',';
+    }
+
     const v = o[k];
     if (v instanceof Float32Array) {
-      result += `${k}: Float32Array(${v.join(',')})\n`;
+      result += `${JSON.stringify(k)}: Float32Array(${v.join(',')})`;
     } else {
       const s = JSON.stringify(v);
       if (s.length >= 20 && v instanceof Object && v !== null) {
-        result += `${k}: ${zstringify(v)}`;
+        result += `${JSON.stringify(k)}:\n${zstringify(v)}`;
       } else {
-        result += `${k}: ${s}\n`;
+        result += `${JSON.stringify(k)}: ${s}`;
       }
     }
   }
@@ -335,24 +341,37 @@ z-index: 2;
       const {dataClient} = realm;
 
       const playersArray = dataClient.getArray('players');
+
+      const _updateText = () => {
+        if (playersArray.getSize() > 0) {
+          el.setText(`players: [\n${zstringify(playersArray.toArray())}\n]`);
+        } else {
+          el.setText(`players: []`);
+        }
+      };
+      _updateText();
       
       const onadd = e => {
-        console.log('game players array add', realm.key, e.data, playersArray.toArray());
+        // console.log('game players array add', realm.key, e.data, playersArray.toArray());
+        const {map: playerMap} = e.data;
 
-        // const {player, playerId} = e.data;
-        // players.add(playerId);
-        // console.log('add player', playerId);
-        el.setText(zstringify(playersArray.toArray()));
+        playerMap.listen();
+        playerMap.addEventListener('update', e => {
+          // console.log('player map update', e.data);
+
+          _updateText();
+        });
+
+        _updateText();
       };
       playersArray.addEventListener('add', onadd);
 
       // console.log('game players array listen on realm', realm.key);
       const onremove = e => {
-        console.log('game players array remove', realm.key, e.data, playersArray.toArray());
+        // console.log('game players array remove', realm.key, e.data, playersArray.toArray());
+        const {map: playerMap} = e.data;
 
-        // const {player, playerId} = e.data;
-        // players.delete(playerId);
-        el.setText(zstringify(playersArray.toArray()));
+        _updateText();
       };
       playersArray.addEventListener('remove', onremove);
   

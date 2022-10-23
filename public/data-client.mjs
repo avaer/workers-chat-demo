@@ -266,6 +266,10 @@ export class DCArray extends EventTarget {
     listen && map.listen();
     return map;
   }
+  getSize() {
+    const array = this.dataClient.crdt.get(this.arrayId);
+    return array ? Object.keys(array).length : 0;
+  }
   toArray() {
     const array = this.dataClient.crdt.get(this.arrayId);
     if (array) {
