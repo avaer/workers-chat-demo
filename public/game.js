@@ -133,18 +133,18 @@ class GameRealmsCanvases {
         canvas.height = realmSize;
         const ctx = canvas.getContext('2d');
         _drawRectangle(ctx, '#CCC');
+        
+        const x = dx + 1;
+        const z = dz + 1;
 
         const text = document.createElement('div');
         text.className = 'text';
         const text1 = document.createElement('div');
-        text1.textContent = `${dx}:${dz}`;
+        text1.textContent = `${x}:${z}`;
         text.appendChild(text1);
         const text2 = document.createElement('div');
         // text2.textContent = `${dx}:${dz}`;
         text.appendChild(text2);
-
-        const x = dx + 1;
-        const z = dz + 1;
 
         const div = document.createElement('div');
         div.className = 'network-realm';
