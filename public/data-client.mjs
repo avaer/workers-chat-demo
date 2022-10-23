@@ -903,11 +903,41 @@ export class NetworkedDataClient extends EventTarget {
             const {method, args} = updateObject;
             if (method === UPDATE_METHODS.IMPORT) {
               const [crdtExport] = args;
-              // console.log('data init', {crdtExport});
-    
-              resolve({
-                crdtExport,
+              // this.crdt = convertObjectToMap(zbdecode(crdtExport));
+              
+              if (this.userData.realm.key === '0:0:0') {
+                console.log('data init top left', zbdecode(crdtExport)); // XXX not absorbed
+                // debugger;
+              } else if (this.userData.realm.key === '0:0:400') {
+                console.log('data init bottom left', zbdecode(crdtExport)); // XXX not absorbed
+                // debugger;
+              }
+              
+              // console.log('crdt imported', this.crdt);
+              const importMessage = new MessageEvent('import', {
+                data: {
+                  crdtExport,
+                },
               });
+              const uint8Array = serializeMessage(importMessage);
+              const updateObject = parseUpdateObject(uint8Array);
+
+              const {
+                rollback,
+                update,
+              } = this.dataClient.applyUpdateObject(updateObject, {
+                force: true, // since coming from the server
+              });
+              if (rollback) {
+                throw new Error('initial import failed 1');
+              }
+              if (update) {
+                this.dataClient.emitUpdate(update);
+              } else {
+                throw new Error('initial import failed 2');
+              }
+
+              resolve();
               this.ws.removeEventListener('message', initialMessage);
             }
           }
