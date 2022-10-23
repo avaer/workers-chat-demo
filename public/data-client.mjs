@@ -461,6 +461,9 @@ export class DataClient extends EventTarget {
           ],
         });
       }
+      default: {
+        throw new Error('invalid message type: ' + type);
+      }
     }
   }
   getImportMessage() {
