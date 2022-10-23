@@ -269,10 +269,6 @@ const dataClientPromises = new Map();
 
 //
 
-const MESSAGE_TYPES = {
-  AUDIO: 1,
-  DATA: 2,
-};
 const schemaArrayNames = [
   'players',
   'worldApps',
