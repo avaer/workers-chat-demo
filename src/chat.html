@@ -1261,7 +1261,7 @@ function join() {
   }, 5000);
   ws.addEventListener("close", event => {
     console.log("WebSocket closed, reconnecting:", event.code, event.reason);
-    rejoin();
+    // rejoin();
     clearInterval(interval);
   });
   ws.addEventListener("error", event => {
