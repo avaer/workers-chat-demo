@@ -237,7 +237,7 @@ async function handleApiRequest(path, request, env) {
       // Compute a new URL with `/api/room/<name>` removed. We'll forward the rest of the path
       // to the Durable Object.
       let newUrl = new URL(request.url);
-      newUrl.pathname = "/" + path.slice(2).join("/");
+      newUrl.pathname = "/" + name + "/" + path.slice(2).join("/");
 
       // Send the request to the object. The `fetch()` method of a Durable Object stub has the
       // same signature as the global `fetch()` function, but the request is always sent to the
@@ -265,7 +265,7 @@ const readCrdtFromStorage = async (storage, arrayNames) => {
   }
   return crdt;
 };
-let dataClientPromise = null;
+const dataClientPromises = new Map();
 
 //
 
@@ -317,9 +317,12 @@ export class ChatRoom {
   async fetch(request) {
     return await handleErrors(request, async () => {
       let url = new URL(request.url);
+      const match = url.pathname.match(/^\/([^\/]+?)\/([^\/]+?)$/);
+      const roomName = match ? match[1] : '';
+      const methodName = match ? match[2] : '';
 
-      switch (url.pathname) {
-        case "/websocket": {
+      switch (methodName) {
+        case "websocket": {
           // The request is to `/api/room/<name>/websocket`. A client is trying to establish a new
           // WebSocket session.
           if (request.headers.get("Upgrade") != "websocket") {
@@ -337,7 +340,7 @@ export class ChatRoom {
           let pair = new WebSocketPair();
 
           // We're going to take pair[1] as our end, and return pair[0] to the client.
-          await this.handleSession(pair[1], ip, url);
+          await this.handleSession(pair[1], ip, roomName, url);
 
           // Now we return the other end of the pair to the client.
           return new Response(null, { status: 101, webSocket: pair[0] });
@@ -350,7 +353,7 @@ export class ChatRoom {
   }
 
   // handleSession() implements our WebSocket-based chat protocol.
-  async handleSession(webSocket, ip, url) {
+  async handleSession(webSocket, ip, roomName, url) {
     // Accept our end of the WebSocket. This tells the runtime that we'll be terminating the
     // WebSocket in JavaScript, not sending it elsewhere.
     webSocket.accept();
@@ -361,16 +364,21 @@ export class ChatRoom {
       return;
     }
 
-    const _resumeWebsocket = _pauseWebSocket(webSocket);
-
+    let dataClientPromise = dataClientPromises.get(roomName);
     if (!dataClientPromise) {
       dataClientPromise = (async () => {
         const crdt = await readCrdtFromStorage(this.storage, schemaArrayNames);
-        return new DataClient({
+        // const crdt = new Map();
+        const dataClient = new DataClient({
           crdt,
         });
+        return dataClient;
       })();
+      dataClientPromises.set(roomName, dataClientPromise);
     }
+
+    const _resumeWebsocket = _pauseWebSocket(webSocket);
+
     const dataClient = await dataClientPromise;
     const networkClient = {
       serializeMessage(message) {
