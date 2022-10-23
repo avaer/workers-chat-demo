@@ -164,6 +164,37 @@ z-index: 1;
         div.setText = text => {
           text2.innerText = text;
         };
+        div.updateText = dataClient => {
+          const playersArray = dataClient.getArray('players', {
+            listen: false,
+          });
+          const worldApps = dataClient.getArray('worldApps', {
+            listen: false,
+          });
+
+          const _updateText = () => {
+            let playersString = '';
+            if (playersArray.getSize() > 0) {
+              playersString = `players: [\n${zstringify(playersArray.toArray())}\n]`;
+            } else {
+              playersString = `players: []`;
+            }
+
+            let worldAppsString = '';
+            if (worldApps.getSize() > 0) {
+              worldAppsString = `worldApps: [\n${zstringify(worldApps.toArray())}\n]`;
+            } else {
+              worldAppsString = `worldApps: []`;
+            }
+
+            const s = [
+              playersString,
+              worldAppsString,
+            ].join('\n');
+            div.setText(s);
+          };
+          _updateText();
+        };
         
         this.elements.push(div);
       }
@@ -295,22 +326,33 @@ z-index: 2;
     const worldItems = Array.from(world.querySelectorAll('.realms-item'));
     const collidedItem = worldItems.find(item => _boxContains(targetBox, item.position));
     if (collidedItem) {
+      // data layer
+      console.log('get entity 1', virtualWorld, collidedItem.arrayIndexId);
+      const entity = virtualWorld.virtualMaps.get(collidedItem.arrayIndexId);
+      console.log('get entity 2', entity);
+      const update = entity.remove();
+      console.log('got update', update);
+      
+      // render layer
       inventory.appendChild(collidedItem);
       collidedItem.style.left = null;
       collidedItem.style.top = null;
     } else {
       if (inventoryItems.length > 0) {
+        // data layer
+        const entity = virtualWorld.addEntity({ // XXX make this return an update and emit it manually
+          name: 'rock',
+          position: targetPosition.slice(),
+        });
+        console.log('added rock', entity);
+
+        // render layer
         const item = inventoryItems.pop();
         item.position = targetPosition.slice();
         item.style.left = `${targetPosition[0]}px`;
         item.style.top = `${targetPosition[2]}px`;
+        item.arrayIndexId = entity.arrayIndexId;
         world.appendChild(item);
-
-        const entity = virtualWorld.addEntity({
-          name: 'rock',
-          position: targetPosition.slice(),
-        });
-        console.log('add rock', entity);
       }
     }
   };
@@ -327,27 +369,22 @@ z-index: 2;
       el.classList.add('connecting');
     }
   });
+  const getRealmElement = realm => realmsCanvases.elements.find(el => {
+    return el.min[0] === realm.min[0] && el.min[2] === realm.min[2];
+  });
   realms.addEventListener('realmjoin', e => {
     const {realm} = e.data;
-    const el = realmsCanvases.elements.find(el => {
-      return el.min[0] === realm.min[0] && el.min[2] === realm.min[2];
-    });
+    const el = getRealmElement(realm);
     if (el) {
       el.classList.add('connected');
       el.classList.remove('connecting');
 
       const {dataClient} = realm;
 
-      const playersArray = dataClient.getArray('players');
+      el.updateText(dataClient);
 
-      const _updateText = () => {
-        if (playersArray.getSize() > 0) {
-          el.setText(`players: [\n${zstringify(playersArray.toArray())}\n]`);
-        } else {
-          el.setText(`players: []`);
-        }
-      };
-      _updateText();
+      const playersArray = dataClient.getArray('players');
+      const worldApps = dataClient.getArray('worldApps');
       
       const onadd = e => {
         // console.log('game players array add', realm.key, e.data, playersArray.toArray());
@@ -357,10 +394,10 @@ z-index: 2;
         playerMap.addEventListener('update', e => {
           // console.log('player map update', e.data);
 
-          _updateText();
+          el.updateText(dataClient);
         });
 
-        _updateText();
+        el.updateText(dataClient);
       };
       playersArray.addEventListener('add', onadd);
 
@@ -369,7 +406,7 @@ z-index: 2;
         // console.log('game players array remove', realm.key, e.data, playersArray.toArray());
         const {map: playerMap} = e.data;
 
-        _updateText();
+        el.updateText(dataClient);
       };
       playersArray.addEventListener('remove', onremove);
   
@@ -378,6 +415,7 @@ z-index: 2;
         dataClient.removeEventListener('remove', onremove);
 
         playersArray.unlisten();
+        worldApps.unlisten();
 
         // console.log('game players array cancel on realm', realm.key);
       });
@@ -418,10 +456,24 @@ z-index: 2;
   const _initLogic = () => {
     // world
     virtualWorld.addEventListener('entityadd', e => {
-      console.log('add virtual world app', e.data);
+      // console.log('add virtual world app', e.data);
+      const {realm} = e.data;
+      const {dataClient} = realm;
+      
+      const el = getRealmElement(realm);
+      if (el) {
+        el.updateText(dataClient);
+      }
     });
     virtualWorld.addEventListener('entityremove', e => {
-      console.log('remove virtual world app', e.data);
+      // console.log('remove virtual world app', e.data);
+      const {realm} = e.data;
+      const {dataClient} = realm;
+      
+      const el = getRealmElement(realm);
+      if (el) {
+        el.updateText(dataClient);
+      }
     });
 
     // players

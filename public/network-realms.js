@@ -105,7 +105,7 @@ class VirtualPlayer extends EventTarget {
     this.connectedRealms = new Set();
     this.cleanupMapFns = new Map();
 
-    console.log('new virtual player', this, new Error().stack);
+    // console.log('new virtual player', this, new Error().stack);
   }
   initialize(o) {
     const headRealm = this.#getHeadRealm();
@@ -257,6 +257,17 @@ class VirtualPlayersArray extends EventTarget {
       this.virtualPlayers.set(playerId, virtualPlayer);
     }
     return virtualPlayer;
+  }
+  addEntity(val) {
+    const position = val[positionKey] ?? [0, 0, 0];
+    const realm = this.parent.getClosestRealm(position);
+    const array = new DCArray(this.arrayId, realm.dataClient);
+    const {
+      map,
+      update,
+    } = array.add(val);
+    realm.emitUpdate(update);
+    return map;
   }
   link(realm) {
     const {networkedDataClient, networkedIrcClient, networkedAudioClient} = realm;
@@ -416,17 +427,104 @@ class VirtualPlayersArray extends EventTarget {
     }
   } */
 }
+class VirtualEntityArray extends VirtualPlayersArray {
+  constructor(...args) {
+    super(...args);
+
+    this.virtualMaps = new Map();
+  }
+  addEntity(val) {
+    const position = val[positionKey] ?? [0, 0, 0];
+    const realm = this.parent.getClosestRealm(position);
+    const array = new DCArray(this.arrayId, realm.dataClient);
+    const {
+      map,
+      update,
+    } = array.add(val);
+    realm.emitUpdate(update);
+    return map;
+  }
+  link(realm) {
+    const {networkedDataClient} = realm;
+
+    // bind local array maps to virtual maps
+    const dcArray = networkedDataClient.dataClient.getArray(this.arrayId); // note: auto listen
+
+    const _getOrCreateVirtualMap = (arrayIndexId) => {
+      let virtualMap = this.virtualMaps.get(arrayIndexId);
+      if (!virtualMap) {
+        virtualMap = new VirtualEntityMap(arrayIndexId, this);
+        this.virtualMaps.set(arrayIndexId, virtualMap);
+      
+        this.dispatchEvent(new MessageEvent('entityadd', {
+          data: {
+            entityId: arrayIndexId,
+            entity: virtualMap,
+            realm,
+          },
+        }));
+  
+        virtualMap.addEventListener('garbagecollect', e => {
+          this.dispatchEvent(new MessageEvent('entityremove', {
+            data: {
+              entityId: arrayIndexId,
+              entity: virtualMap,
+              realm,
+            },
+          }));
+        });
+      }
+      return virtualMap;
+    };
+    
+    const localVirtualMaps = new Map();
+    const onadd = e => {
+      const {arrayIndexId, map} = e.data;
+      const virtualMap = _getOrCreateVirtualMap(arrayIndexId);
+      virtualMap.link(arrayIndexId, map);
+      localVirtualMaps.set(map, virtualMap);
+    };
+    dcArray.addEventListener('add', onadd);
+    const onremove = e => {
+      const {arrayIndexId} = e.data;
+      const virtualMap = this.virtualMaps.get(arrayIndexId);
+      virtualMap.unlink(arrayIndexId);
+      localVirtualMaps.delete(arrayIndexId);
+    };
+    dcArray.addEventListener('remove', onremove);
+    
+    this.cleanupFns.set(realm, () => {
+      // unbind array virtual maps
+      dcArray.unlisten();
+      dcArray.removeEventListener('add', onadd);
+      dcArray.removeEventListener('remove', onremove);
+
+      for (const localVirtualMap of localVirtualMaps.values()) {
+        localVirtualMap.unlinkFilter((arrayIndexId, map) => {
+          if (!map?.dataClient?.userData?.realm) {
+            debugger;
+          }
+          return realm === map.dataClient.userData.realm;
+        });
+      }
+    });
+  }
+  unlink(realm) {
+    this.cleanupFns.get(realm)();
+    this.cleanupFns.delete(realm);
+  }
+}
 
 //
 
 class VirtualEntityMap extends EventTarget {
-  constructor(arrayIndexId, virtualArray) {
+  constructor(arrayIndexId, parent) {
     super();
     
     this.arrayIndexId = arrayIndexId;
-    this.virtualArray = virtualArray;
+    this.parent = parent;
 
-    this.maps = new Set(); // set of bound dc maps
+    this.maps = new Map(); // bound dc maps
     this.headDataClient = null; // the currently bound data client, changed when the network is reconfigured
     this.cleanupFns = new Map();
   }
@@ -436,7 +534,14 @@ class VirtualEntityMap extends EventTarget {
   set(key, val) {
     throw new Error('not implemented');
   }
-  link(map) {
+  remove() {
+    throw new Error('not implemented'); // XXX
+  }
+  link(arrayIndexId, map) {
+    if (typeof arrayIndexId !== 'string') {
+      debugger;
+    }
+
     // listen
     map.listen();
     const update = e => {
@@ -450,27 +555,37 @@ class VirtualEntityMap extends EventTarget {
     map.addEventListener('update', update);
 
     // update head data client
-    this.maps.add(map);
+    this.maps.set(arrayIndexId, map);
     this.updateHeadDataClient();
 
-    this.cleanupFns.set(map, () => {
+    this.cleanupFns.set(arrayIndexId, () => {
       map.unlisten();
       map.removeEventListener('update', update);
     });
   }
-  unlink(map) {
-    const cleanupFn = this.cleanupFns.get(map);
+  unlink(arrayIndexId) {
+    if (typeof arrayIndexId !== 'string') {
+      debugger;
+    }
+
+    const cleanupFn = this.cleanupFns.get(arrayIndexId);
     cleanupFn();
     this.cleanupFns.delete(map);
 
     // update head data client
-    this.maps.delete(map);
+    this.maps.delete(arrayIndexId);
     this.updateHeadDataClient();
 
     // garbage collect
     if (this.maps.size === 0) {
-      // this.virtualArray.remove(this.arrayIndexId);
       this.dispatchEvent(new MessageEvent('garbagecollect'));
+    }
+  }
+  unlinkFilter(fn) {
+    for (const [arrayIndexId, map] of this.maps.entries()) {
+      if (fn(arrayIndexId, map)) {
+        this.unlink(arrayIndexId);
+      }
     }
   }
   updateHeadDataClient() {
@@ -493,84 +608,6 @@ class VirtualEntityMap extends EventTarget {
     }
     // XXX changing the head data client requires us to re-emit the delta update
     return headDataClient;
-  }
-}
-
-class VirtualEntityArray extends EventTarget {
-  constructor(arrayId, parent) {
-    super();
-
-    this.arrayId = arrayId;
-    this.parent = parent;
-
-    this.virtualMaps = new Map();
-    this.dcCleanupFns = new Map();
-  }
-  addEntity(val) {
-    const position = val[positionKey] ?? [0, 0, 0];
-    const realm = this.parent.getClosestRealm(position);
-    const array = new DCArray(this.arrayId, realm.dataClient);
-    const {
-      map,
-      update,
-    } = array.add(val);
-    realm.emitUpdate(update);
-    return map;
-  }
-  getOrCreateVirtualMap(arrayIndexId) {
-    let virtualMap = this.virtualMaps.get(arrayIndexId);
-    if (!virtualMap) {
-      virtualMap = new VirtualEntityMap(arrayIndexId, this);
-      this.virtualMaps.set(arrayIndexId, virtualMap);
-    
-      this.dispatchEvent(new MessageEvent('entityadd', {
-        data: {
-          entityId: arrayIndexId,
-          entity: virtualMap,
-        },
-      }));
-
-      virtualMap.addEventListener('garbagecollect', e => {
-        this.dispatchEvent(new MessageEvent('entityremove', {
-          data: {
-            entityId: arrayIndexId,
-            entity: virtualMap,
-          },
-        }));
-      });
-    }
-    return virtualMap;
-  }
-  link(networkedDataClient) {
-    // bind local array maps to virtual maps
-    const dcArray = networkedDataClient.dataClient.getArray(this.arrayId); // note: auto listen
-    
-    const localVirtualMaps = new Map();
-    dcArray.addEventListener('add', e => {
-      const {arrayIndexId, map} = e.data;
-      const virtualMap = this.getOrCreateVirtualMap(arrayIndexId);
-      virtualMap.link(map);
-      localVirtualMaps.set(map, virtualMap);
-    });
-    dcArray.addEventListener('remove', e => {
-      const {arrayIndexId} = e.data;
-      const virtualMap = this.virtualMaps.get(arrayIndexId);
-      virtualMap.unlink();
-      localVirtualMaps.delete(arrayIndexId);
-    });
-    
-    this.dcCleanupFns.set(networkedDataClient, () => {
-      // unbind array virtual maps
-      dcArray.unlisten();
-
-      for (const localVirtualMap of localVirtualMaps.values()) {
-        localVirtualMap.unlink(networkedDataClient);
-      }
-    });
-  }
-  unlink(networkedDataClient) {
-    this.dcCleanupFns.get(networkedDataClient)();
-    this.dcCleanupFns.delete(networkedDataClient);
   }
 }
 
@@ -630,7 +667,9 @@ export class NetworkRealm extends EventTarget {
     this.connected = false;
   }
   emitUpdate(update) {
-    // console.log('emit update to realm', this.key, update);
+    if (update.type === 'add.worldApps') {
+      console.log('emit update to realm', this.key, update.type, update);
+    }
     this.dataClient.emitUpdate(update);
     this.networkedDataClient.emitUpdate(update);
   }
@@ -647,7 +686,7 @@ export class NetworkRealms extends EventTarget {
     this.lastPosition = [NaN, NaN, NaN];
     this.players = new VirtualPlayersArray('players', this);
     this.localPlayer = new VirtualPlayer('players', this.playerId, this, 'local');
-    this.world = new VirtualEntityArray('world', this);
+    this.world = new VirtualEntityArray('worldApps', this);
     this.connectedRealms = new Set();
     this.tx = makeTransactionHandler();
   }
@@ -732,14 +771,14 @@ export class NetworkRealms extends EventTarget {
               // try to connect
               this.players.link(realm);
               this.localPlayer.link(realm);
-              this.world.link(realm.networkedDataClient);
+              this.world.link(realm);
               
               try {
                 await realm.connect();
               } catch(err) {
                 this.players.unlink(realm);
                 this.localPlayer.unlink(realm);
-                this.world.unlink(realm.networkedDataClient);
+                this.world.unlink(realm);
                 throw err;
               }
               this.connectedRealms.add(realm);
@@ -779,7 +818,7 @@ export class NetworkRealms extends EventTarget {
           if (!candidateRealms.find(candidateRealm => candidateRealm.key === connectedRealm.key)) {
             this.players.unlink(connectedRealm);
             this.localPlayer.unlink(connectedRealm);
-            this.world.unlink(connectedRealm.networkedDataClient);
+            this.world.unlink(connectedRealm);
 
             connectedRealm.disconnect();
             this.connectedRealms.delete(connectedRealm);
