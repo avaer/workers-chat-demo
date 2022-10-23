@@ -130,8 +130,7 @@ class HeadTrackedEntity extends EventTarget {
     }
   }
   #migrateTo(newHeadRealm) {
-    const realms = this.parent;
-    if (!realms.tx.running) {
+    if (!this.realms.tx.running) {
       throw new Error('migration happening outside of a lock -- wrap in realms.tx()')
     }
 
@@ -146,6 +145,8 @@ class HeadTrackedEntity extends EventTarget {
     });
 
     // console.log('move realm ', oldHeadRealm.key, ' -> ', newHeadRealm.key);
+
+    const playerId = this.realms.playerId;
 
     // XXX do the actual migration to newHeadRealm:
     // - lock the transaction (already done)
@@ -178,12 +179,12 @@ class HeadTrackedEntity extends EventTarget {
 }
 
 class VirtualPlayer extends HeadTrackedEntity {
-  constructor(arrayId, arrayIndexId, parent, name) {
+  constructor(arrayId, arrayIndexId, realms, name) {
     super();
 
     this.arrayId = arrayId;
     this.arrayIndexId = arrayIndexId;
-    this.parent = parent;
+    this.realms = realms;
     this.name = name;
 
     this.cleanupMapFns = new Map();
@@ -191,8 +192,10 @@ class VirtualPlayer extends HeadTrackedEntity {
     // console.log('new virtual player', this, new Error().stack);
   }
   initialize(o) {
-    const {dataClient, networkedDataClient} = this.headRealm;
-    const playersArray = dataClient.getArray(this.arrayId, {
+    const deadHandUpdate = this.headRealm.dataClient.deadHandArrayMap(this.arrayId, this.arrayIndexId, this.realms.playerId);
+    this.headRealm.emitUpdate(deadHandUpdate);
+    
+    const playersArray = this.headRealm.dataClient.getArray(this.arrayId, {
       listen: false,
     });
     const {
@@ -201,6 +204,7 @@ class VirtualPlayer extends HeadTrackedEntity {
     } = playersArray.addAt(this.arrayIndexId, o, {
       listen: false,
     });
+
     this.headRealm.emitUpdate(update);
   }
   link(realm) {
@@ -261,7 +265,7 @@ class VirtualPlayersArray extends EventTarget {
   getOrCreateVirtualPlayer(playerId) {
     let virtualPlayer = this.virtualPlayers.get(playerId);
     if (!virtualPlayer) {
-      virtualPlayer = new VirtualPlayer(this.arrayId, playerId, this, 'remote');
+      virtualPlayer = new VirtualPlayer(this.arrayId, playerId, this.parent, 'remote');
       this.virtualPlayers.set(playerId, virtualPlayer);
     }
     return virtualPlayer;
@@ -433,12 +437,18 @@ class VirtualEntityArray extends VirtualPlayersArray {
   addEntity(val) {
     const position = val[positionKey] ?? [0, 0, 0];
     const realm = this.parent.getClosestRealm(position);
+    const arrayIndexId = makeId();
+    
+    const deadHandUpdate = realm.dataClient.deadHandArrayMap(this.arrayId, arrayIndexId, this.parent.playerId);
+    realm.emitUpdate(deadHandUpdate);
+    
     const array = new DCArray(this.arrayId, realm.dataClient);
     const {
       map,
       update,
-    } = array.add(val);
+    } = array.addAt(val, arrayIndexId);
     realm.emitUpdate(update);
+
     return map;
   }
   link(realm) {
