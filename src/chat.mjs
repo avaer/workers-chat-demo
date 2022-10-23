@@ -275,7 +275,7 @@ const MESSAGE_TYPES = {
 };
 const schemaArrayNames = [
   'players',
-  'objects',
+  'worldApps',
 ];
 
 const _pauseWebSocket = (ws) => {
