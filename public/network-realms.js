@@ -158,7 +158,9 @@ class HeadTrackedEntity extends EventTarget {
     const {
       map: newPlayerMap,
       update: newAddUpdate,
-    } = newPlayersArray.addAt(this.arrayIndexId, oldPlayerJson);
+    } = newPlayersArray.addAt(this.arrayIndexId, oldPlayerJson, {
+      listen: false,
+    });
     // console.log('added json', oldPlayerJson, newPlayerMap, newAddUpdate);
     newHeadRealm.emitUpdate(newAddUpdate);
     

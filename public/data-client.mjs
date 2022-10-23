@@ -750,7 +750,9 @@ export class DataClient extends EventTarget {
     const arrayIndexId = makeId();
     return this.addArrayMapElement(arrayId, arrayIndexId, val, opts);
   }
-  addArrayMapElement(arrayId, arrayIndexId, val = {}, {listen = true} = {}) {
+  addArrayMapElement(arrayId, arrayIndexId, val = {}, {
+    listen = true,
+  } = {}) {
     const crdtVal = convertValToCrdtVal(val);
     this.crdt.set(arrayIndexId, crdtVal);
     
@@ -853,7 +855,7 @@ export class NetworkedDataClient extends EventTarget {
 
     this.dataClient = dataClient;
     this.userData = userData;
-    
+
     this.ws = null;
   }
   static handlesMethod(method) {
