@@ -557,9 +557,9 @@ class VirtualEntityMap extends HeadTrackedEntity {
     this.headRealm.emitUpdate(update);
   }
   link(arrayIndexId, map) {
-    if (typeof arrayIndexId !== 'string') {
+    /* if (typeof arrayIndexId !== 'string') {
       debugger;
-    }
+    } */
 
     // listen
     map.listen();
@@ -589,9 +589,9 @@ class VirtualEntityMap extends HeadTrackedEntity {
     });
   }
   unlink(arrayIndexId) {
-    if (typeof arrayIndexId !== 'string') {
+    /* if (typeof arrayIndexId !== 'string') {
       debugger;
-    }
+    } */
 
     const cleanupFn = this.cleanupFns.get(arrayIndexId);
     cleanupFn();
@@ -671,9 +671,9 @@ export class NetworkRealm extends EventTarget {
     this.connected = false;
   }
   emitUpdate(update) {
-    if (update.type === 'add.worldApps') {
-      console.log('emit update to realm', this.key, update.type, update);
-    }
+    // if (update.type === 'add.worldApps') {
+    //   console.log('emit update to realm', this.key, update.type, update);
+    // }
     this.dataClient.emitUpdate(update);
     this.networkedDataClient.emitUpdate(update);
   }
