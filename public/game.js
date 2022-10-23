@@ -178,8 +178,6 @@ const zstringify = o => {
   for (const k in o) {
     if (result) {
       result += '\n';
-    } else {
-      result += ',';
     }
 
     const v = o[k];
