@@ -285,11 +285,11 @@ export class DCArray extends EventTarget {
       return [];
     }
   }
-  add(val) {
-    return this.dataClient.createArrayMapElement(this.arrayId, val);
+  add(val, opts) {
+    return this.dataClient.createArrayMapElement(this.arrayId, val, opts);
   }
-  addAt(arrayIndexId, val) {
-    return this.dataClient.addArrayMapElement(this.arrayId, arrayIndexId, val);
+  addAt(arrayIndexId, val, opts) {
+    return this.dataClient.addArrayMapElement(this.arrayId, arrayIndexId, val, opts);
   }
   removeAt(arrayIndexId) {
     return this.dataClient.removeArrayMapElement(this.arrayId, arrayIndexId);
