@@ -455,8 +455,9 @@ z-index: 2;
 
   const _initLogic = () => {
     // world
+    const worldItemRenderers = [];
     virtualWorld.addEventListener('entityadd', e => {
-      // console.log('add virtual world app', e.data);
+      console.log('add virtual world app', e.data);
       const {realm} = e.data;
       const {dataClient} = realm;
       
@@ -477,7 +478,7 @@ z-index: 2;
     });
 
     // players
-    const playerRenderers = [];
+    const playerCursorRenderers = [];
     // console.log('listen to players', virtualPlayers);
     virtualPlayers.addEventListener('join', e => {
       console.log('add virtual player', e.data);
@@ -497,8 +498,8 @@ z-index: 2;
       p.innerHTML = `<img src="/public/images/audio.svg" class="audio-icon"><span class="name">${e.data.playerId}</span>`;
       roster.appendChild(p);
 
-      const playerRenderer = new RemotePlayerHtmlRenderer(e.data.playerId, playerId, player);
-      playerRenderers.push(playerRenderer);
+      const playerCursorRenderer = new RemotePlayerCursorHtmlRenderer(e.data.playerId, playerId, player);
+      playerCursorRenderers.push(playerCursorRenderer);
     });
     virtualPlayers.addEventListener('leave', e => {
       console.log('remove virtual player', e.data);
@@ -512,11 +513,11 @@ z-index: 2;
         }
       }
 
-      for (let i = 0; i < playerRenderers.length; i++) {
-        const playerRenderer = playerRenderers[i];
-        if (playerRenderer.remotePlayerId === playerId) {
-          playerRenderers.splice(i, 1);
-          playerRenderer.destroy();
+      for (let i = 0; i < playerCursorRenderers.length; i++) {
+        const playerCursorRenderer = playerCursorRenderers[i];
+        if (playerCursorRenderer.remotePlayerId === playerId) {
+          playerCursorRenderers.splice(i, 1);
+          playerCursorRenderer.destroy();
           break;
         }
       }

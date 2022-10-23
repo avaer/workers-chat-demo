@@ -187,25 +187,62 @@ class VirtualPlayer extends HeadTrackedEntity {
     this.realms = realms;
     this.name = name;
 
+    this.playerApps = new VirtualEntityArray('playerApps:' + this.arrayIndexId, this.realms);
+    this.playerActions = new VirtualEntityArray('playerActions:' + this.arrayIndexId, this.realms);
     this.cleanupMapFns = new Map();
 
     // console.log('new virtual player', this, new Error().stack);
   }
-  initialize(o) {
-    const deadHandUpdate = this.headRealm.dataClient.deadHandArrayMap(this.arrayId, this.arrayIndexId, this.realms.playerId);
-    this.headRealm.emitUpdate(deadHandUpdate);
-    
-    const playersArray = this.headRealm.dataClient.getArray(this.arrayId, {
-      listen: false,
-    });
-    const {
-      // map,
-      update,
-    } = playersArray.addAt(this.arrayIndexId, o, {
-      listen: false,
-    });
+  initializePlayer(o, {
+    appVals = [],
+    appIds = [],
+    actionVals = [],
+    actionValIds = [],
+  } = {}) {
+    const _initializeApps = () => {
+      for (let i = 0; i < appVals.length; i++) {
+        const appVal = appVals[i];
+        const appId = appIds[i] ?? makeId();
+        const deadHandUpdate = this.headRealm.dataClient.deadHandArrayMap(this.playerApps.arrayId, appId);
+        this.headRealm.emitUpdate(deadHandUpdate);
 
-    this.headRealm.emitUpdate(update);
+        const map = this.playerApps.addEntityAt(appId, appVal);
+        console.log('added player app', appVal, appId, map);
+        // XXX listen for this in the local player renderer
+      }
+    };
+    _initializeApps();
+
+    const _initializeActions = () => {
+      for (let i = 0; i < actionVals.length; i++) {
+        const actionVal = actionVals[i];
+        const actionId = actionValIds[i] ?? makeId();
+        const deadHandUpdate = this.headRealm.dataClient.deadHandArrayMap(this.playerActions.arrayId, actionId);
+        this.headRealm.emitUpdate(deadHandUpdate);
+
+        const map = this.playerActions.addEntityAt(actionId, actionVal);
+        console.log('added player action', actionVal, actionId, map);
+        // XXX listen for this in the local player renderer
+      }
+    };
+    _initializeActions();
+
+    const _initializePlayer = () => {
+      const deadHandUpdate = this.headRealm.dataClient.deadHandArrayMap(this.arrayId, this.arrayIndexId, this.realms.playerId);
+      this.headRealm.emitUpdate(deadHandUpdate);
+      
+      const playersArray = this.headRealm.dataClient.getArray(this.arrayId, {
+        listen: false,
+      });
+      const {
+        // map,
+        update,
+      } = playersArray.addAt(this.arrayIndexId, o, {
+        listen: false,
+      });
+      this.headRealm.emitUpdate(update);
+    };
+    _initializePlayer();
   }
   link(realm) {
     // console.log('link', realm);
@@ -220,19 +257,11 @@ class VirtualPlayer extends HeadTrackedEntity {
       }));
     };
     map.addEventListener('update', update);
-    
-    /* const remove = e => {
-      const {arrayIndexId} = e.data;
-      // console.log('virtual player got underlying remove', e.data);
-      // XXX
-    };
-    map.addEventListener('remove', remove); */
 
     this.cleanupMapFns.set(realm, () => {
       map.unlisten();
 
       map.removeEventListener('update', update);
-      // map.removeEventListener('remove', remove);
     });
   }
   unlink(realm) {
@@ -243,7 +272,6 @@ class VirtualPlayer extends HeadTrackedEntity {
     this.cleanupMapFns.delete(realm);
   }
   setKeyValue(key, val) {
-    // console.log('head realm key', this.headRealm.key);
     const {dataClient, networkedDataClient} = this.headRealm;
     const valueMap = dataClient.getArrayMap(this.arrayId, this.arrayIndexId, {
       listen: false,
