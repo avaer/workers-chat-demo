@@ -270,7 +270,6 @@ const dataClientPromises = new Map();
 //
 
 const schemaArrayNames = [
-  'players',
   'worldApps',
 ];
 
