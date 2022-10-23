@@ -299,63 +299,7 @@ class VirtualPlayersArray extends EventTarget {
     return virtualPlayer;
   }
   link(realm) {
-    const {networkedDataClient, networkedIrcClient, networkedAudioClient} = realm;
-    
-    const _linkIrc = () => {
-      // XXX instead of this, attach to the players array in the data client
-      /* const onjoin = e => {
-        const {playerId} = e.data;
-        const created = !this.virtualPlayers.has(playerId);
-        const virtualPlayer = this.getOrCreateVirtualPlayer(playerId);
-        virtualPlayer.link(realm);
-        if (created) {
-          this.dispatchEvent(new MessageEvent('join', {
-            data: {
-              player: virtualPlayer,
-              playerId,
-            },
-          }));
-        }
-      };
-      networkedIrcClient.addEventListener('join', onjoin);
-      const onleave = e => {
-        const {playerId} = e.data;
-        const virtualPlayer = this.virtualPlayers.get(playerId);
-        if (virtualPlayer) {
-          virtualPlayer.unlink(realm);
-          if (!virtualPlayer.isLinked()) {
-            this.virtualPlayers.delete(playerId);
-            
-            virtualPlayer.dispatchEvent(new MessageEvent('leave'));
-            this.dispatchEvent(new MessageEvent('leave', {
-              data: {
-                player: virtualPlayer,
-                playerId,
-              },
-            }));
-          }
-        } else {
-          console.warn('removing nonexistent player', playerId, this.players);
-        }
-      };
-      networkedIrcClient.addEventListener('leave', onleave); */
-
-      // note: this is not a good place for this, since it doesn't have to do with players
-      // it's here for convenience
-      const onchat = e => {
-        this.parent.dispatchEvent(new MessageEvent('chat', {
-          data: e.data,
-        }));
-      };
-      networkedIrcClient.addEventListener('chat', onchat);
-
-      this.cleanupFns.set(networkedIrcClient, () => {
-        // networkedIrcClient.removeEventListener('join', onjoin);
-        // networkedIrcClient.removeEventListener('leave', onleave);
-        networkedIrcClient.removeEventListener('chat', onchat);
-      });
-    };
-    _linkIrc();
+    const {networkedDataClient, networkedAudioClient} = realm;
 
     const _linkData = () => {
       const playersArray = networkedDataClient.dataClient.getArray(this.arrayId);
@@ -437,13 +381,10 @@ class VirtualPlayersArray extends EventTarget {
     _linkAudio();
   }
   unlink(realm) {
-    const {networkedDataClient, networkedIrcClient, networkedAudioClient} = realm;
+    const {networkedDataClient, networkedAudioClient} = realm;
 
     this.cleanupFns.get(networkedDataClient)();
     this.cleanupFns.delete(networkedDataClient);
-
-    this.cleanupFns.get(networkedIrcClient)();
-    this.cleanupFns.delete(networkedIrcClient);
 
     this.cleanupFns.get(networkedAudioClient)();
     this.cleanupFns.delete(networkedAudioClient);
@@ -553,6 +494,39 @@ class VirtualEntityArray extends VirtualPlayersArray {
   unlink(realm) {
     this.cleanupFns.get(realm)();
     this.cleanupFns.delete(realm);
+  }
+}
+
+//
+
+class VirtualIrc {
+  constructor(parent) {
+    this.parent = parent;
+    this.cleanupFns = new Map();
+  }
+  link(realm) {
+    const {networkedIrcClient} = realm;
+
+    // note: this is not a good place for this, since it doesn't have to do with players
+    // it's here for convenience
+    const onchat = e => {
+      this.parent.dispatchEvent(new MessageEvent('chat', {
+        data: e.data,
+      }));
+    };
+    networkedIrcClient.addEventListener('chat', onchat);
+
+    this.cleanupFns.set(networkedIrcClient, () => {
+      // networkedIrcClient.removeEventListener('join', onjoin);
+      // networkedIrcClient.removeEventListener('leave', onleave);
+      networkedIrcClient.removeEventListener('chat', onchat);
+    });
+  }
+  unlink(realm) {
+    const {networkedIrcClient} = realm;
+
+    this.cleanupFns.get(networkedIrcClient)();
+    this.cleanupFns.delete(networkedIrcClient);
   }
 }
 
@@ -718,6 +692,7 @@ export class NetworkRealms extends EventTarget {
     this.players = new VirtualPlayersArray('players', this);
     this.localPlayer = new VirtualPlayer('players', this.playerId, this, 'local');
     this.world = new VirtualEntityArray('worldApps', this);
+    this.irc = new VirtualIrc(this);
     this.connectedRealms = new Set();
     this.tx = makeTransactionHandler();
   }
@@ -811,6 +786,7 @@ export class NetworkRealms extends EventTarget {
               this.players.link(realm);
               this.localPlayer.link(realm);
               this.world.link(realm);
+              this.irc.link(realm);
               
               try {
                 await realm.connect();
@@ -818,6 +794,7 @@ export class NetworkRealms extends EventTarget {
                 this.players.unlink(realm);
                 this.localPlayer.unlink(realm);
                 this.world.unlink(realm);
+                this.irc.unlink(realm);
                 throw err;
               }
               this.connectedRealms.add(realm);
@@ -858,6 +835,7 @@ export class NetworkRealms extends EventTarget {
             this.players.unlink(connectedRealm);
             this.localPlayer.unlink(connectedRealm);
             this.world.unlink(connectedRealm);
+            this.irc.unlink(connectedRealm);
 
             connectedRealm.disconnect();
             this.connectedRealms.delete(connectedRealm);
