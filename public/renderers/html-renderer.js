@@ -167,12 +167,48 @@ z-index: 1;
             listen: false,
           });
 
+          const _formatArray = array => {
+            array = array.getKeys().map(arrayIndexId => {
+              const playerApp = array.getMap(arrayIndexId, {
+                listen: false,
+              });
+              const playerAppJson = playerApp.toObject();
+              return playerAppJson;
+            });
+            return zstringify(array);
+          };
           const _updateText = () => {
             let playersString = '';
             if (playersArray.getSize() > 0) {
               playersString = `players: [\n${zstringify(playersArray.toArray())}\n]`;
             } else {
               playersString = `players: []`;
+            }
+
+            for (const arrayIndexId of playersArray.getKeys()) {
+              // player apps
+              let playerAppsString = '';
+              const playerAppsArray = dataClient.getArray('playerApps:' + arrayIndexId, {
+                listen: false,
+              });
+              if (playerAppsArray.getSize() > 0) {
+                playerAppsString = `playerApps: [\n${_formatArray(playerAppsArray)}\n]`;
+              } else {
+                playerAppsString = `playerApps: []`;
+              }
+              playersString += '\n' + playerAppsString;
+              
+              // player actions
+              let playerActionsString = '';
+              const playerActionsArray = dataClient.getArray('playerActions:' + arrayIndexId, {
+                listen: false,
+              });
+              if (playerActionsArray.getSize()) {
+                playerActionsString = `playerActions: [\n${_formatArray(playerActionsArray)}\n]`;
+              } else {
+                playerActionsString = `playerActions: []`;
+              }
+              playersString += '\n' + playerActionsString;
             }
 
             let worldAppsString = '';
