@@ -88,43 +88,26 @@ const _getHeadRealm = (position, realms) => {
       }
     }
   }
-  debugger;
   return null;
 }
-class VirtualPlayer extends EventTarget {
-  constructor(arrayId, arrayIndexId, parent, name) {
-    super();
 
-    this.arrayId = arrayId;
-    this.arrayIndexId = arrayIndexId;
-    this.parent = parent;
-    this.name = name;
+//
+
+class HeadTrackedEntity extends EventTarget {
+  constructor() {
+    super();
 
     this.headPosition = [NaN, NaN, NaN];
     this.headRealm = null;
     this.connectedRealms = new Set();
-    this.cleanupMapFns = new Map();
-
-    // console.log('new virtual player', this, new Error().stack);
-  }
-  initialize(o) {
-    const headRealm = this.#getHeadRealm();
-    const {dataClient, networkedDataClient} = headRealm;
-    const playersArray = dataClient.getArray(this.arrayId, {
-      listen: false,
-    });
-    const {
-      // map,
-      update,
-    } = playersArray.addAt(this.arrayIndexId, o, {
-      listen: false,
-    });
-    headRealm.emitUpdate(update);
   }
   setHeadPosition(position) {
     this.headPosition[0] = position[0];
     this.headPosition[1] = position[1];
     this.headPosition[2] = position[2];
+  }
+  isLinked() {
+    return this.connectedRealms.size > 0;
   }
   updateHeadRealm() {
     if (isNaN(this.headPosition[0]) || isNaN(this.headPosition[1]) || isNaN(this.headPosition[2])) {
@@ -184,15 +167,45 @@ class VirtualPlayer extends EventTarget {
     // console.log('emit remove old', oldHeadRealm.key, oldRemoveUpdate, oldRemoveUpdate.type);
     oldHeadRealm.emitUpdate(oldRemoveUpdate);
   }
-  #getHeadRealm() {
+  /* #getHeadRealm() {
     if (this.isLinked()) {
-      return _getHeadRealm(this.headPosition, this.connectedRealms);
+      // return _getHeadRealm(this.headPosition, this.connectedRealms);
+      if (this.headRealm) {
+        return this.headRealm;
+      } else {
+        throw new Error('no head realm for linked player');
+      }
     } else {
       throw new Error('try to get head realm for fully unlinked player ' + this.playerId);
     }
+  } */
+}
+
+class VirtualPlayer extends HeadTrackedEntity {
+  constructor(arrayId, arrayIndexId, parent, name) {
+    super();
+
+    this.arrayId = arrayId;
+    this.arrayIndexId = arrayIndexId;
+    this.parent = parent;
+    this.name = name;
+
+    this.cleanupMapFns = new Map();
+
+    // console.log('new virtual player', this, new Error().stack);
   }
-  isLinked() {
-    return this.connectedRealms.size > 0;
+  initialize(o) {
+    const {dataClient, networkedDataClient} = this.headRealm;
+    const playersArray = dataClient.getArray(this.arrayId, {
+      listen: false,
+    });
+    const {
+      // map,
+      update,
+    } = playersArray.addAt(this.arrayIndexId, o, {
+      listen: false,
+    });
+    this.headRealm.emitUpdate(update);
   }
   link(realm) {
     // console.log('link', realm);
@@ -230,14 +243,13 @@ class VirtualPlayer extends EventTarget {
     this.cleanupMapFns.delete(realm);
   }
   setKeyValue(key, val) {
-    const headRealm = this.#getHeadRealm();
-    // console.log('head realm key', headRealm.key);
-    const {dataClient, networkedDataClient} = headRealm;
+    // console.log('head realm key', this.headRealm.key);
+    const {dataClient, networkedDataClient} = this.headRealm;
     const valueMap = dataClient.getArrayMap(this.arrayId, this.arrayIndexId, {
       listen: false,
     });
     const update = valueMap.setKeyValueUpdate(key, val);
-    headRealm.emitUpdate(update);
+    this.headRealm.emitUpdate(update);
   }
 }
 
@@ -257,17 +269,6 @@ class VirtualPlayersArray extends EventTarget {
       this.virtualPlayers.set(playerId, virtualPlayer);
     }
     return virtualPlayer;
-  }
-  addEntity(val) {
-    const position = val[positionKey] ?? [0, 0, 0];
-    const realm = this.parent.getClosestRealm(position);
-    const array = new DCArray(this.arrayId, realm.dataClient);
-    const {
-      map,
-      update,
-    } = array.add(val);
-    realm.emitUpdate(update);
-    return map;
   }
   link(realm) {
     const {networkedDataClient, networkedIrcClient, networkedAudioClient} = realm;
@@ -480,8 +481,14 @@ class VirtualEntityArray extends VirtualPlayersArray {
     const localVirtualMaps = new Map();
     const onadd = e => {
       const {arrayIndexId, map} = e.data;
+      const had = localVirtualMaps.has(arrayIndexId);
       const virtualMap = _getOrCreateVirtualMap(arrayIndexId);
       virtualMap.link(arrayIndexId, map);
+      if (!had) {
+        const initialPosition = map.getKey('position');
+        virtualMap.setHeadPosition(initialPosition);
+        virtualMap.updateHeadRealm();
+      }
       localVirtualMaps.set(map, virtualMap);
     };
     dcArray.addEventListener('add', onadd);
@@ -517,7 +524,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
 
 //
 
-class VirtualEntityMap extends EventTarget {
+class VirtualEntityMap extends HeadTrackedEntity {
   constructor(arrayIndexId, parent) {
     super();
     
@@ -525,7 +532,6 @@ class VirtualEntityMap extends EventTarget {
     this.parent = parent;
 
     this.maps = new Map(); // bound dc maps
-    this.headDataClient = null; // the currently bound data client, changed when the network is reconfigured
     this.cleanupFns = new Map();
   }
   get(key) {
@@ -535,7 +541,14 @@ class VirtualEntityMap extends EventTarget {
     throw new Error('not implemented');
   }
   remove() {
-    throw new Error('not implemented'); // XXX
+    // throw new Error('not implemented'); // XXX
+    // this.parent.virtualMaps.delete(this.arrayIndexId);
+    console.log('remove from head realm', this.headRealm);
+    const array = this.headRealm.dataClient.getArray(this.parent.arrayId, {
+      listen: false,
+    });
+    const update = array.removeAt(this.arrayIndexId);
+    this.headRealm.emitUpdate(update);
   }
   link(arrayIndexId, map) {
     if (typeof arrayIndexId !== 'string') {
@@ -545,18 +558,24 @@ class VirtualEntityMap extends EventTarget {
     // listen
     map.listen();
     const update = e => {
-      // only route if this is the king data client
-      if (map.dataClient === this.headDataClient) {
+      const {key, val} = e.data;
+        
+      // only route if this is the linked data client
+      // if (map.dataClient === this.headRealm.dataClient) {
         this.dispatchEvent(new MessageEvent('update', {
           data: e.data,
         }));
+      // }
+
+      if (key === positionKey) {
+        this.setHeadPosition(val);
+        this.updateHeadRealm();
       }
     };
     map.addEventListener('update', update);
 
-    // update head data client
     this.maps.set(arrayIndexId, map);
-    this.updateHeadDataClient();
+    this.connectedRealms.add(map.dataClient.userData.realm);
 
     this.cleanupFns.set(arrayIndexId, () => {
       map.unlisten();
@@ -570,11 +589,11 @@ class VirtualEntityMap extends EventTarget {
 
     const cleanupFn = this.cleanupFns.get(arrayIndexId);
     cleanupFn();
-    this.cleanupFns.delete(map);
+    this.cleanupFns.delete(arrayIndexId);
 
-    // update head data client
+    const map = this.maps.get(arrayIndexId);
     this.maps.delete(arrayIndexId);
-    this.updateHeadDataClient();
+    this.connectedRealms.delete(map.dataClient.userData.realm);
 
     // garbage collect
     if (this.maps.size === 0) {
@@ -587,27 +606,6 @@ class VirtualEntityMap extends EventTarget {
         this.unlink(arrayIndexId);
       }
     }
-  }
-  updateHeadDataClient() {
-    let headDataClient = null;
-    let headDataClientDistance = Infinity;
-    for (const map of this.maps.values()) {
-      const position = map.getKey('position');
-      const {dataClient} = map;
-      const {realm} = dataClient.userData;
-      const realmCenter = [
-        realm.min[0] + realm.size/2,
-        realm.min[1] + realm.size/2,
-        realm.min[2] + realm.size/2,
-      ];
-      const distance = distanceTo(position, realmCenter);
-      if (distance < headDataClientDistance) {
-        headDataClient = map;
-        headDataClientDistance = distance;
-      }
-    }
-    // XXX changing the head data client requires us to re-emit the delta update
-    return headDataClient;
   }
 }
 
@@ -697,16 +695,24 @@ export class NetworkRealms extends EventTarget {
     return this.world;
   }
   getClosestRealm(position) {
-    let closestRealm = null;
-    let closestRealmDistance = Infinity;
     for (const realm of this.connectedRealms) {
-      const distance = distanceTo(realm.min, position);
-      if (distance < closestRealmDistance) {
-        closestRealm = realm;
-        closestRealmDistance = distance;
+      if (realm.connected) {
+        const box = {
+          min: realm.min,
+          max: [
+            realm.min[0] + realm.size,
+            realm.min[1] + realm.size,
+            realm.min[2] + realm.size,
+          ],
+        };
+        // console.log('check box', box.min, box.max, position);
+        if (boxContains(box, position)) {
+          // console.log('got head', realm.min);
+          return realm;
+        }
       }
     }
-    return closestRealm;
+    return null;
   }
   enableMic() {
     // XXX this needs to be a per-realm thing

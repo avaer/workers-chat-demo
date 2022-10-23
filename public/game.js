@@ -340,7 +340,7 @@ z-index: 2;
     } else {
       if (inventoryItems.length > 0) {
         // data layer
-        const entity = virtualWorld.addEntity({ // XXX make this return an update and emit it manually
+        const entity = virtualWorld.addEntity({ // XXX make thisd return an update and emit it manually
           name: 'rock',
           position: targetPosition.slice(),
         });
