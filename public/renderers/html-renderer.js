@@ -14,19 +14,25 @@ export class LocalPlayerHtmlRenderer {
 
     // const map = this.dataClient.getArrayMap('players', this.remotePlayerId);
     // console.log('virtual player update listen');
-    const entityadd = e => {
-      const {val} = e.data;
+    const playerAppsEntityAdd = e => {
+      console.log('html renderer got player apps add', e.data);
+      /* const {val} = e.data;
       const [x, y, z] = val;
       div.style.left = `${x}px`;
-      div.style.top = `${y}px`;
+      div.style.top = `${y}px`; */
     };
-    virtualPlayer.addEventListener('entityadd', entityadd);
+    virtualPlayer.playerApps.addEventListener('entityadd', playerAppsEntityAdd);
+
+    const playerActionsEntityAdd = e => {
+      console.log('html renderer got player actions add', e.data);
+    };
+    virtualPlayer.playerActions.addEventListener('entityadd', playerActionsEntityAdd);
 
     this.cleanupFn = () => {
       document.body.removeChild(div);
 
-      // console.log('virtual player update unlisten');
-      virtualPlayer.removeEventListener('entityadd', entityadd);
+      virtualPlayer.removeEventListener('entityadd', playerAppsEntityAdd);
+      virtualPlayer.removeEventListener('entityadd', playerActionsEntityAdd);
     };
   }
   destroy() {

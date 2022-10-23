@@ -230,9 +230,9 @@ class VirtualPlayer extends HeadTrackedEntity {
         const deadHandUpdate = this.headRealm.dataClient.deadHandArrayMap(this.playerApps.arrayId, appId);
         this.headRealm.emitUpdate(deadHandUpdate);
 
-        console.log('initialize player add player app 1', appVal, appId);
+        // console.log('initialize player add player app 1', appVal, appId);
         const map = this.playerApps.addEntityAt(appId, appVal);
-        console.log('initialize player add player app 2', appVal, appId, map);
+        // console.log('initialize player add player app 2', appVal, appId, map);
         // XXX listen for this in the local player renderer
       }
     };
@@ -246,7 +246,7 @@ class VirtualPlayer extends HeadTrackedEntity {
         this.headRealm.emitUpdate(deadHandUpdate);
 
         const map = this.playerActions.addEntityAt(actionId, actionVal);
-        console.log('added player action', actionVal, actionId, map);
+        // console.log('added player action', actionVal, actionId, map);
         // XXX listen for this in the local player renderer
       }
     };
@@ -493,7 +493,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
     
     const localVirtualMaps = new Map();
     const onadd = e => {
-      console.log('VirtualEntityArray got entity add', e.data);
+      // console.log('VirtualEntityArray got entity add', e.data);
       const {arrayIndexId, map} = e.data;
       const had = localVirtualMaps.has(arrayIndexId);
       const virtualMap = _getOrCreateVirtualMap(arrayIndexId);
