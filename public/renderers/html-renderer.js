@@ -118,7 +118,7 @@ const _drawRectangle = (ctx, color) => {
   ctx.fillRect(realmSize - borderWidth - innerBorder, innerBorder, borderWidth, realmSize - innerBorder * 2); // right
 };
 export class GameRealmsCanvases {
-  constructor() {
+  constructor(realms) {
     this.elements = [];
     for (let dx = -1; dx <= 1; dx++) {
       for (let dz = -1; dz <= 1; dz++) {

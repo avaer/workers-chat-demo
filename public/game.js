@@ -4,6 +4,15 @@ import {realmSize} from './constants.js';
 import {RemotePlayerCursorHtmlRenderer, GameRealmsCanvases, LocalPlayerHtmlRenderer, WorldItemHtmlRenderer} from "./renderers/html-renderer.js";
 import {NetworkRealms} from "./network-realms.js";
 
+//
+
+// XXX render player apps worn on player's heads
+// XXX wait for sync before we finally disconnect, or else the message might not have been sent befor we disconnect
+// XXX render app icons on top of the player
+// XXX add multi-deadhand/livehand support to server
+
+//
+
 const frameSize = 64;
 class GamePlayerCanvas {
   constructor(spriteImg) {
@@ -345,7 +354,7 @@ z-index: 2;
     }
   });
   // realms canvas
-  const realmsCanvases = new GameRealmsCanvases();
+  const realmsCanvases = new GameRealmsCanvases(realms);
   for (const el of realmsCanvases.elements) {
     document.body.appendChild(el);
   }

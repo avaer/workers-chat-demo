@@ -151,9 +151,9 @@ class HeadTrackedEntity extends EventTarget {
 
     const playerId = this.realms.playerId;
 
-    // XXX do the actual migration to newHeadRealm:
+    // do the actual migration to newHeadRealm:
     // - lock the transaction (already done)
-    // - lock the map with dead hand
+    // - lock the maps with dead hands
     const deadHandUpdate = oldHeadRealm.dataClient.deadHandArrayMap(this.arrayId, this.arrayIndexId, playerId);
     oldHeadRealm.emitUpdate(deadHandUpdate);
 
@@ -173,14 +173,9 @@ class HeadTrackedEntity extends EventTarget {
     });
     // console.log('added json', oldPlayerJson, newPlayerMap, newAddUpdate);
     newHeadRealm.emitUpdate(newAddUpdate);
-
-    // XXX render player apps as part of world
-    // XXX we need to also migrate our apps and actions, which come along with us
-    // XXX wait for sync before we finally disconnect, or else the message might not have been sent befor we disconnect
-    // XXX render apps in the realms box
-    // XXX render app icons on top of the player
-    // XXX add multi-deadhand/livehand support to server
     
+    // XXX we need to also migrate our apps and actions, which come along with us to the destination using the player's head tracking
+
     // - delete from the old array
     const oldRemoveUpdate = oldPlayerMap.removeUpdate();
     // console.log('emit remove old', oldHeadRealm.key, oldRemoveUpdate, oldRemoveUpdate.type);
@@ -604,7 +599,6 @@ class VirtualEntityMap extends HeadTrackedEntity {
     throw new Error('not implemented');
   }
   remove() {
-    // throw new Error('not implemented'); // XXX
     // console.log('remove from head realm', this.headRealm);
     const array = this.headRealm.dataClient.getArray(this.parent.arrayId, {
       listen: false,
