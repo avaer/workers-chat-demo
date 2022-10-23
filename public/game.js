@@ -327,11 +327,11 @@ z-index: 2;
     const collidedItem = worldItems.find(item => _boxContains(targetBox, item.position));
     if (collidedItem) {
       // data layer
-      console.log('get entity 1', virtualWorld, collidedItem.arrayIndexId);
+      // console.log('get entity 1', virtualWorld, collidedItem.arrayIndexId);
       const entity = virtualWorld.virtualMaps.get(collidedItem.arrayIndexId);
-      console.log('get entity 2', entity);
+      // console.log('get entity 2', entity);
       const update = entity.remove();
-      console.log('got update', update);
+      // console.log('got update', update);
       
       // render layer
       inventory.appendChild(collidedItem);
