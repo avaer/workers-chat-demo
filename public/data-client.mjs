@@ -328,7 +328,7 @@ export class DCArray extends EventTarget {
     }
     array[map.arrayIndexId] = true;
 
-    console.log('import map db write', array);
+    // console.log('import map db write', array);
 
     return new MessageEvent('importMap.' + this.arrayId, {
       data: {

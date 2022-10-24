@@ -187,32 +187,28 @@ class HeadTrackedEntity extends EventTarget {
     _emitDeadHands(oldHeadRealm);
     _emitDeadHands(newHeadRealm);
 
-    // - import to the new realm
-    // const playerImportMessage = oldPlayerMap.getImportMessage();
-    // const playerAppsImportMessage = oldPlayerAppsArray.getImportMessage();
-    // const playerActionsImportMessage = oldPlayerActionsArray.getImportMessage();
-    // newHeadRealm.emitUpdate(playerAppsImportMessage);
-    // newHeadRealm.emitUpdate(playerActionsImportMessage);
-    // newHeadRealm.emitUpdate(playerImportMessage);
 
+    // add new
     // import apps
     const playerAppsImportMessage = newPlayerAppsArray.importArrayUpdate(oldPlayerAppsArray);
     newHeadRealm.emitUpdate(playerAppsImportMessage);
-
     // import actions
     const playerActionsImportMessage = newPlayerActionsArray.importArrayUpdate(oldPlayerActionsArray);
     newHeadRealm.emitUpdate(playerActionsImportMessage);
-
     // import player
     const playerImportMessage = newPlayersArray.importMapUpdate(oldPlayerMap);
     newHeadRealm.emitUpdate(playerImportMessage);
 
-    // XXX delete the old player
-    
-    // - delete from the old array
-    const oldRemoveUpdate = oldPlayerMap.removeUpdate();
-    // console.log('emit remove old', oldHeadRealm.key, oldRemoveUpdate, oldRemoveUpdate.type);
-    oldHeadRealm.emitUpdate(oldRemoveUpdate);
+    // delete old
+    // delete apps
+    const playerAppsDeleteMessage = oldPlayerAppsArray.removeArrayUpdate();
+    oldHeadRealm.emitUpdate(playerAppsDeleteMessage);
+    // delete actions
+    const playerActionsDeleteMessage = oldPlayerActionsArray.removeArrayUpdate();
+    oldHeadRealm.emitUpdate(playerActionsDeleteMessage);
+    // delete player
+    const oldPlayerRemoveUpdate = oldPlayerMap.removeUpdate();
+    oldHeadRealm.emitUpdate(oldPlayerRemoveUpdate);
   }
 }
 
