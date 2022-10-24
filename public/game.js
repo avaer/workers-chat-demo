@@ -223,10 +223,14 @@ export const startGame = async () => {
   };
   _initLogic();
 
-  const _initRenderers = async () => {
+  const _initRenderers = () => {
     // XXX this does not need to be async
-    localPlayerCanvas = await GamePlayerCanvas.loadFromUrl('/public/images/fire-mage.png', realms.localPlayer);
-    console.log('got canvas', localPlayerCanvas);
+    localPlayerCanvas = new GamePlayerCanvas(realms.localPlayer);
+    (async () => {
+      const spriteImg = await GamePlayerCanvas.loadFromUrl('/public/images/fire-mage.png');
+      localPlayerCanvas.setSprite(spriteImg);
+    })();
+    // console.log('got canvas', localPlayerCanvas);
     localPlayerCanvas.canvas.style.cssText = `\
 position: fixed;
 outline: none;
@@ -290,11 +294,11 @@ z-index: 2;
       }
     });
     localPlayerCanvas.canvas.tabIndex = -1;
-    // localPlayerCanvas.canvas.focus(); // XXX unlock this
+    document.body.appendChild(localPlayerCanvas.canvas);
+    localPlayerCanvas.canvas.focus();
     document.body.addEventListener('click', e => {
       localPlayerCanvas.canvas.focus();
     });
-    document.body.appendChild(localPlayerCanvas.canvas);
 
     // action methods
     const _pickupDrop = () => {

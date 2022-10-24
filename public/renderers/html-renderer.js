@@ -114,10 +114,15 @@ export class WorldItemHtmlRenderer {
 
 //
 
+export class GameObjectCanvas {
+
+}
+
 export class GamePlayerCanvas {
-  constructor(spriteImg, virtualPlayer) {
-    this.spriteImg = spriteImg;
+  constructor(virtualPlayer) {
     this.virtualPlayer = virtualPlayer;
+    
+    this.spriteImg = null;
 
     this.canvas = document.createElement('canvas');
     this.canvas.width = frameSize;
@@ -130,6 +135,8 @@ export class GamePlayerCanvas {
     this.velocity = [0, 0, 0];
     this.direction = [0, 0, 1];
 
+    const playerApps = [];
+
     // const map = this.dataClient.getArrayMap('players', this.remotePlayerId);
     // console.log('virtual player update listen');
     const playerAppsEntityAdd = e => {
@@ -138,13 +145,25 @@ export class GamePlayerCanvas {
       const [x, y, z] = val;
       div.style.left = `${x}px`;
       div.style.top = `${y}px`; */
+      const {entity} = e.data;
     };
     virtualPlayer.playerApps.addEventListener('entityadd', playerAppsEntityAdd);
+    const playerAppsEntityRemove = e => {
+      console.log('html renderer got player apps remove', e.data);
+    };
+    virtualPlayer.playerApps.addEventListener('entityremove', playerAppsEntityRemove);
 
     const playerActionsEntityAdd = e => {
       console.log('html renderer got player actions add', e.data);
     };
     virtualPlayer.playerActions.addEventListener('entityadd', playerActionsEntityAdd);
+    const playerActionsEntityRemove = e => {
+      console.log('html renderer got player actions remove', e.data);
+    };
+    virtualPlayer.playerActions.addEventListener('entityremove', playerActionsEntityRemove);
+  }
+  setSprite(spriteImg) {
+    this.spriteImg = spriteImg;
   }
   move() {
     const speed = 5;
@@ -168,24 +187,26 @@ export class GamePlayerCanvas {
     }
   }
   draw() {
-    let row;
-    if (this.direction[0] === -1) {
-      row = 1;
-    } else if (this.direction[0] === 1) {
-      row = 2;
-    } else if (this.direction[2] === -1) {
-      row = 3;
-    } else {
-      row = 0;
-    }
-    const timestamp = performance.now();
-    const frameLoopTime = 200;
-    const col = Math.floor(timestamp / frameLoopTime) % 3;
+    if (this.spriteImg) {
+      let row;
+      if (this.direction[0] === -1) {
+        row = 1;
+      } else if (this.direction[0] === 1) {
+        row = 2;
+      } else if (this.direction[2] === -1) {
+        row = 3;
+      } else {
+        row = 0;
+      }
+      const timestamp = performance.now();
+      const frameLoopTime = 200;
+      const col = Math.floor(timestamp / frameLoopTime) % 3;
 
-    this.ctx.clearRect(0, 0, frameSize, frameSize);
-    this.ctx.drawImage(this.spriteImg, col * frameSize, row * frameSize, frameSize, frameSize, 0, 0, frameSize, frameSize);
+      this.ctx.clearRect(0, 0, frameSize, frameSize);
+      this.ctx.drawImage(this.spriteImg, col * frameSize, row * frameSize, frameSize, frameSize, 0, 0, frameSize, frameSize);
+    }
   }
-  static loadFromUrl(url, virtualPlayer) {
+  static loadFromUrl(url) {
     return new Promise((accept, reject) => {
       const img = new Image();
       img.onload = () => {
@@ -206,8 +227,7 @@ export class GamePlayerCanvas {
         }
         ctx.putImageData(imageData, 0, 0);
 
-        const result = new GamePlayerCanvas(canvas, virtualPlayer);
-        accept(result);
+        accept(canvas);
       };
       img.onerror = err => {
         reject(err);
