@@ -338,24 +338,26 @@ export class DCArray extends EventTarget {
     });
   }
   importArrayUpdate(array) {
-    throw new Error('not implemented');
-
-    /* const arrayVal = this.dataClient.crdt.get(this.arrayId);
-    
+    const arrayVal = array.dataClient.crdt.get(array.arrayId);
     const arrayCrdtExport = structuredClone(arrayVal);
+    this.dataClient.crdt.set(array.arrayId, arrayCrdtExport);
 
     const mapCrdtExports = {};
-    for (const k in arrayVal) {
-      const crdtVal = this.dataClient.crdt.get(k);
-      mapCrdtExports[k] = structuredClone(crdtVal);
+    for (const arrayIndexId in arrayVal) {
+      const map = array.getMap(arrayIndexId, {
+        listen: false,
+      });
+      const mapVal = map.getRawObject();
+      const mapCrdtExport = structuredClone(mapVal);
+      this.dataClient.crdt.set(arrayIndexId, mapCrdtExport);
+      mapCrdtExports[arrayIndexId] = mapCrdtExport;
     }
-
     return new MessageEvent('importArray.' + this.arrayId, {
       data: {
         arrayCrdtExport,
         mapCrdtExports,
       },
-    }); */
+    });
   }
   add(val, opts) {
     return this.dataClient.createArrayMapElement(this.arrayId, val, opts);
@@ -421,21 +423,26 @@ export class DCArray extends EventTarget {
 
     const importMapKey = 'importMap.' + this.arrayId;
     const importMapFn = e => {
-      const {arrayIndexId} = e.data;
-      const array = this.dataClient.crdt.get(this.arrayId);
-      const map = this.dataClient.crdt.get(arrayIndexId);
-      // console.log('dc handle import map', this.dataClient.userData.realm.key, {array, map}, new Error().stack);
-      _addMap(arrayIndexId, map);
+      const {arrayIndexId, crdtExport} = e.data;
+      const val = convertCrdtValToVal(crdtExport);
+      _addMap(arrayIndexId, val);
     };
     this.dataClient.addEventListener(importMapKey, importMapFn);
 
-    /* const importArrayKey = 'importArray.' + this.arrayId;
+    const importArrayKey = 'importArray.' + this.arrayId;
     const importArrayFn = e => {
-      const {arrayId, arrayIndexId} = e.data;
-      console.log('dc handle import array', {arrayId, arrayIndexId});
-      debugger;
+      const {
+        arrayCrdtExport,
+        mapsCrdtExports,
+      } = e.data;
+
+      for (const arrayIndexId in mapsCrdtExports) {
+        const map = mapsCrdtExports[arrayIndexId];
+        const val = convertCrdtValToVal(map);
+        _addMap(arrayIndexId, val);
+      }
     };
-    this.dataClient.addEventListener(importArrayKey, importArrayFn); */
+    this.dataClient.addEventListener(importArrayKey, importArrayFn);
 
     // listener
     this.dataClient.arrayListeners.set(this.arrayId, this);
