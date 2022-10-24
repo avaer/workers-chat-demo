@@ -488,37 +488,33 @@ export class DataClient extends EventTarget {
   getSyncMessage() {
     return new MessageEvent('sync');
   }
-  deadHandArrayMap(arrayId, arrayIndexId, deadHand) {
+  deadHandKeys(keys, deadHand) {
     return new MessageEvent('deadhand', {
       data: {
-        keys: [arrayId + '.' + arrayIndexId],
+        keys,
         deadHand,
       },
     });
   }
+  deadHandArrayMap(arrayId, arrayIndexId, deadHand) {
+    return this.deadHandKeys([arrayId + '.' + arrayIndexId], deadHand);
+  }
   deadHandArrayMaps(arrayId, arrayIndexId, deadHand) {
-    return new MessageEvent('deadhand', {
+    return this.deadHandKeys(arrayIndexId.map(arrayIndexId => arrayId + '.' + arrayIndexId), deadHand);
+  }
+  liveHandKeys(keys, liveHand) {
+    return new MessageEvent('livehand', {
       data: {
-        keys: arrayIndexId.map(arrayIndexId => arrayId + '.' + arrayIndexId),
-        deadHand,
+        keys,
+        liveHand,
       },
     });
   }
   liveHandArrayMap(arrayId, arrayIndexId, liveHand) {
-    return new MessageEvent('livehand', {
-      data: {
-        keys: [arrayId + '.' + arrayIndexId],
-        liveHand,
-      },
-    });
+    return this.liveHandKeys([arrayId + '.' + arrayIndexId], liveHand);
   }
   liveHandArrayMaps(arrayId, arrayIndex, liveHand) {
-    return new MessageEvent('livehand', {
-      data: {
-        keys: arrayIndex.map(arrayIndexId => arrayId + '.' + arrayIndexId),
-        liveHand,
-      },
-    });
+    return this.liveHandKeys(arrayIndex.map(arrayIndexId => arrayId + '.' + arrayIndexId), liveHand);
   }
   applyUint8Array(uint8Array, opts) {
     const updateObject = parseUpdateObject(uint8Array);
