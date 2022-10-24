@@ -297,6 +297,23 @@ export class DCArray extends EventTarget {
   removeAt(arrayIndexId) {
     return this.dataClient.removeArrayMapElement(this.arrayId, arrayIndexId);
   }
+  removeArrayUpdate() {
+    let array = this.dataClient.crdt.get(this.arrayId);
+    if (!array) {
+      throw new Error('remove nonexistent array!');
+      // array = {};
+      // this.crdt.set(arrayId, array);
+    }
+    const mapKeys = Object.keys(array);
+    delete array[this.arrayIndexId];
+
+    // delete the maps, too
+    for (const mapKey of mapKeys) {
+      this.dataClient.crdt.delete(mapKey);
+    }
+
+    return new MessageEvent('removeArray.' + this.arrayId);
+  }
   listen() {
     const addKey = 'add.' + this.arrayId;
     const addFn = e => {
@@ -411,6 +428,14 @@ export class DataClient extends EventTarget {
           args: [
             arrayId,
             arrayIndexId,
+          ],
+        });
+      }
+      case 'removeArray': {
+        return zbencode({
+          method: UPDATE_METHODS.REMOVE_ARRAY,
+          args: [
+            arrayId,
           ],
         });
       }
@@ -594,6 +619,25 @@ export class DataClient extends EventTarget {
         });
         break;
       }
+      case UPDATE_METHODS.REMOVE_ARRAY: {
+        const [arrayId, arrayIndexId] = args;
+        let array = this.crdt.get(arrayId);
+        if (!array) {
+          throw new Error('remove from nonexistent array!');
+          // array = {};
+          // this.crdt.set(arrayId, array);
+        }
+        const mapKeys = Object.keys(array);
+        delete array[arrayIndexId];
+
+        // remove the maps, too
+        for (const mapKey of mapKeys) {
+          this.crdt.delete(mapKey);
+        }
+
+        update = new MessageEvent('removeArray.' + arrayId);
+        break;
+      }
       case UPDATE_METHODS.ROLLBACK: {
         const [arrayId, arrayIndexId, key, epoch, val] = args;
         const object = this.crdt.get(arrayIndexId);
@@ -686,38 +730,47 @@ export class DataClient extends EventTarget {
             arrayIndexId,
           };
         } else {
-          if (m.type === 'rollback') {
-            const {arrayId, arrayIndexId, key, oldEpoch, oldVal} = m.data;
+          const match = m.type.match(/^removeArray\.(.+?)$/);
+          if (match) {
+            const arrayId = match[1];
             return {
-              type: 'rollback',
+              type: 'removeArray',
               arrayId,
-              arrayIndexId,
-              key,
-              oldEpoch,
-              oldVal,
-            };
-          } else if (m.type === 'import') {
-            return {
-              type: 'import',
-              crdtExport: m.data.crdtExport,
-            };
-          } else if (m.type === 'deadhand') {
-            const {keys, deadHand} = m.data;
-            return {
-              type: 'deadhand',
-              keys,
-              deadHand,
-            };
-          } else if (m.type === 'livehand') {
-            const {keys, liveHand} = m.data;
-            return {
-              type: 'livehand',
-              keys,
-              liveHand,
             };
           } else {
-            throw new Error('unrecognized message type: ' + m.type);
-          } 
+            if (m.type === 'rollback') {
+              const {arrayId, arrayIndexId, key, oldEpoch, oldVal} = m.data;
+              return {
+                type: 'rollback',
+                arrayId,
+                arrayIndexId,
+                key,
+                oldEpoch,
+                oldVal,
+              };
+            } else if (m.type === 'import') {
+              return {
+                type: 'import',
+                crdtExport: m.data.crdtExport,
+              };
+            } else if (m.type === 'deadhand') {
+              const {keys, deadHand} = m.data;
+              return {
+                type: 'deadhand',
+                keys,
+                deadHand,
+              };
+            } else if (m.type === 'livehand') {
+              const {keys, liveHand} = m.data;
+              return {
+                type: 'livehand',
+                keys,
+                liveHand,
+              };
+            } else {
+              throw new Error('unrecognized message type: ' + m.type);
+            }
+          }
         }
       }
     }
@@ -734,6 +787,8 @@ export class DataClient extends EventTarget {
       saveKeyFn(arrayIndexId);
     } else if (type === 'add' || type === 'remove') {
       saveKeyFn(arrayIndexId);
+      saveKeyFn(arrayId);
+    } else if (type === 'removeArray') {
       saveKeyFn(arrayId);
     } else if (type === 'rollback') {
       saveKeyFn(arrayIndexId);
@@ -882,6 +937,7 @@ export class NetworkedDataClient extends EventTarget {
       UPDATE_METHODS.SET,
       UPDATE_METHODS.ADD,
       UPDATE_METHODS.REMOVE,
+      UPDATE_METHODS.REMOVE_ARRAY,
       UPDATE_METHODS.ROLLBACK,
       UPDATE_METHODS.DEAD_HAND,
       UPDATE_METHODS.LIVE_HAND,

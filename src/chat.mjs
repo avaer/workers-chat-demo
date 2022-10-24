@@ -428,13 +428,23 @@ export class ChatRoom {
     const deadHands = new Map();
     const _triggerDeadHands = () => {
       for (const [key, {arrayId, arrayIndexId}] of deadHands) {
-        const map = dataClient.getArrayMap(arrayId, arrayIndexId, {
-          listen: false,
-        });
-        const removeUpdate = map.removeUpdate();
-        // console.log('removing dead', arrayId, arrayIndexId);
-        const removeUpdateBuffer = dataClient.serializeMessage(removeUpdate);
-        proxyMessageToPeers(removeUpdateBuffer);
+        if (arrayIndexId !== null) { // map mode
+          const map = dataClient.getArrayMap(arrayId, arrayIndexId, {
+            listen: false,
+          });
+          const removeUpdate = map.removeUpdate();
+          console.log('removing dead map', arrayId, arrayIndexId, removeUpdate.type);
+          const removeUpdateBuffer = dataClient.serializeMessage(removeUpdate);
+          proxyMessageToPeers(removeUpdateBuffer);
+        } else { // array mode
+          const array = dataClient.getArray(arrayId, {
+            listen: false,
+          });
+          const removeUpdate = array.removeUpdate();
+          console.log('removing dead array', arrayId, removeUpdate.type);
+          const removeUpdateBuffer = dataClient.serializeMessage(removeUpdate);
+          proxyMessageToPeers(removeUpdateBuffer);
+        }
       }
     };
 
@@ -443,13 +453,19 @@ export class ChatRoom {
       if (deadHand === playerId) {
         // const key = `${arrayId}:${arrayIndexId}`;
         for (const key of keys) {
-          const match = key.match(/^([^\.]+?)\.([^\.]+)$/);
-          if (match) {
+          let match;
+          if (match = key.match(/^([^\.]+?)\.([^\.]+)$/)) {
             const arrayId = match[1];
             const arrayIndexId = match[2];
             deadHands.set(key, {
               arrayId,
               arrayIndexId,
+            });
+          } else if (match = key.match(/^([^\.]+)$/)) {
+            const arrayId = match[1];
+            deadHands.set(key, {
+              arrayId,
+              arrayIndexId: null,
             });
           } else {
             throw new Error('invalid deadhand key: ' + key);
