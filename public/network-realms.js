@@ -166,13 +166,8 @@ class HeadTrackedEntity extends EventTarget {
       listen: false,
     });
 
-    console.log('move realm ', oldHeadRealm.key, ' -> ', newHeadRealm.key);
-
     const playerId = this.realms.playerId;
-
-    // do the actual migration to newHeadRealm:
-    // - lock the transaction (already done)
-    // - lock the maps with dead hands
+    console.log('move realm ', playerId, oldHeadRealm.key, ' -> ', newHeadRealm.key);
 
     // set dead hands
     const _emitDeadHands = realm => {
@@ -186,7 +181,6 @@ class HeadTrackedEntity extends EventTarget {
     };
     _emitDeadHands(oldHeadRealm);
     _emitDeadHands(newHeadRealm);
-
 
     // add new
     // import apps
