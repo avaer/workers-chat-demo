@@ -450,12 +450,11 @@ export class DataClient extends EventTarget {
       case 'deadhand': {
         // console.log('serialize dead hand');
         // debugger;
-        const {arrayId, arrayIndexId, deadHand} = m.data;
+        const {keys, deadHand} = m.data;
         return zbencode({
           method: UPDATE_METHODS.DEAD_HAND,
           args: [
-            arrayId,
-            arrayIndexId,
+            keys,
             deadHand,
           ],
         });
@@ -463,12 +462,11 @@ export class DataClient extends EventTarget {
       case 'livehand': {
         // console.log('serialize live hand');
         // debugger;
-        const {arrayId, arrayIndexId, liveHand} = m.data;
+        const {keys, liveHand} = m.data;
         return zbencode({
           method: UPDATE_METHODS.LIVE_HAND,
           args: [
-            arrayId,
-            arrayIndexId,
+            keys,
             liveHand,
           ],
         });
@@ -493,8 +491,15 @@ export class DataClient extends EventTarget {
   deadHandArrayMap(arrayId, arrayIndexId, deadHand) {
     return new MessageEvent('deadhand', {
       data: {
-        arrayId,
-        arrayIndexId,
+        keys: [arrayId + '.' + arrayIndexId],
+        deadHand,
+      },
+    });
+  }
+  deadHandArrayMaps(arrayId, arrayIndexId, deadHand) {
+    return new MessageEvent('deadhand', {
+      data: {
+        keys: arrayIndexId.map(arrayIndexId => arrayId + '.' + arrayIndexId),
         deadHand,
       },
     });
@@ -502,8 +507,15 @@ export class DataClient extends EventTarget {
   liveHandArrayMap(arrayId, arrayIndexId, liveHand) {
     return new MessageEvent('livehand', {
       data: {
-        arrayId,
-        arrayIndexId,
+        keys: [arrayId + '.' + arrayIndexId],
+        liveHand,
+      },
+    });
+  }
+  liveHandArrayMaps(arrayId, arrayIndex, liveHand) {
+    return new MessageEvent('livehand', {
+      data: {
+        keys: arrayIndex.map(arrayIndexId => arrayId + '.' + arrayIndexId),
         liveHand,
       },
     });
@@ -631,24 +643,22 @@ export class DataClient extends EventTarget {
         break;
       }
       case UPDATE_METHODS.DEAD_HAND: {
-        const [arrayId, arrayIndexId, deadHand] = args;
+        const [keys, deadHand] = args;
         // console.log('handle dead hand', {arrayId, arrayIndexId, deadHand});
         this.dispatchEvent(new MessageEvent('deadhand', {
           data: {
-            arrayId,
-            arrayIndexId,
+            keys,
             deadHand,
           },
         }));
         break;
       }
       case UPDATE_METHODS.LIVE_HAND: {
-        const [arrayId, arrayIndexId, liveHand] = args;
+        const [keys, liveHand] = args;
         // console.log('handle live hand', {arrayId, arrayIndexId, liveHand});
         this.dispatchEvent(new MessageEvent('livehand', {
           data: {
-            arrayId,
-            arrayIndexId,
+            keys,
             liveHand,
           },
         }));
@@ -716,19 +726,17 @@ export class DataClient extends EventTarget {
               crdtExport: m.data.crdtExport,
             };
           } else if (m.type === 'deadhand') {
-            const {arrayId, arrayIndexId, deadHand} = m.data;
+            const {keys, deadHand} = m.data;
             return {
               type: 'deadhand',
-              arrayId,
-              arrayIndexId,
+              keys,
               deadHand,
             };
           } else if (m.type === 'livehand') {
-            const {arrayId, arrayIndexId, liveHand} = m.data;
+            const {keys, liveHand} = m.data;
             return {
               type: 'livehand',
-              arrayId,
-              arrayIndexId,
+              keys,
               liveHand,
             };
           } else {

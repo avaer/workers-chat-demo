@@ -108,7 +108,7 @@ export const startGame = async () => {
     const worldItemRenderers = [];
     // bind
     virtualWorld.addEventListener('entityadd', e => {
-      console.log('add virtual world app', e.data);
+      // console.log('add virtual world app', e.data);
       const {realm} = e.data;
       const {dataClient} = realm;
       
@@ -132,16 +132,16 @@ export const startGame = async () => {
     const playerCursorRenderers = [];
     // console.log('listen to players', virtualPlayers);
     virtualPlayers.addEventListener('join', e => {
-      console.log('add virtual player', e.data);
+      // console.log('add virtual player', e.data);
       const {player} = e.data;
 
-      // bind
+      /* // bind
       player.addEventListener('entityadd', e => {
         console.log('add virtual player app', e.data);
       });
       player.addEventListener('entityremove', e => {
         console.log('remove virtual player app', e.data);
-      });
+      }); */
 
       // ui
       let p = document.createElement("p");
@@ -154,7 +154,7 @@ export const startGame = async () => {
       playerCursorRenderers.push(playerCursorRenderer);
     });
     virtualPlayers.addEventListener('leave', e => {
-      console.log('remove virtual player', e.data);
+      // console.log('remove virtual player', e.data);
       const {playerId} = e.data;
 
       for (let i = 0; i < roster.children.length; i++) {
@@ -354,13 +354,15 @@ z-index: 2;
             // the player already has deadhand on all of its apps, probably?
             // const deadHandUpdate = firstApp.headRealm.dataClient.deadHandArrayMap(
             //   realms.localPlayer.playerApps.arrayId,
-            //   firstApp.arrayIndexId
+            //   [firstApp.arrayIndexId],
+            //   realms.playerId,
             // );
             // firstApp.headRealm.emitUpdate(deadHandUpdate);
             // new location: world
             const deadHandUpdate = targetRealm.dataClient.deadHandArrayMap(
               'worldApps',
-              firstApp.arrayIndexId
+              [firstApp.arrayIndexId],
+              realms.playerId,
             );
             targetRealm.emitUpdate(deadHandUpdate);
 

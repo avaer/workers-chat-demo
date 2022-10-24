@@ -439,21 +439,31 @@ export class ChatRoom {
     };
 
     dataClient.addEventListener('deadhand', e => {
-      const {arrayId, arrayIndexId, deadHand} = e.data;
+      const {keys, deadHand} = e.data;
       if (deadHand === playerId) {
-        const key = `${arrayId}:${arrayIndexId}`;
-        deadHands.set(key, {
-          arrayId,
-          arrayIndexId,
-        });
+        // const key = `${arrayId}:${arrayIndexId}`;
+        for (const key of keys) {
+          const match = key.match(/^([\s\S]+?)\.([^\.]+)$/);
+          if (match) {
+            const arrayId = match[1];
+            const arrayIndexId = match[2];
+            deadHands.set(key, {
+              arrayId,
+              arrayIndexId,
+            });
+          } else {
+            throw new Error('invalid deadhand key: ' + key);
+          }
+        }
         // console.log('register dead hand', e.data, {arrayId, arrayIndexId, deadHand});
       }
     });
     dataClient.addEventListener('livehand', e => {
-      const {arrayId, arrayIndexId, liveHand} = e.data;
+      const {keys, liveHand} = e.data;
       if (liveHand === playerId) {
-        const key = `${arrayId}:${arrayIndexId}`;
-        deadHands.delete(key);
+        for (const key of keys) {
+          deadHands.delete(key);
+        }
         // console.log('register live hand', e.data, {arrayId, arrayIndexId, liveHand});
       }
     });

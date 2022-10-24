@@ -134,7 +134,7 @@ class HeadTrackedEntity extends EventTarget {
   }
   #migrateTo(newHeadRealm) {
     if (!this.realms.tx.running) {
-      throw new Error('migration happening outside of a lock -- wrap in realms.tx()')
+      throw new Error('migration happening outside of a lock -- wrap in realms.tx()');
     }
 
     const oldHeadRealm = this.headRealm;
@@ -147,7 +147,7 @@ class HeadTrackedEntity extends EventTarget {
       listen: false,
     });
 
-    // console.log('move realm ', oldHeadRealm.key, ' -> ', newHeadRealm.key);
+    console.log('move realm ', oldHeadRealm.key, ' -> ', newHeadRealm.key);
 
     const playerId = this.realms.playerId;
 
@@ -201,7 +201,7 @@ class VirtualPlayer extends HeadTrackedEntity {
     });
     this.cleanupMapFns = new Map();
 
-    console.log('player apps listen');
+    /* console.log('player apps listen');
     this.playerApps.addEventListener('entityadd', e => {
       console.log('add player app', e.data, this.playerApps.getSize());
     });
@@ -213,9 +213,7 @@ class VirtualPlayer extends HeadTrackedEntity {
     });
     this.playerActions.addEventListener('entityremove', e => {
       console.log('remove player action', e.data);
-    });
-
-    // console.log('new virtual player', this, new Error().stack);
+    }); */
   }
   initializePlayer(o, {
     appVals = [],
@@ -245,11 +243,11 @@ class VirtualPlayer extends HeadTrackedEntity {
         const deadHandUpdate = this.headRealm.dataClient.deadHandArrayMap(this.playerActions.arrayId, actionId);
         this.headRealm.emitUpdate(deadHandUpdate);
 
-        console.log('add entity 1');
+        // console.log('add entity 1');
         const map = this.playerActions.addEntityAt(actionId, actionVal);
         // console.log('added player action', actionVal, actionId, map);
         // XXX listen for this in the local player renderer
-        console.log('add entity 2');
+        // console.log('add entity 2');
       }
     };
     _initializeActions();
