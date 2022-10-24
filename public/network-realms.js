@@ -181,8 +181,13 @@ class HeadTrackedEntity extends EventTarget {
     // newHeadRealm.emitUpdate(playerAppsImportMessage);
     // newHeadRealm.emitUpdate(playerActionsImportMessage);
     // newHeadRealm.emitUpdate(playerImportMessage);
+
+    const newPlayersArray = newHeadRealm.dataClient.getArray(this.arrayId, {
+      listen: false,
+    });
     
-    const playerImportMessage = oldPlayerMap.getImportMessage();
+    // XXX this import must immedately write to the target realm, because otherwise the data won't make it in
+    const playerImportMessage = newPlayersArray.importMapUpdate(oldPlayerMap);
     // XXX test that this import works
     // const newPlayersArray = newHeadRealm.dataClient.getArray(this.arrayId, {
     //   listen: false,
@@ -194,7 +199,9 @@ class HeadTrackedEntity extends EventTarget {
     // } = newPlayersArray.addAt(this.arrayIndexId, oldPlayerJson, {
     //   listen: false,
     // });
+    console.log('import message 1', playerImportMessage.type, playerImportMessage);
     newHeadRealm.emitUpdate(playerImportMessage);
+    console.log('import message 2', playerImportMessage.type, playerImportMessage);
     
     // - delete from the old array
     const oldRemoveUpdate = oldPlayerMap.removeUpdate();
@@ -351,14 +358,12 @@ class VirtualPlayersArray extends EventTarget {
     return virtualPlayer;
   }
   link(realm) {
-    const {networkedDataClient, networkedAudioClient} = realm;
+    const {dataClient, networkedDataClient, networkedAudioClient} = realm;
 
     const _linkData = () => {
-      const playersArray = networkedDataClient.dataClient.getArray(this.arrayId);
+      const playersArray = dataClient.getArray(this.arrayId);
 
-      const onadd = e => {
-        // console.log('got player add', e.data);
-        const {arrayIndexId, map, val} = e.data;
+      const _linkPlayer = arrayIndexId => {
         const playerId = arrayIndexId;
 
         const created = !this.virtualPlayers.has(playerId);
@@ -373,11 +378,7 @@ class VirtualPlayersArray extends EventTarget {
           }));
         }
       };
-      playersArray.addEventListener('add', onadd);
-
-      const onremove = e => {
-        // console.log('got player remove', e.data);
-        const {arrayId, arrayIndexId} = e.data;
+      const _unlinkPlayer = arrayIndexId => {
         const playerId = arrayIndexId;
 
         const virtualPlayer = this.virtualPlayers.get(playerId);
@@ -398,12 +399,43 @@ class VirtualPlayersArray extends EventTarget {
           console.warn('removing nonexistent player', playerId, this.players);
         }
       };
+
+      const onadd = e => {
+        // console.log('got player add', e.data);
+        const {arrayIndexId, map, val} = e.data;
+        _linkPlayer(arrayIndexId);
+      };
+      playersArray.addEventListener('add', onadd);
+
+      const onremove = e => {
+        // console.log('got player remove', e.data);
+        const {arrayIndexId} = e.data;
+        _unlinkPlayer(arrayIndexId);
+      };
       playersArray.addEventListener('remove', onremove);
+
+      const importArrayKey = 'importArray.' + this.arrayId;
+      const onimportarray = e => {
+        console.log('got player importarray', e.data);
+        // const {arrayIndexId} = e.data;
+      };
+      dataClient.addEventListener(importArrayKey, onimportarray);
+
+      const importMapKey = 'importMap.' + this.arrayId;
+      const onimportmap = e => {
+        const {arrayIndexId} = e.data;
+        _linkPlayer(arrayIndexId);
+      };
+      dataClient.addEventListener(importMapKey, onimportmap);
 
       this.cleanupFns.set(networkedDataClient, () => {
         playersArray.unlisten();
+
         playersArray.removeEventListener('add', onadd);
         playersArray.removeEventListener('remove', onremove);
+
+        dataClient.removeEventListener(importArrayKey, onimportarray);
+        dataClient.removeEventListener(importMapKey, onimportmap);
       });
     };
     _linkData();

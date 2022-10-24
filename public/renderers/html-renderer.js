@@ -360,9 +360,9 @@ z-index: 1;
                 listen: false,
               });
               if (playerAppsArray.getSize() > 0) {
-                playerAppsString = `playerApps: [\n${_formatArray(playerAppsArray)}\n]`;
+                playerAppsString = `  playerApps: [\n${_formatArray(playerAppsArray)}\n]`;
               } else {
-                playerAppsString = `playerApps: []`;
+                playerAppsString = `  playerApps: []`;
               }
               playersString += '\n' + playerAppsString;
               
@@ -372,9 +372,9 @@ z-index: 1;
                 listen: false,
               });
               if (playerActionsArray.getSize()) {
-                playerActionsString = `playerActions: [\n${_formatArray(playerActionsArray)}\n]`;
-              } else {
-                playerActionsString = `playerActions: []`;
+                playerActionsString = `  playerActions: [\n${_formatArray(playerActionsArray)}\n]`;
+              } else {www
+                playerActionsString = `  playerActions: []`;
               }
               playersString += '\n' + playerActionsString;
             }

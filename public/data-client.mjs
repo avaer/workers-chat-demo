@@ -71,18 +71,17 @@ export class DCMap extends EventTarget {
     const object = this.getRawObject();
     return structuredClone(object);
   } */
-  getImportMessage() {
+  /* getImportMessage() {
     const object = this.getRawObject();
     const crdtExport = structuredClone(object);
 
-    return new MessageEvent('importMap', {
+    return new MessageEvent('importMap.' + this.arrayId, {
       data: {
-        arrayId: this.arrayId,
         arrayIndexId: this.arrayIndexId,
         crdtExport,
       },
     });
-  }
+  } */
   getKey(key) {
     const object = this.getRawObject();
     if (object) {
@@ -198,11 +197,8 @@ export class DCMap extends EventTarget {
   }
   listen() {
     const setKey = 'set.' + this.arrayId + '.' + this.arrayIndexId;
-    // console.log('map listen', setKey);
     const setFn = e => {
-      // console.log('map set fn', setKey, e.data);
       const {key, epoch, val} = e.data;
-      // console.log('capture set data 1', e.data);
       this.dispatchEvent(new MessageEvent('update', {
         data: {
           key,
@@ -210,7 +206,6 @@ export class DCMap extends EventTarget {
           val,
         },
       }));
-      // console.log('capture set data 2', e.data);
     };
     this.dataClient.addEventListener(setKey, setFn);
 
@@ -227,6 +222,15 @@ export class DCMap extends EventTarget {
     };
     this.dataClient.addEventListener(removeKey, removeFn);
 
+    /* const importMapKey = 'importMap.' + this.arrayId;
+    const importMapFn = e => {
+      const {arrayIndexId} = e.data;
+      const array = this.dataClient.crdt.get(this.arrayId);
+      const map = this.dataClient.crdt.get(arrayIndexId);
+      console.log('dc handle import map', {array, map});
+    };
+    this.dataClient.addEventListener(importMapKey, importMapFn); */
+
     // listener
     this.dataClient.arrayMapListeners.set(this.arrayIndexId, this);
     
@@ -234,6 +238,7 @@ export class DCMap extends EventTarget {
       // console.log('map unlink', setKey);
       this.dataClient.removeEventListener(setKey, setFn);
       this.dataClient.removeEventListener(removeKey, removeFn);
+      // this.dataClient.removeEventListener(importMapKey, importMapFn);
 
       // listener
       this.dataClient.arrayMapListeners.delete(this.arrayIndexId);
@@ -308,8 +313,34 @@ export class DCArray extends EventTarget {
     const array = this.dataClient.crdt.get(this.arrayId);
     return structuredClone(array);
   } */
-  getImportMessage() {
-    const arrayVal = this.dataClient.crdt.get(this.arrayId);
+  importMapUpdate(map) {
+    const rawObject = map.getRawObject();
+    const crdtExport = structuredClone(rawObject);
+
+    // map
+    this.dataClient.crdt.set(map.arrayIndexId, crdtExport);
+
+    // array
+    let array = this.dataClient.crdt.get(this.arrayId);
+    if (!array) {
+      array = {};
+      this.dataClient.crdt.set(this.arrayId, array);
+    }
+    array[map.arrayIndexId] = true;
+
+    console.log('import map db write', array);
+
+    return new MessageEvent('importMap.' + this.arrayId, {
+      data: {
+        arrayIndexId: map.arrayIndexId,
+        crdtExport,
+      },
+    });
+  }
+  importArrayUpdate(array) {
+    throw new Error('not implemented');
+
+    /* const arrayVal = this.dataClient.crdt.get(this.arrayId);
     
     const arrayCrdtExport = structuredClone(arrayVal);
 
@@ -319,13 +350,12 @@ export class DCArray extends EventTarget {
       mapCrdtExports[k] = structuredClone(crdtVal);
     }
 
-    return new MessageEvent('importArray', {
+    return new MessageEvent('importArray.' + this.arrayId, {
       data: {
-        arrayId: this.arrayId,
         arrayCrdtExport,
         mapCrdtExports,
       },
-    });
+    }); */
   }
   add(val, opts) {
     return this.dataClient.createArrayMapElement(this.arrayId, val, opts);
@@ -354,12 +384,7 @@ export class DCArray extends EventTarget {
     return new MessageEvent('removeArray.' + this.arrayId);
   }
   listen() {
-    const addKey = 'add.' + this.arrayId;
-    const addFn = e => {
-      const {
-        arrayIndexId,
-        val,
-      } = e.data;
+    const _addMap = (arrayIndexId, val) => {
       const map = new DCMap(this.arrayId, arrayIndexId, this.dataClient);
       this.dispatchEvent(new MessageEvent('add', {
         data: {
@@ -368,6 +393,15 @@ export class DCArray extends EventTarget {
           val,
         },
       }));
+    };
+
+    const addKey = 'add.' + this.arrayId;
+    const addFn = e => {
+      const {
+        arrayIndexId,
+        val,
+      } = e.data;
+      _addMap(arrayIndexId, val);
     };
     this.dataClient.addEventListener(addKey, addFn);
 
@@ -385,12 +419,32 @@ export class DCArray extends EventTarget {
     };
     this.dataClient.addEventListener(removeKey, removeFn);
 
+    const importMapKey = 'importMap.' + this.arrayId;
+    const importMapFn = e => {
+      const {arrayIndexId} = e.data;
+      const array = this.dataClient.crdt.get(this.arrayId);
+      const map = this.dataClient.crdt.get(arrayIndexId);
+      // console.log('dc handle import map', this.dataClient.userData.realm.key, {array, map}, new Error().stack);
+      _addMap(arrayIndexId, map);
+    };
+    this.dataClient.addEventListener(importMapKey, importMapFn);
+
+    /* const importArrayKey = 'importArray.' + this.arrayId;
+    const importArrayFn = e => {
+      const {arrayId, arrayIndexId} = e.data;
+      console.log('dc handle import array', {arrayId, arrayIndexId});
+      debugger;
+    };
+    this.dataClient.addEventListener(importArrayKey, importArrayFn); */
+
     // listener
     this.dataClient.arrayListeners.set(this.arrayId, this);
 
     this.cleanupFn = () => {
       this.dataClient.removeEventListener(addKey, addFn);
       this.dataClient.removeEventListener(removeKey, removeFn);
+      this.dataClient.removeEventListener(importMapKey, importMapFn);
+      // this.dataClient.removeEventListener(importArrayKey, importArrayFn);
 
       // listener
       this.dataClient.arrayListeners.delete(this.arrayId);
@@ -593,12 +647,14 @@ export class DataClient extends EventTarget {
     let update = null;
 
     const {method, args} = updateObject;
+    console.log('apply update object', {method, args});
     switch (method) {
       case UPDATE_METHODS.IMPORT: {
         const [crdtExport] = args;
         // console.log('importing export', crdtExport, zbdecode(crdtExport));
         this.crdt = convertObjectToMap(zbdecode(crdtExport));
         // console.log('crdt imported', this.crdt);
+        // XXX tag this with keys and listen for it in DCArray and DCMap
         update = new MessageEvent('import', {
           data: {
             crdtExport,
@@ -620,7 +676,15 @@ export class DataClient extends EventTarget {
         // set the map
         this.crdt.set(arrayIndexId, crdtExport);
 
-        update = new MessageEvent('importMap', {
+        /* this.dispatchEvent(new MessageEvent('postImportMap.' + arrayId, {
+          data: {
+            arrayId,
+            arrayIndexId,
+            crdtExport,
+          },
+        })); */
+
+        update = new MessageEvent('importMap.' + arrayId, {
           data: {
             arrayId,
             arrayIndexId,
@@ -641,9 +705,15 @@ export class DataClient extends EventTarget {
           this.crdt.set(k, mapsCrdtExports[k]);
         }
         
-        update = new MessageEvent('importArray', {
+        /* this.dispatchEvent(new MessageEvent('postImportArray.' + arrayId, {
           data: {
-            arrayId,
+            arrayCrdtExport,
+            mapsCrdtExports,
+          },
+        })); */
+        
+        update = new MessageEvent('importArray.' + arrayId, {
+          data: {
             arrayCrdtExport,
             mapsCrdtExports,
           },
@@ -843,51 +913,59 @@ export class DataClient extends EventTarget {
               arrayId,
             };
           } else {
-            if (m.type === 'rollback') {
-              const {arrayId, arrayIndexId, key, oldEpoch, oldVal} = m.data;
-              return {
-                type: 'rollback',
-                arrayId,
-                arrayIndexId,
-                key,
-                oldEpoch,
-                oldVal,
-              };
-            } else if (m.type === 'import') {
-              return {
-                type: 'import',
-                crdtExport: m.data.crdtExport,
-              };
-            } else if (m.type === 'importMap') {
+            const match = m.type.match(/^importMap\.(.+?)$/);
+            if (match) {
+              const arrayId = match[1];
               return {
                 type: 'importMap',
-                arrayId: m.data.arrayId,
+                arrayId,
                 arrayIndexId: m.data.arrayIndexId,
                 crdtExport: m.data.crdtExport,
               };
-            } else if (m.type === 'importArray') {
-              return {
-                type: 'importArray',
-                arrayId: m.data.arrayId,
-                arrayCrdtExport: m.data.arrayCrdtExport,
-                mapsCrdtExports: m.data.mapsCrdtExports,
-              };
-            } else if (m.type === 'deadhand') {
-              const {keys, deadHand} = m.data;
-              return {
-                type: 'deadhand',
-                keys,
-                deadHand,
-              };
-            } else if (m.type === 'livehand') {
-              const {keys, liveHand} = m.data;
-              return {
-                type: 'livehand',
-                keys,
-                liveHand,
-              };
             } else {
-              throw new Error('unrecognized message type: ' + m.type);
+              const match = m.type.match(/^importArray\.(.+?)$/);
+              if (match) {
+                const arrayId = match[1];
+                return {
+                  type: 'importArray',
+                  arrayId,
+                  arrayCrdtExport: m.data.arrayCrdtExport,
+                  mapsCrdtExports: m.data.mapsCrdtExports,
+                };
+              } else {
+                if (m.type === 'rollback') {
+                  const {arrayId, arrayIndexId, key, oldEpoch, oldVal} = m.data;
+                  return {
+                    type: 'rollback',
+                    arrayId,
+                    arrayIndexId,
+                    key,
+                    oldEpoch,
+                    oldVal,
+                  };
+                } else if (m.type === 'import') {
+                  return {
+                    type: 'import',
+                    crdtExport: m.data.crdtExport,
+                  };
+                } else if (m.type === 'deadhand') {
+                  const {keys, deadHand} = m.data;
+                  return {
+                    type: 'deadhand',
+                    keys,
+                    deadHand,
+                  };
+                } else if (m.type === 'livehand') {
+                  const {keys, liveHand} = m.data;
+                  return {
+                    type: 'livehand',
+                    keys,
+                    liveHand,
+                  };
+                } else {
+                  throw new Error('unrecognized message type: ' + m.type);
+                }
+              }
             }
           }
         }
@@ -922,7 +1000,7 @@ export class DataClient extends EventTarget {
     return saveKeys;
   }
   emitUpdate(messageEvent) {
-    // console.log('emit update', messageEvent.type);
+    console.log('data client emit update', messageEvent.type);
     this.dispatchEvent(messageEvent);
   }
   
