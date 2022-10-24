@@ -162,7 +162,7 @@ class HeadTrackedEntity extends EventTarget {
         'playerApps:' + this.arrayIndexId, // playerApps
         'playerActions:' + this.arrayIndexId, // playerActions
       ];
-      const deadHandupdate = realm.dataClient.deadHandKeys(keys);
+      const deadHandupdate = realm.dataClient.deadHandKeys(keys, this.realms.playerId);
       realm.emitUpdate(deadHandupdate);
     };
     _emitDeadHands(oldHeadRealm);
