@@ -205,8 +205,25 @@ p:last-of-type {
 /* */
 
 .player-sprite {
+  position: absolute;
   margin-top: -64px;
   margin-left: -32px;
+}
+.player-sprite .player-apps {
+  position: absolute;
+  display: flex;;
+  top: -64px;
+  left: 0;
+  width: 60px;
+  height: 30px;
+  background-color: red;
+}
+.player-sprite .player-apps .player-app {
+  display: flex;
+}
+.player-sprite .player-apps .player-app img {
+  width: 30px;
+  height: 30px;
 }
 
 /* */

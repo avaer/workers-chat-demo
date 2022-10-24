@@ -124,10 +124,18 @@ export class GamePlayerCanvas {
     
     this.spriteImg = null;
 
+    this.element = document.createElement('div');
+    this.element.className = 'game-player';
+    
     this.canvas = document.createElement('canvas');
     this.canvas.width = frameSize;
     this.canvas.height = frameSize;
     this.ctx = this.canvas.getContext('2d');
+    this.element.appendChild(this.canvas);
+    
+    const playerAppsEl = document.createElement('div');
+    playerAppsEl.className = 'player-apps';
+    this.element.appendChild(playerAppsEl);
 
     this.cancelFn = null;
 
@@ -135,14 +143,23 @@ export class GamePlayerCanvas {
     this.velocity = [0, 0, 0];
     this.direction = [0, 0, 1];
 
-    const playerApps = new Set();
+    const playerApps = new Map();
     const playerActions = new Set();
     const _renderPlayerApps = () => {
+      // remove all elements
+      playerAppsEl.innerHTML = '';
+
       for (const actionMap of playerActions) {
-        console.log('got action map', actionMap);
         const actionJson = actionMap.toObject();
         // console.log('got action map', actionJson);
-        // XXX
+        const {action} = actionJson;
+        if (action === 'wear') {
+          const wornApp = playerApps.get(actionJson.appId);
+          const appDiv = document.createElement('div');
+          appDiv.className = 'player-app';
+          appDiv.innerHTML = `<img src="/public/images/rock.png" >`;
+          playerAppsEl.appendChild(appDiv);
+        }
       }
     };
 
@@ -154,15 +171,15 @@ export class GamePlayerCanvas {
       const [x, y, z] = val;
       div.style.left = `${x}px`;
       div.style.top = `${y}px`; */
-      const {entity} = e.data;
-      playerApps.add(entity);
+      const {entityId, entity} = e.data;
+      playerApps.set(entityId, entity);
       _renderPlayerApps();
     };
     virtualPlayer.playerApps.addEventListener('entityadd', playerAppsEntityAdd);
     const playerAppsEntityRemove = e => {
       console.log('html renderer got player apps remove', e.data);
-      const {entity} = e.data;
-      playerApps.delete(entity);
+      const {entityId} = e.data;
+      playerApps.delete(entityId);
       _renderPlayerApps();
     };
     virtualPlayer.playerApps.addEventListener('entityremove', playerAppsEntityRemove);

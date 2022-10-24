@@ -245,9 +245,11 @@ class VirtualPlayer extends HeadTrackedEntity {
         const deadHandUpdate = this.headRealm.dataClient.deadHandArrayMap(this.playerActions.arrayId, actionId);
         this.headRealm.emitUpdate(deadHandUpdate);
 
+        console.log('add entity 1');
         const map = this.playerActions.addEntityAt(actionId, actionVal);
         // console.log('added player action', actionVal, actionId, map);
         // XXX listen for this in the local player renderer
+        console.log('add entity 2');
       }
     };
     _initializeActions();
@@ -459,6 +461,12 @@ class VirtualEntityArray extends VirtualPlayersArray {
   addEntity(val) {
     return this.addEntityAt(makeId(), val);
   }
+  first() {
+    for (const map of this.virtualMaps.values()) {
+      return map;
+    }
+    return null;
+  }
   link(realm) {
     const {networkedDataClient} = realm;
 
@@ -495,6 +503,9 @@ class VirtualEntityArray extends VirtualPlayersArray {
         // if attached to a parent which already has a head realm, use that
         if (this.opts.getHeadRealm) {
           const headRealm = this.opts.getHeadRealm();
+          /* if (!headRealm) {
+            debugger;
+          } */
           virtualMap.setHeadRealm(headRealm);
         } else {
           // otherwise, use the closest realm to the app's "position"... it better have one
@@ -504,6 +515,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
             debugger;
           }
           virtualMap.setHeadPosition(initialPosition);
+          console.log('set head from initial position', initialPosition);
           virtualMap.updateHeadRealm();
         }
 

@@ -1,12 +1,11 @@
 import {makeId} from './util.mjs';
-import {realmSize} from './constants.js';
+import {frameSize, realmSize} from './constants.js';
 
 import {RemotePlayerCursorHtmlRenderer, GameRealmsCanvases, GamePlayerCanvas, LocalPlayerHtmlRenderer, WorldItemHtmlRenderer} from "./renderers/html-renderer.js";
 import {NetworkRealms} from "./network-realms.js";
 
 //
 
-// XXX render player apps worn on player's heads
 // XXX wait for sync before we finally disconnect, or else the message might not have been sent befor we disconnect
 // XXX render app icons on top of the player
 // XXX add multi-deadhand/livehand support to server
@@ -231,18 +230,18 @@ export const startGame = async () => {
       localPlayerCanvas.setSprite(spriteImg);
     })();
     // console.log('got canvas', localPlayerCanvas);
-    localPlayerCanvas.canvas.style.cssText = `\
+    localPlayerCanvas.element.style.cssText = `\
 position: fixed;
 outline: none;
 z-index: 2;
     `;
-    localPlayerCanvas.canvas.classList.add('player-sprite');
+    localPlayerCanvas.element.classList.add('player-sprite');
     let localPlayerFocused = false;
-    localPlayerCanvas.canvas.addEventListener('focus', e => {
+    localPlayerCanvas.element.addEventListener('focus', e => {
       // console.log('character focus 1');
       localPlayerFocused = true;
     });
-    localPlayerCanvas.canvas.addEventListener('blur', e => {
+    localPlayerCanvas.element.addEventListener('blur', e => {
       // console.log('character blur 1');
       localPlayerFocused = false;
     });
@@ -293,11 +292,11 @@ z-index: 2;
         }
       }
     });
-    localPlayerCanvas.canvas.tabIndex = -1;
-    document.body.appendChild(localPlayerCanvas.canvas);
-    localPlayerCanvas.canvas.focus();
+    localPlayerCanvas.element.tabIndex = -1;
+    document.body.appendChild(localPlayerCanvas.element);
+    localPlayerCanvas.element.focus();
     document.body.addEventListener('click', e => {
-      localPlayerCanvas.canvas.focus();
+      localPlayerCanvas.element.focus();
     });
 
     // action methods
@@ -343,14 +342,29 @@ z-index: 2;
         collidedItem.style.left = null;
         collidedItem.style.top = null; */
       } else {
-        console.log('got player apps', realms.localPlayer.playerApps.getSize());
+        // console.log('got player apps', realms.localPlayer.playerApps.getSize());
         if (realms.localPlayer.playerApps.getSize() > 0) {
-          const firstApp = appsArray.getIndex(0, {
-            listen: false,
-          });
-
           const targetRealm = realms.getClosestRealm(targetPosition);
           if (targetRealm) {
+            // the app we will be dropping
+            const firstApp = realms.localPlayer.playerApps.first();
+            
+            // set dead hands
+            // old location: player
+            // the player already has deadhand on all of its apps, probably?
+            // const deadHandUpdate = firstApp.headRealm.dataClient.deadHandArrayMap(
+            //   realms.localPlayer.playerApps.arrayId,
+            //   firstApp.arrayIndexId
+            // );
+            // firstApp.headRealm.emitUpdate(deadHandUpdate);
+            // new location: world
+            const deadHandUpdate = targetRealm.dataClient.deadHandArrayMap(
+              'worldApps',
+              firstApp.arrayIndexId
+            );
+            targetRealm.emitUpdate(deadHandUpdate);
+
+            // add at the new location (world)
             const worldApps = targetRealm.dataClient.getArray('worldApps', {
               listen: false,
             });
@@ -362,6 +376,9 @@ z-index: 2;
               listen: false,
             });
             targetRealm.emitUpdate(update);
+
+            // remove from the old location (player)
+            firstApp.remove();
           } else {
             console.warn('no containing realm to drop to');
           }
@@ -397,8 +414,8 @@ z-index: 2;
       if (localPlayerCanvas) {
         localPlayerCanvas.move();
         localPlayerCanvas.draw();
-        localPlayerCanvas.canvas.style.left = localPlayerCanvas.position[0] + 'px';
-        localPlayerCanvas.canvas.style.top = localPlayerCanvas.position[2] + 'px';
+        localPlayerCanvas.element.style.left = localPlayerCanvas.position[0] + 'px';
+        localPlayerCanvas.element.style.top = localPlayerCanvas.position[2] + 'px';
 
         realms.updatePosition(localPlayerCanvas.position, realmSize);
       }
