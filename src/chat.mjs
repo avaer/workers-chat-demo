@@ -443,7 +443,7 @@ export class ChatRoom {
       if (deadHand === playerId) {
         // const key = `${arrayId}:${arrayIndexId}`;
         for (const key of keys) {
-          const match = key.match(/^([\s\S]+?)\.([^\.]+)$/);
+          const match = key.match(/^([^\.]+?)\.([^\.]+)$/);
           if (match) {
             const arrayId = match[1];
             const arrayIndexId = match[2];

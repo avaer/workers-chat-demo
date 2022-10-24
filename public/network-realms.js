@@ -156,12 +156,21 @@ class HeadTrackedEntity extends EventTarget {
     // - lock the maps with dead hands
 
     // set dead hands
-    const oldPlayerDeadHandUpdate = oldHeadRealm.dataClient.deadHandArrayMap(this.arrayId, this.arrayIndexId, playerId);
-    oldHeadRealm.emitUpdate(oldPlayerDeadHandUpdate);
-    const newPlayerDeadHandUpdate = newHeadRealm.dataClient.deadHandArrayMap(this.arrayId, this.arrayIndexId, playerId);
-    newHeadRealm.emitUpdate(newPlayerDeadHandUpdate);
+    const _emitDeadHands = realm => {
+      const keys = [
+        this.arrayId + '.' + this.arrayIndexId, // player
+        'playerApps:' + this.arrayIndexId, // playerApps
+        'playerActions:' + this.arrayIndexId, // playerActions
+      ];
+      const deadHandupdate = realm.dataClient.deadHandKeys(keys);
+      realm.emitUpdate(deadHandupdate);
+    };
+    _emitDeadHands(oldHeadRealm);
+    _emitDeadHands(newHeadRealm);
 
-    // - create in the new array
+    // - create new date
+    // XXX copy map and copyo array can be message types
+    // XXX implement copy map first, and test it on the player
     const newPlayersArray = newHeadRealm.dataClient.getArray(this.arrayId, {
       listen: false,
     });
