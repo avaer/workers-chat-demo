@@ -154,11 +154,12 @@ class HeadTrackedEntity extends EventTarget {
     // do the actual migration to newHeadRealm:
     // - lock the transaction (already done)
     // - lock the maps with dead hands
-    const deadHandUpdate = oldHeadRealm.dataClient.deadHandArrayMap(this.arrayId, this.arrayIndexId, playerId);
-    oldHeadRealm.emitUpdate(deadHandUpdate);
 
-    const deadHandUpdate2 = newHeadRealm.dataClient.deadHandArrayMap(this.arrayId, this.arrayIndexId, playerId);
-    newHeadRealm.emitUpdate(deadHandUpdate2);
+    // set dead hands
+    const oldPlayerDeadHandUpdate = oldHeadRealm.dataClient.deadHandArrayMap(this.arrayId, this.arrayIndexId, playerId);
+    oldHeadRealm.emitUpdate(oldPlayerDeadHandUpdate);
+    const newPlayerDeadHandUpdate = newHeadRealm.dataClient.deadHandArrayMap(this.arrayId, this.arrayIndexId, playerId);
+    newHeadRealm.emitUpdate(newPlayerDeadHandUpdate);
 
     // - create in the new array
     const newPlayersArray = newHeadRealm.dataClient.getArray(this.arrayId, {
