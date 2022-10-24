@@ -185,24 +185,6 @@ export class GamePlayerCanvas {
     this.ctx.clearRect(0, 0, frameSize, frameSize);
     this.ctx.drawImage(this.spriteImg, col * frameSize, row * frameSize, frameSize, frameSize, 0, 0, frameSize, frameSize);
   }
-  /* start() {
-    let frame;
-    const _recurse = () => {
-      frame = requestAnimationFrame(_recurse);
-      this.draw();
-    };
-    _recurse();
-
-    this.cancelFn = () => {
-      cancelAnimationFrame(frame);
-    };
-  }
-  stop() {
-    if (this.cancelFn) {
-      this.cancelFn();
-      this.cancelFn = null;
-    }
-  } */
   static loadFromUrl(url, virtualPlayer) {
     return new Promise((accept, reject) => {
       const img = new Image();
