@@ -351,6 +351,14 @@ export class ChatRoom {
           return new Response(null, { status: 101, webSocket: pair[0] });
         }
 
+        case 'get': {
+          break;
+        }
+
+        case 'set': {
+          break;
+        }
+
         default:
           return new Response("Not found", {status: 404});
       }
