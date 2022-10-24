@@ -67,6 +67,15 @@ export class DCMap extends EventTarget {
       return {};
     }
   }
+  export() {
+    const object = this.getRawObject();
+    return structuredClone(object);
+  }
+  getImportMessage() {
+    return new MessageEvent('importMap.' + this.arrayId + '.' + this.arrayIndexId, {
+      data: this.export(),
+    });
+  }
   getKey(key) {
     const object = this.getRawObject();
     if (object) {
@@ -288,6 +297,16 @@ export class DCArray extends EventTarget {
       return [];
     }
   }
+  export() {
+    const array = this.dataClient.crdt.get(this.arrayId);
+    return structuredClone(array);
+  }
+  getImportMessage() {
+    return new MessageEvent('importArray', {
+      arrayId: this.arrayId,
+      data: this.export(),
+    });
+  }
   add(val, opts) {
     return this.dataClient.createArrayMapElement(this.arrayId, val, opts);
   }
@@ -389,6 +408,28 @@ export class DataClient extends EventTarget {
           method: UPDATE_METHODS.IMPORT,
           args: [
             crdtExport,
+          ],
+        });
+      }
+      case 'importMap': {
+        const {arrayId, arrayIndexId, crdtExport} = parsedMessage;
+        return zbencode({
+          method: UPDATE_METHODS.IMPORT_MAP,
+          args: [
+            arrayId,
+            arrayIndexId,
+            crdtExport,
+          ],
+        });
+      }
+      case 'importArray': {
+        const {arrayId, arrayCrdtExport, mapCrdtExports} = parsedMessage;
+        return zbencode({
+          method: UPDATE_METHODS.IMPORT_ARRAY,
+          args: [
+            arrayId,
+            arrayCrdtExport,
+            mapCrdtExports,
           ],
         });
       }
@@ -541,6 +582,50 @@ export class DataClient extends EventTarget {
         update = new MessageEvent('import', {
           data: {
             crdtExport,
+          },
+        });
+        break;
+      }
+      case UPDATE_METHODS.IMPORT_MAP: {
+        const [arrayId, arrayIndexId, crdtExport] = args;
+        // console.log('importing export', crdtExport, zbdecode(crdtExport));
+
+        // ensure the array exists
+        let array = this.crdt.get(arrayId);
+        if (!array) {
+          array = {};
+          this.crdt.set(arrayId, array);
+        }
+
+        // set the map
+        this.crdt.set(arrayIndexId, crdtExport);
+
+        update = new MessageEvent('importMap', {
+          data: {
+            arrayId,
+            arrayIndexId,
+            crdtExport,
+          },
+        });
+        break;
+      }
+      case UPDATE_METHODS.IMPORT_ARRAY: {
+        const [arrayId, arrayCrdtExport, mapsCrdtExports] = args;
+        // console.log('importing export', crdtExport, zbdecode(crdtExport));
+
+        // set array
+        this.crdt.set(arrayId, arrayCrdtExport);
+        
+        // set array maps
+        for (const k in mapsCrdtExports) {
+          this.crdt.set(k, mapsCrdtExports[k]);
+        }
+        
+        update = new MessageEvent('importArray', {
+          data: {
+            arrayId,
+            arrayCrdtExport,
+            mapsCrdtExports,
           },
         });
         break;
