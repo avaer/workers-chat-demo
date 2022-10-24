@@ -143,6 +143,12 @@ class HeadTrackedEntity extends EventTarget {
     const oldPlayersArray = oldHeadRealm.dataClient.getArray(this.arrayId, {
       listen: false,
     });
+    const oldPlayerAppsArray = oldHeadRealm.dataClient.getArray('playerApps:' + this.realms.playerId, {
+      listen: false,
+    });
+    const oldPlayerActionsArray = oldHeadRealm.dataClient.getArray('playerActions:' + this.realms.playerId, {
+      listen: false,
+    });
     const oldPlayerMap = oldPlayersArray.getMap(this.arrayIndexId, {
       listen: false,
     });
@@ -168,24 +174,28 @@ class HeadTrackedEntity extends EventTarget {
     _emitDeadHands(oldHeadRealm);
     _emitDeadHands(newHeadRealm);
 
-    // - create new date
-    // XXX copy map and copyo array can be message types
-    // XXX implement copy map first, and test it on the player
-    const newPlayersArray = newHeadRealm.dataClient.getArray(this.arrayId, {
-      listen: false,
-    });
-    const oldPlayerJson = oldPlayerMap.toObject();
-    const {
-      map: newPlayerMap,
-      update: newAddUpdate,
-    } = newPlayersArray.addAt(this.arrayIndexId, oldPlayerJson, {
-      listen: false,
-    });
-    // console.log('added json', oldPlayerJson, newPlayerMap, newAddUpdate);
-    newHeadRealm.emitUpdate(newAddUpdate);
+    // - import to the new realm
+    // const playerImportMessage = oldPlayerMap.getImportMessage();
+    // const playerAppsImportMessage = oldPlayerAppsArray.getImportMessage();
+    // const playerActionsImportMessage = oldPlayerActionsArray.getImportMessage();
+    // newHeadRealm.emitUpdate(playerAppsImportMessage);
+    // newHeadRealm.emitUpdate(playerActionsImportMessage);
+    // newHeadRealm.emitUpdate(playerImportMessage);
     
-    // XXX we need to also migrate our apps and actions, which come along with us to the destination using the player's head tracking
-
+    const playerImportMessage = oldPlayerMap.getImportMessage();
+    // XXX test that this import works
+    // const newPlayersArray = newHeadRealm.dataClient.getArray(this.arrayId, {
+    //   listen: false,
+    // });
+    // const oldPlayerJson = oldPlayerMap.toObject();
+    // const {
+    //   map: newPlayerMap,
+    //   update: newAddUpdate,
+    // } = newPlayersArray.addAt(this.arrayIndexId, oldPlayerJson, {
+    //   listen: false,
+    // });
+    newHeadRealm.emitUpdate(playerImportMessage);
+    
     // - delete from the old array
     const oldRemoveUpdate = oldPlayerMap.removeUpdate();
     // console.log('emit remove old', oldHeadRealm.key, oldRemoveUpdate, oldRemoveUpdate.type);

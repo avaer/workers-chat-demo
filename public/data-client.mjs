@@ -67,13 +67,20 @@ export class DCMap extends EventTarget {
       return {};
     }
   }
-  export() {
+  /* export() {
     const object = this.getRawObject();
     return structuredClone(object);
-  }
+  } */
   getImportMessage() {
-    return new MessageEvent('importMap.' + this.arrayId + '.' + this.arrayIndexId, {
-      data: this.export(),
+    const object = this.getRawObject();
+    const crdtExport = structuredClone(object);
+
+    return new MessageEvent('importMap', {
+      data: {
+        arrayId: this.arrayId,
+        arrayIndexId: this.arrayIndexId,
+        crdtExport,
+      },
     });
   }
   getKey(key) {
@@ -160,13 +167,13 @@ export class DCMap extends EventTarget {
       },
     });
   }
-  clearUpdate() {
+  /* clearUpdate() {
     return new MessageEvent('remove.' + this.arrayId, {
       data: {
-        arrayIndexId: this.arrayIndexId, // XXX is this needed?
+        arrayIndexId: this.arrayIndexId,
       },
     });
-  }
+  } */
 
   // server
   trySetKeyEpochValue(key, epoch, val) {
@@ -297,14 +304,27 @@ export class DCArray extends EventTarget {
       return [];
     }
   }
-  export() {
+  /* export() {
     const array = this.dataClient.crdt.get(this.arrayId);
     return structuredClone(array);
-  }
+  } */
   getImportMessage() {
+    const arrayVal = this.dataClient.crdt.get(this.arrayId);
+    
+    const arrayCrdtExport = structuredClone(arrayVal);
+
+    const mapCrdtExports = {};
+    for (const k in arrayVal) {
+      const crdtVal = this.dataClient.crdt.get(k);
+      mapCrdtExports[k] = structuredClone(crdtVal);
+    }
+
     return new MessageEvent('importArray', {
-      arrayId: this.arrayId,
-      data: this.export(),
+      data: {
+        arrayId: this.arrayId,
+        arrayCrdtExport,
+        mapCrdtExports,
+      },
     });
   }
   add(val, opts) {
@@ -837,6 +857,20 @@ export class DataClient extends EventTarget {
               return {
                 type: 'import',
                 crdtExport: m.data.crdtExport,
+              };
+            } else if (m.type === 'importMap') {
+              return {
+                type: 'importMap',
+                arrayId: m.data.arrayId,
+                arrayIndexId: m.data.arrayIndexId,
+                crdtExport: m.data.crdtExport,
+              };
+            } else if (m.type === 'importArray') {
+              return {
+                type: 'importArray',
+                arrayId: m.data.arrayId,
+                arrayCrdtExport: m.data.arrayCrdtExport,
+                mapsCrdtExports: m.data.mapsCrdtExports,
               };
             } else if (m.type === 'deadhand') {
               const {keys, deadHand} = m.data;
