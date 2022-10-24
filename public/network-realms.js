@@ -448,6 +448,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
       map,
       update,
     } = array.addAt(arrayIndexId, val);
+    // map.setHeadRealm(realm);
     realm.emitUpdate(update);
 
     return map;
@@ -469,14 +470,6 @@ class VirtualEntityArray extends VirtualPlayersArray {
       if (!virtualMap) {
         virtualMap = new VirtualEntityMap(arrayIndexId, this);
         this.virtualMaps.set(arrayIndexId, virtualMap);
-      
-        this.dispatchEvent(new MessageEvent('entityadd', {
-          data: {
-            entityId: arrayIndexId,
-            entity: virtualMap,
-            realm,
-          },
-        }));
   
         virtualMap.addEventListener('garbagecollect', e => {
           this.dispatchEvent(new MessageEvent('entityremove', {
@@ -513,6 +506,14 @@ class VirtualEntityArray extends VirtualPlayersArray {
           virtualMap.setHeadPosition(initialPosition);
           virtualMap.updateHeadRealm();
         }
+
+        this.dispatchEvent(new MessageEvent('entityadd', {
+          data: {
+            entityId: arrayIndexId,
+            entity: virtualMap,
+            realm,
+          },
+        }));
       }
       localVirtualMaps.set(map, virtualMap);
     };
@@ -605,6 +606,18 @@ class VirtualEntityMap extends HeadTrackedEntity {
     });
     const update = array.removeAt(this.arrayIndexId);
     this.headRealm.emitUpdate(update);
+  }
+  toObject() {
+    if (!this.headRealm) {
+      debugger;
+    }
+    const array = this.headRealm.dataClient.getArray(this.parent.arrayId, {
+      listen: false,
+    });
+    const map = array.getMap(this.arrayIndexId, {
+      listen: false,
+    });
+    return map.toObject();
   }
   link(arrayIndexId, map) {
     /* if (typeof arrayIndexId !== 'string') {

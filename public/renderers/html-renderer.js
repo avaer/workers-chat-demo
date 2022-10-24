@@ -135,7 +135,16 @@ export class GamePlayerCanvas {
     this.velocity = [0, 0, 0];
     this.direction = [0, 0, 1];
 
-    const playerApps = [];
+    const playerApps = new Set();
+    const playerActions = new Set();
+    const _renderPlayerApps = () => {
+      for (const actionMap of playerActions) {
+        console.log('got action map', actionMap);
+        const actionJson = actionMap.toObject();
+        // console.log('got action map', actionJson);
+        // XXX
+      }
+    };
 
     // const map = this.dataClient.getArrayMap('players', this.remotePlayerId);
     // console.log('virtual player update listen');
@@ -146,19 +155,30 @@ export class GamePlayerCanvas {
       div.style.left = `${x}px`;
       div.style.top = `${y}px`; */
       const {entity} = e.data;
+      playerApps.add(entity);
+      _renderPlayerApps();
     };
     virtualPlayer.playerApps.addEventListener('entityadd', playerAppsEntityAdd);
     const playerAppsEntityRemove = e => {
       console.log('html renderer got player apps remove', e.data);
+      const {entity} = e.data;
+      playerApps.delete(entity);
+      _renderPlayerApps();
     };
     virtualPlayer.playerApps.addEventListener('entityremove', playerAppsEntityRemove);
 
     const playerActionsEntityAdd = e => {
       console.log('html renderer got player actions add', e.data);
+      const {entity} = e.data;
+      playerActions.add(entity);
+      _renderPlayerApps();
     };
     virtualPlayer.playerActions.addEventListener('entityadd', playerActionsEntityAdd);
     const playerActionsEntityRemove = e => {
       console.log('html renderer got player actions remove', e.data);
+      const {entity} = e.data;
+      playerActions.delete(entity);
+      _renderPlayerApps();
     };
     virtualPlayer.playerActions.addEventListener('entityremove', playerActionsEntityRemove);
   }
