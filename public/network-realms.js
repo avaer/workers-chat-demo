@@ -93,116 +93,120 @@ const _getHeadRealm = (position, realms) => {
 
 //
 
-class HeadTrackedEntity extends EventTarget {
+class WritableHeadTracker extends EventTarget {
   constructor() {
     super();
 
-    this.headPosition = [NaN, NaN, NaN];
-    this.headRealm = null;
     this.connectedRealms = new Set();
   }
-  setHeadPosition(position) {
-    this.headPosition[0] = position[0];
-    this.headPosition[1] = position[1];
-    this.headPosition[2] = position[2];
+  #headRealm = null;
+  getHeadRealm() {
+    if (!this.#headRealm) {
+      console.warn('head tracker has no head! need to call updateHeadRealm()');
+    }
+    return this.#headRealm;
+  }
+  getReadable() {
+    return new ReadableHeadTracker(this);
+  }
+  updateHeadRealm(headPosition) {
+    if (!headPosition || isNaN(headPosition[0]) || isNaN(headPosition[1]) || isNaN(headPosition[2])) {
+      throw new Error('try to update head realm for unpositioned player: ' + headPosition.join(','));
+    }
+
+    if (this.isLinked()) {
+      const newHeadRealm = _getHeadRealm(headPosition, this.connectedRealms);
+      // console.log('update head realm', this.name, this.headRealm, newHeadRealm);
+      if (!this.#headRealm) {
+        this.#headRealm = newHeadRealm;
+      } else {
+        const oldHeadRealm = this.#headRealm;
+        if (newHeadRealm.key !== oldHeadRealm.key) {
+          this.#headRealm = newHeadRealm;
+
+          if (!Array.from(this.connectedRealms)[0].parent.tx.running) {
+            throw new Error('migration happening outside of a lock -- wrap in realms.tx()');
+          }
+
+          this.dispatchEvent(new MessageEvent('migrate', {
+            data: {
+              oldHeadRealm,
+              newHeadRealm,
+            },
+          }));
+        }
+      }
+    } else {
+      debugger;
+      throw new Error('try to get head realm for fully unlinked player ' + this.playerId);
+    }
   }
   isLinked() {
     return this.connectedRealms.size > 0;
   }
-  updateHeadRealm() {
-    if (isNaN(this.headPosition[0]) || isNaN(this.headPosition[1]) || isNaN(this.headPosition[2])) {
-      throw new Error('try to update head realm for unpositioned player: ' + this.playerId + ' ' + this.headPosition.join(','));
-    }
+  setHeadRealm(realm) {
+    this.#headRealm = realm;
+  }
+  linkRealm(realm) {
+    this.connectedRealms.add(realm);
+  }
+  unlinkRealm(realm) {
+    this.connectedRealms.delete(realm);
+  }
+}
+class ReadableHeadTracker extends EventTarget {
+  constructor(writable) {
+    super();
 
-    if (this.isLinked()) {
-      const newHeadRealm = _getHeadRealm(this.headPosition, this.connectedRealms);
-      // console.log('update head realm', this.name, this.headRealm, newHeadRealm);
-      if (!this.headRealm) {
-        this.headRealm = newHeadRealm;
-      } else {
-        const oldHeadRealm = this.headRealm;
-        if (newHeadRealm.key !== oldHeadRealm.key) {
-          this.#migrateTo(newHeadRealm);
-        }
-      }
-    } else {
-      throw new Error('try to get head realm for fully unlinked player ' + this.playerId);
-    }
+    this.writable = writable;
+
+    writable.addEventListener('migrate', e => {
+      this.dispatchEvent(new MessageEvent('migrate', {
+        data: e.data,
+      }));
+    });
+  }
+  getHeadRealm() {
+    return this.writable.getHeadRealm();
+  }
+  /* isLinked() {
+    return this.writable.isLinked();
   }
   setHeadRealm(realm) {
-    this.headRealm = realm;
+    // nothing
+  } */
+  linkRealm(realm) {
+    // nothing
   }
-  #migrateTo(newHeadRealm) {
-    if (!this.realms.tx.running) {
-      throw new Error('migration happening outside of a lock -- wrap in realms.tx()');
-    }
+  unlinkRealm(realm) {
+    // nothing
+  }
+  updateHeadRealm(headPosition) {
+    // nothing
+  }
+}
+class HeadTrackedEntity extends EventTarget {
+  constructor(headTracker) {
+    super();
 
-    // perform the ehad swap
-    const oldHeadRealm = this.headRealm;
-    this.headRealm = newHeadRealm;
-
-    // old objects
-    const oldPlayersArray = oldHeadRealm.dataClient.getArray(this.arrayId, {
-      listen: false,
-    });
-    const oldPlayerAppsArray = oldHeadRealm.dataClient.getArray('playerApps:' + this.realms.playerId, {
-      listen: false,
-    });
-    const oldPlayerActionsArray = oldHeadRealm.dataClient.getArray('playerActions:' + this.realms.playerId, {
-      listen: false,
-    });
-    const oldPlayerMap = oldPlayersArray.getMap(this.arrayIndexId, {
-      listen: false,
-    });
-
-    // new objects
-    const newPlayersArray = newHeadRealm.dataClient.getArray(this.arrayId, {
-      listen: false,
-    });
-    const newPlayerAppsArray = newHeadRealm.dataClient.getArray('playerApps:' + this.realms.playerId, {
-      listen: false,
-    });
-    const newPlayerActionsArray = newHeadRealm.dataClient.getArray('playerActions:' + this.realms.playerId, {
-      listen: false,
-    });
-
-    const playerId = this.realms.playerId;
-    console.log('move realm ', playerId, oldHeadRealm.key, ' -> ', newHeadRealm.key);
-
-    // set dead hands
-    const _emitDeadHands = realm => {
-      const keys = [
-        this.arrayId + '.' + this.arrayIndexId, // player
-        'playerApps:' + this.arrayIndexId, // playerApps
-        'playerActions:' + this.arrayIndexId, // playerActions
-      ];
-      const deadHandupdate = realm.dataClient.deadHandKeys(keys, this.realms.playerId);
-      realm.emitUpdate(deadHandupdate);
-    };
-    _emitDeadHands(oldHeadRealm);
-    _emitDeadHands(newHeadRealm);
-
-    // add new
-    // import apps
-    const playerAppsImportMessage = newPlayerAppsArray.importArrayUpdate(oldPlayerAppsArray);
-    newHeadRealm.emitUpdate(playerAppsImportMessage);
-    // import actions
-    const playerActionsImportMessage = newPlayerActionsArray.importArrayUpdate(oldPlayerActionsArray);
-    newHeadRealm.emitUpdate(playerActionsImportMessage);
-    // import player
-    const playerImportMessage = newPlayersArray.importMapUpdate(oldPlayerMap);
-    newHeadRealm.emitUpdate(playerImportMessage);
-
-    // delete old
-    // delete apps
-    const playerAppsDeleteMessage = oldPlayerAppsArray.removeArrayUpdate();
-    oldHeadRealm.emitUpdate(playerAppsDeleteMessage);
-    // delete actions
-    const playerActionsDeleteMessage = oldPlayerActionsArray.removeArrayUpdate();
-    oldHeadRealm.emitUpdate(playerActionsDeleteMessage);
-    // delete player
-    const oldPlayerRemoveUpdate = oldPlayerMap.removeUpdate();
-    oldHeadRealm.emitUpdate(oldPlayerRemoveUpdate);
+    this.headTracker = headTracker || new WritableHeadTracker(this);
+  }
+  get headRealm() {
+    debugger;
+  }
+  set headRealm(v) {
+    debugger;
+  }
+  isLinked() {
+    debugger;
+    return this.headTracker.isLinked();
+  }
+  updateHeadRealm(headPosition) {
+   debugger;
+  }
+  setHeadRealm(realm) {
+    debugger;
+    this.headTracker.setHeadRealm(realm);
   }
 }
 
@@ -215,12 +219,79 @@ class VirtualPlayer extends HeadTrackedEntity {
     this.realms = realms;
     this.name = name;
 
-    const getHeadRealm = () => this.headRealm;
+    this.headTracker.addEventListener('migrate', e => {
+      const {oldHeadRealm, newHeadRealm} = e.data;
+
+      // old objects
+      const oldPlayersArray = oldHeadRealm.dataClient.getArray(this.arrayId, {
+        listen: false,
+      });
+      const oldPlayerAppsArray = oldHeadRealm.dataClient.getArray('playerApps:' + this.realms.playerId, {
+        listen: false,
+      });
+      const oldPlayerActionsArray = oldHeadRealm.dataClient.getArray('playerActions:' + this.realms.playerId, {
+        listen: false,
+      });
+      const oldPlayerMap = oldPlayersArray.getMap(this.arrayIndexId, {
+        listen: false,
+      });
+
+      // new objects
+      const newPlayersArray = newHeadRealm.dataClient.getArray(this.arrayId, {
+        listen: false,
+      });
+      const newPlayerAppsArray = newHeadRealm.dataClient.getArray('playerApps:' + this.realms.playerId, {
+        listen: false,
+      });
+      const newPlayerActionsArray = newHeadRealm.dataClient.getArray('playerActions:' + this.realms.playerId, {
+        listen: false,
+      });
+
+      const playerId = this.realms.playerId;
+      console.log('move realm ', playerId, oldHeadRealm.key, ' -> ', newHeadRealm.key);
+
+      // set dead hands
+      const _emitDeadHands = realm => {
+        const keys = [
+          this.arrayId + '.' + this.arrayIndexId, // player
+          'playerApps:' + this.arrayIndexId, // playerApps
+          'playerActions:' + this.arrayIndexId, // playerActions
+        ];
+        const deadHandupdate = realm.dataClient.deadHandKeys(keys, this.realms.playerId);
+        realm.emitUpdate(deadHandupdate);
+      };
+      _emitDeadHands(oldHeadRealm);
+      _emitDeadHands(newHeadRealm);
+
+      // add new
+      // import apps
+      const playerAppsImportMessage = newPlayerAppsArray.importArrayUpdate(oldPlayerAppsArray);
+      newHeadRealm.emitUpdate(playerAppsImportMessage);
+      // import actions
+      const playerActionsImportMessage = newPlayerActionsArray.importArrayUpdate(oldPlayerActionsArray);
+      newHeadRealm.emitUpdate(playerActionsImportMessage);
+      // import player
+      const playerImportMessage = newPlayersArray.importMapUpdate(oldPlayerMap);
+      newHeadRealm.emitUpdate(playerImportMessage);
+
+      // delete old
+      // delete apps
+      const playerAppsDeleteMessage = oldPlayerAppsArray.removeArrayUpdate();
+      oldHeadRealm.emitUpdate(playerAppsDeleteMessage);
+      // delete actions
+      const playerActionsDeleteMessage = oldPlayerActionsArray.removeArrayUpdate();
+      oldHeadRealm.emitUpdate(playerActionsDeleteMessage);
+      // delete player
+      const oldPlayerRemoveUpdate = oldPlayerMap.removeUpdate();
+      oldHeadRealm.emitUpdate(oldPlayerRemoveUpdate);
+    });
+
+    const readableHeadTracker = this.headTracker.getReadable();
     this.playerApps = new VirtualEntityArray('playerApps:' + this.arrayIndexId, this.realms, {
-      getHeadRealm,
+      headTracker: readableHeadTracker,
     });
     this.playerActions = new VirtualEntityArray('playerActions:' + this.arrayIndexId, this.realms, {
-      getHeadRealm,
+      headTracker: readableHeadTracker,
     });
     this.cleanupMapFns = new Map();
 
@@ -244,12 +315,14 @@ class VirtualPlayer extends HeadTrackedEntity {
     actionVals = [],
     actionValIds = [],
   } = {}) {
+    const headRealm = this.headTracker.getHeadRealm();
+
     const _initializeApps = () => {
       for (let i = 0; i < appVals.length; i++) {
         const appVal = appVals[i];
         const appId = appIds[i] ?? makeId();
-        const deadHandUpdate = this.headRealm.dataClient.deadHandArrayMap(this.playerApps.arrayId, appId);
-        this.headRealm.emitUpdate(deadHandUpdate);
+        const deadHandUpdate = headRealm.dataClient.deadHandArrayMap(this.playerApps.arrayId, appId);
+        headRealm.emitUpdate(deadHandUpdate);
 
         // console.log('initialize player add player app 1', appVal, appId);
         const map = this.playerApps.addEntityAt(appId, appVal);
@@ -263,8 +336,8 @@ class VirtualPlayer extends HeadTrackedEntity {
       for (let i = 0; i < actionVals.length; i++) {
         const actionVal = actionVals[i];
         const actionId = actionValIds[i] ?? makeId();
-        const deadHandUpdate = this.headRealm.dataClient.deadHandArrayMap(this.playerActions.arrayId, actionId);
-        this.headRealm.emitUpdate(deadHandUpdate);
+        const deadHandUpdate = headRealm.dataClient.deadHandArrayMap(this.playerActions.arrayId, actionId);
+        headRealm.emitUpdate(deadHandUpdate);
 
         // console.log('add entity 1');
         const map = this.playerActions.addEntityAt(actionId, actionVal);
@@ -276,10 +349,10 @@ class VirtualPlayer extends HeadTrackedEntity {
     _initializeActions();
 
     const _initializePlayer = () => {
-      const deadHandUpdate = this.headRealm.dataClient.deadHandArrayMap(this.arrayId, this.arrayIndexId, this.realms.playerId);
-      this.headRealm.emitUpdate(deadHandUpdate);
+      const deadHandUpdate = headRealm.dataClient.deadHandArrayMap(this.arrayId, this.arrayIndexId, this.realms.playerId);
+      headRealm.emitUpdate(deadHandUpdate);
       
-      const playersArray = this.headRealm.dataClient.getArray(this.arrayId, {
+      const playersArray = headRealm.dataClient.getArray(this.arrayId, {
         listen: false,
       });
       const {
@@ -288,13 +361,13 @@ class VirtualPlayer extends HeadTrackedEntity {
       } = playersArray.addAt(this.arrayIndexId, o, {
         listen: false,
       });
-      this.headRealm.emitUpdate(update);
+      headRealm.emitUpdate(update);
     };
     _initializePlayer();
   }
   link(realm) {
     // console.log('link', realm);
-    this.connectedRealms.add(realm);
+    this.headTracker.linkRealm(realm);
 
     const {dataClient} = realm;
     const map = dataClient.getArrayMap(this.arrayId, this.arrayIndexId);
@@ -319,28 +392,28 @@ class VirtualPlayer extends HeadTrackedEntity {
   }
   unlink(realm) {
     // console.log('unlink', realm);
-    this.connectedRealms.delete(realm);
+    this.headTracker.unlinkRealm(realm);
 
     this.cleanupMapFns.get(realm)();
     this.cleanupMapFns.delete(realm);
   }
   setKeyValue(key, val) {
-    const {dataClient, networkedDataClient} = this.headRealm;
+    const headRealm = this.headTracker.getHeadRealm();
+    const {dataClient, networkedDataClient} = headRealm;
     const valueMap = dataClient.getArrayMap(this.arrayId, this.arrayIndexId, {
       listen: false,
     });
     const update = valueMap.setKeyValueUpdate(key, val);
-    this.headRealm.emitUpdate(update);
+    headRealm.emitUpdate(update);
   }
 }
 
 class VirtualPlayersArray extends EventTarget {
-  constructor(arrayId, parent, opts = {}) {
+  constructor(arrayId, parent) {
     super();
 
     this.arrayId = arrayId;
     this.parent = parent;
-    this.opts = opts;
 
     this.virtualPlayers = new Map();
     this.cleanupFns = new Map();
@@ -380,7 +453,7 @@ class VirtualPlayersArray extends EventTarget {
         const virtualPlayer = this.virtualPlayers.get(playerId);
         if (virtualPlayer) {
           virtualPlayer.unlink(realm);
-          if (!virtualPlayer.isLinked()) {
+          if (!virtualPlayer.headTracker.isLinked()) {
             this.virtualPlayers.delete(playerId);
             
             virtualPlayer.dispatchEvent(new MessageEvent('leave'));
@@ -478,9 +551,10 @@ class VirtualPlayersArray extends EventTarget {
   } */
 }
 class VirtualEntityArray extends VirtualPlayersArray {
-  constructor(...args) {
-    super(...args);
+  constructor(arrayId, realms, opts) {
+    super(arrayId, realms);
 
+    this.headTracker = opts?.headTracker ?? null;
     this.virtualMaps = new Map();
   }
   addEntityAt(arrayIndexId, val) {
@@ -522,7 +596,9 @@ class VirtualEntityArray extends VirtualPlayersArray {
     const _getOrCreateVirtualMap = (arrayIndexId) => {
       let virtualMap = this.virtualMaps.get(arrayIndexId);
       if (!virtualMap) {
-        virtualMap = new VirtualEntityMap(arrayIndexId, this);
+        virtualMap = new VirtualEntityMap(arrayIndexId, this, {
+          headTracker: this.headTracker,
+        });
         this.virtualMaps.set(arrayIndexId, virtualMap);
   
         virtualMap.addEventListener('garbagecollect', e => {
@@ -546,23 +622,14 @@ class VirtualEntityArray extends VirtualPlayersArray {
       const virtualMap = _getOrCreateVirtualMap(arrayIndexId);
       virtualMap.link(arrayIndexId, map);
       if (!had) {
-        // if attached to a parent which already has a head realm, use that
-        if (this.opts.getHeadRealm) {
-          const headRealm = this.opts.getHeadRealm();
-          /* if (!headRealm) {
-            debugger;
-          } */
-          virtualMap.setHeadRealm(headRealm);
-        } else {
-          // otherwise, use the closest realm to the app's "position"... it better have one
-          const initialPosition = map.getKey('position');
-          if (!initialPosition) {
-            console.warn('entity addition did not have a position', arrayIndexId, map);
-            debugger;
-          }
-          virtualMap.setHeadPosition(initialPosition);
-          console.log('set head from initial position', initialPosition);
-          virtualMap.updateHeadRealm();
+        const initialPosition = map.getKey('position');
+        /* if (!initialPosition) {
+          console.warn('entity addition did not have a position', arrayIndexId, map);
+          debugger;
+        }
+        console.log('set head from initial position', initialPosition); */
+        if (initialPosition) {
+          this.headTracker.updateHeadRealm(initialPosition);
         }
 
         this.dispatchEvent(new MessageEvent('entityadd', {
@@ -642,8 +709,8 @@ class VirtualIrc {
 //
 
 class VirtualEntityMap extends HeadTrackedEntity {
-  constructor(arrayIndexId, parent) {
-    super();
+  constructor(arrayIndexId, parent, opts) {
+    super(opts?.headTracker);
     
     this.arrayIndexId = arrayIndexId;
     this.parent = parent;
@@ -666,10 +733,8 @@ class VirtualEntityMap extends HeadTrackedEntity {
     this.headRealm.emitUpdate(update);
   }
   toObject() {
-    if (!this.headRealm) {
-      debugger;
-    }
-    const array = this.headRealm.dataClient.getArray(this.parent.arrayId, {
+    const headRealm = this.headTracker.getHeadRealm();
+    const array = headRealm.dataClient.getArray(this.parent.arrayId, {
       listen: false,
     });
     const map = array.getMap(this.arrayIndexId, {
@@ -695,14 +760,16 @@ class VirtualEntityMap extends HeadTrackedEntity {
       // }
 
       if (key === positionKey) {
-        this.setHeadPosition(val);
-        this.updateHeadRealm();
+        this.updateHeadRealm(val);
       }
     };
     map.addEventListener('update', update);
 
     this.maps.set(arrayIndexId, map);
-    this.connectedRealms.add(map.dataClient.userData.realm);
+    if (!this.headTracker.linkRealm) {
+      debugger;
+    }
+    this.headTracker.linkRealm(map.dataClient.userData.realm);
 
     this.cleanupFns.set(arrayIndexId, () => {
       map.unlisten();
@@ -720,7 +787,7 @@ class VirtualEntityMap extends HeadTrackedEntity {
 
     const map = this.maps.get(arrayIndexId);
     this.maps.delete(arrayIndexId);
-    this.connectedRealms.delete(map.dataClient.userData.realm);
+    this.headTracker.unlinkRealm(map.dataClient.userData.realm);
 
     // garbage collect
     if (this.maps.size === 0) {
@@ -934,8 +1001,7 @@ export class NetworkRealms extends EventTarget {
 
         if (oldNumConnectedRealms === 0 && connectPromises.length > 0) {
           // if this is the first network configuration, initialize our local player
-          this.localPlayer.setHeadPosition(position);
-          this.localPlayer.updateHeadRealm();
+          this.localPlayer.headTracker.updateHeadRealm(position);
           
           const appVals = [
             {
@@ -972,8 +1038,7 @@ export class NetworkRealms extends EventTarget {
           // this.sendRegisterMessage();
         } else {
           // else if we're just moving around, update the local player's position
-          this.localPlayer.setHeadPosition(position);
-          this.localPlayer.updateHeadRealm();
+          this.localPlayer.headTracker.updateHeadRealm(position);
         }
 
         // check if we need to disconnect from any realms
