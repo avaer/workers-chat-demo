@@ -597,6 +597,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
     // bind local array maps to virtual maps
     const dcArray = networkedDataClient.dataClient.getArray(this.arrayId); // note: auto listen
 
+    const localVirtualMaps = new Map();
     const _getOrCreateVirtualMap = (arrayIndexId) => {
       let virtualMap = this.virtualMaps.get(arrayIndexId);
       if (!virtualMap) {
@@ -604,7 +605,8 @@ class VirtualEntityArray extends VirtualPlayersArray {
           headTracker: this.headTracker,
         });
         this.virtualMaps.set(arrayIndexId, virtualMap);
-  
+        localVirtualMaps.set(arrayIndexId, virtualMap);
+
         virtualMap.addEventListener('garbagecollect', e => {
           this.dispatchEvent(new MessageEvent('entityremove', {
             data: {
@@ -618,20 +620,13 @@ class VirtualEntityArray extends VirtualPlayersArray {
       return virtualMap;
     };
     
-    const localVirtualMaps = new Map();
-    const onadd = e => {
-      // console.log('VirtualEntityArray got entity add', e.data);
-      const {arrayIndexId, map} = e.data;
-      const had = localVirtualMaps.has(arrayIndexId);
+    const _linkMap = (arrayIndexId, map) => {
+      const had = this.virtualMaps.has(arrayIndexId);
       const virtualMap = _getOrCreateVirtualMap(arrayIndexId);
+      // console.log('entity link', {virtualMap, had});
       virtualMap.link(arrayIndexId, map);
       if (!had) {
         const initialPosition = map.getKey('position');
-        /* if (!initialPosition) {
-          console.warn('entity addition did not have a position', arrayIndexId, map);
-          debugger;
-        }
-        console.log('set head from initial position', initialPosition); */
         if (initialPosition) {
           this.headTracker.updateHeadRealm(initialPosition);
         }
@@ -644,22 +639,47 @@ class VirtualEntityArray extends VirtualPlayersArray {
           },
         }));
       }
-      localVirtualMaps.set(map, virtualMap);
     };
-    dcArray.addEventListener('add', onadd);
-    const onremove = e => {
-      const {arrayIndexId} = e.data;
+    const _unlinkMap = arrayIndexId => {
       const virtualMap = this.virtualMaps.get(arrayIndexId);
       virtualMap.unlink(arrayIndexId);
       localVirtualMaps.delete(arrayIndexId);
     };
+
+    const onadd = e => {
+      // console.log('VirtualEntityArray got entity add', e.data);
+      const {arrayIndexId, map} = e.data;
+      _linkMap(arrayIndexId, map);
+    };
+    dcArray.addEventListener('add', onadd);
+    const onremove = e => {
+      const {arrayIndexId} = e.data;
+      _unlinkMap(arrayIndexId);
+    };
     dcArray.addEventListener('remove', onremove);
+    
+    const importArrayKey = 'importArray.' + this.arrayId;
+    const onimportarray = e => {
+      // console.log('VirtualEntityArray got importarray', e.data);
+      const {arrayCrdtExport, mapCrdtExports} = e.data;
+      for (const arrayIndexId in arrayCrdtExport) {
+        const map = dcArray.dataClient.getArrayMap(this.arrayId, arrayIndexId, {
+          listen: false,
+        });
+        // const mapCrdtExport = mapCrdtExports[arrayIndexId];
+        // const mapVal = convertCrdtValToVal(mapCrdtExport);
+        _linkMap(arrayIndexId, map);
+      }
+    };
+    dcArray.dataClient.addEventListener(importArrayKey, onimportarray);
     
     this.cleanupFns.set(realm, () => {
       // unbind array virtual maps
       dcArray.unlisten();
       dcArray.removeEventListener('add', onadd);
       dcArray.removeEventListener('remove', onremove);
+
+      dcArray.dataClient.removeEventListener(importArrayKey, onimportarray);
 
       for (const localVirtualMap of localVirtualMaps.values()) {
         localVirtualMap.unlinkFilter((arrayIndexId, map) => {
