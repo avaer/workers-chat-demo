@@ -236,7 +236,7 @@ export class DCMap extends EventTarget {
     this.dataClient.addEventListener(importMapKey, importMapFn); */
 
     // listener
-    this.dataClient.arrayMapListeners.set(this.arrayIndexId, this);
+    // this.dataClient.arrayMapListeners.set(this.arrayIndexId, this);
     
     this.cleanupFn = () => {
       // console.log('map unlink', setKey);
@@ -245,7 +245,7 @@ export class DCMap extends EventTarget {
       // this.dataClient.removeEventListener(importMapKey, importMapFn);
 
       // listener
-      this.dataClient.arrayMapListeners.delete(this.arrayIndexId);
+      // this.dataClient.arrayMapListeners.delete(this.arrayIndexId);
     };
   }
   unlisten() {
@@ -389,6 +389,7 @@ export class DCArray extends EventTarget {
 
     return new MessageEvent('removeArray.' + this.arrayId);
   }
+  // arrayListeners = new Map();
   listen() {
     const _addMap = (arrayIndexId, val) => {
       const map = new DCMap(this.arrayId, arrayIndexId, this.dataClient);
@@ -449,7 +450,13 @@ export class DCArray extends EventTarget {
     this.dataClient.addEventListener(importArrayKey, importArrayFn);
 
     // listener
-    this.dataClient.arrayListeners.set(this.arrayId, this);
+    // if (this.arrayListeners.has(this.arrayId)) {
+    //   console.log('double listen');
+    //   debugger;
+    // } else {
+    //   console.log('single listen');
+    // }
+    // this.arrayListeners.set(this.arrayId, this);
 
     this.cleanupFn = () => {
       this.dataClient.removeEventListener(addKey, addFn);
@@ -458,7 +465,7 @@ export class DCArray extends EventTarget {
       // this.dataClient.removeEventListener(importArrayKey, importArrayFn);
 
       // listener
-      this.dataClient.arrayListeners.delete(this.arrayId);
+      // this.arrayListeners.delete(this.arrayId);
     };
   }
   unlisten() {
@@ -477,9 +484,6 @@ export class DataClient extends EventTarget {
 
     this.crdt = crdt;
     this.userData = userData;
-
-    this.arrayListeners = new Map();
-    this.arrayMapListeners = new Map();
   }
 
   // for both client and server
