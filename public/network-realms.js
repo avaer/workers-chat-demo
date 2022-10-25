@@ -845,7 +845,11 @@ class VirtualEntityMap extends HeadTrackedEntity {
     this.cleanupFns = new Map();
   }
   get(key) {
-    throw new Error('not implemented');
+    const headRealm = this.headTracker.getHeadRealm();
+    const map = headRealm.dataClient.getArrayMap(this.parent.arrayId, this.arrayIndexId, {
+      listen: false,
+    });
+    return map.get(key);
   }
   set(key, val) {
     throw new Error('not implemented');
