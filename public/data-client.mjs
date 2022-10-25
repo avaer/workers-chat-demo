@@ -802,22 +802,24 @@ export class DataClient extends EventTarget {
         break;
       }
       case UPDATE_METHODS.REMOVE_ARRAY: {
-        const [arrayId, arrayIndexId] = args;
+        const [arrayId] = args;
         let array = this.crdt.get(arrayId);
         if (!array) {
-          throw new Error('remove from nonexistent array!');
+          throw new Error('remove from nonexistent array: ' + arrayId);
           // array = {};
           // this.crdt.set(arrayId, array);
         }
         const mapKeys = Object.keys(array);
-        delete array[arrayIndexId];
+        delete array[arrayId];
 
         // remove the maps, too
         for (const mapKey of mapKeys) {
           this.crdt.delete(mapKey);
         }
 
-        update = new MessageEvent('removeArray.' + arrayId);
+        update = new MessageEvent('removeArray.' + arrayId, {
+          data: {},
+        });
         break;
       }
       case UPDATE_METHODS.ROLLBACK: {
