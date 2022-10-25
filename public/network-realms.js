@@ -337,7 +337,7 @@ class VirtualPlayer extends HeadTrackedEntity {
       for (let i = 0; i < appVals.length; i++) {
         const appVal = appVals[i];
         const appId = appIds[i] ?? makeId();
-        const deadHandUpdate = headRealm.dataClient.deadHandArrayMap(this.playerApps.arrayId, appId);
+        const deadHandUpdate = headRealm.dataClient.deadHandArrayMap(this.playerApps.arrayId, appId, this.realms.playerId);
         headRealm.emitUpdate(deadHandUpdate);
 
         // console.log('initialize player add player app 1', appVal, appId);
@@ -352,7 +352,7 @@ class VirtualPlayer extends HeadTrackedEntity {
       for (let i = 0; i < actionVals.length; i++) {
         const actionVal = actionVals[i];
         const actionId = actionValIds[i] ?? makeId();
-        const deadHandUpdate = headRealm.dataClient.deadHandArrayMap(this.playerActions.arrayId, actionId);
+        const deadHandUpdate = headRealm.dataClient.deadHandArrayMap(this.playerActions.arrayId, actionId, this.realms.playerId);
         headRealm.emitUpdate(deadHandUpdate);
 
         // console.log('add entity 1');
