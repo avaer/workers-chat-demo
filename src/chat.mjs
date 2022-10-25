@@ -377,13 +377,19 @@ export class ChatRoom {
       return;
     }
 
+    const realm = {
+      key: roomName,
+    };
+
     let dataClientPromise = dataClientPromises.get(roomName);
     if (!dataClientPromise) {
       dataClientPromise = (async () => {
         const crdt = await readCrdtFromStorage(this.storage, schemaArrayNames);
-        // const crdt = new Map();
         const dataClient = new DataClient({
           crdt,
+          userData: {
+            realm,
+          },
         });
         return dataClient;
       })();
