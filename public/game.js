@@ -42,8 +42,24 @@ export const startGame = async () => {
 
       el.updateText(dataClient);
 
+      const localPlayerApps = realms.localPlayer.playerApps;
+      const localPlayerActions = realms.localPlayer.playerActions;
       const playersArray = dataClient.getArray('players');
       const worldApps = dataClient.getArray('worldApps');
+
+      const onentityadd = e => {
+        // const {entity} = e.data;
+        console.log('got entity add', e.data);
+        el.updateText(dataClient);
+      };
+      localPlayerApps.addEventListener('entityadd', onentityadd);
+
+      const onentityremove = e => {
+        // const {entity} = e.data;
+        console.log('got entity remove', e.data);
+        el.updateText(dataClient);
+      };
+      localPlayerApps.addEventListener('entityremove', onentityremove);
       
       const onadd = e => {
         // console.log('game players array add', realm.key, e.data, playersArray.toArray());
@@ -68,10 +84,28 @@ export const startGame = async () => {
         el.updateText(dataClient);
       };
       playersArray.addEventListener('remove', onremove);
+
+      const onentityadd2 = e => {
+        // const {entity} = e.data;
+        console.log('world app entity add', e.data);
+        el.updateText(dataClient);
+      };
+      worldApps.addEventListener('add', onentityadd2);
+
+      const onentityremove2 = e => {
+        // const {entity} = e.data;
+        console.log('world app entity remove', e.data);
+        el.updateText(dataClient);
+      };
+      worldApps.addEventListener('remove', onentityremove2);
   
       realmCleanupFns.set(realm, () => {
+        localPlayerApps.removeEventListener('entityadd', onentityadd);
+        localPlayerActions.removeEventListener('entityadd', onentityadd);
         dataClient.removeEventListener('add', onadd);
         dataClient.removeEventListener('remove', onremove);
+        worldApps.removeEventListener('add', onentityadd2);
+        worldApps.removeEventListener('remove', onentityremove2);
 
         playersArray.unlisten();
         worldApps.unlisten();
