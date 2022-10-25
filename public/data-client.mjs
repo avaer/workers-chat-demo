@@ -719,13 +719,6 @@ export class DataClient extends EventTarget {
           this.crdt.set(k, mapsCrdtExports[k]);
         }
         
-        /* this.dispatchEvent(new MessageEvent('postImportArray.' + arrayId, {
-          data: {
-            arrayCrdtExport,
-            mapsCrdtExports,
-          },
-        })); */
-        
         update = new MessageEvent('importArray.' + arrayId, {
           data: {
             arrayCrdtExport,
@@ -794,7 +787,7 @@ export class DataClient extends EventTarget {
         const [arrayId, arrayIndexId] = args;
         let array = this.crdt.get(arrayId);
         if (!array) {
-          throw new Error('remove from nonexistent array!');
+          throw new Error('remove from nonexistent array: ' + arrayId);
           // array = {};
           // this.crdt.set(arrayId, array);
         }
