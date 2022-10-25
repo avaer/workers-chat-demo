@@ -433,24 +433,35 @@ export class ChatRoom {
     // set up dead hands tracking
     const deadHands = new Map();
     const _triggerDeadHands = () => {
-      for (const [key, {arrayId, arrayIndexId}] of deadHands) {
+      // const entries = Array.from(deadHands.entries());
+      for (const [key, {arrayId, arrayIndexId}] of deadHands.entries()) {
         if (arrayIndexId !== null) { // map mode
+          // console.log('dead hand map', arrayId, arrayIndexId, deadHands);
           const map = dataClient.getArrayMap(arrayId, arrayIndexId, {
             listen: false,
           });
-          const removeUpdate = map.removeUpdate();
-          console.log('removing dead map', arrayId, arrayIndexId, removeUpdate.type);
-          const removeUpdateBuffer = dataClient.serializeMessage(removeUpdate);
-          proxyMessageToPeers(removeUpdateBuffer);
+          const removeMapUpdate = map.removeUpdate();
+          const removeMapUpdateBuffer = dataClient.serializeMessage(removeMapUpdate);
+          proxyMessageToPeers(removeMapUpdateBuffer);
+
+          const array = dataClient.getArray(arrayId, {
+            listen: false,
+          });
+          const removeArrayUpdate = array.removeArrayUpdate(arrayIndexId);
+          const removeArrayUpdateBuffer = dataClient.serializeMessage(removeArrayUpdate);
+          // console.log('iter 1');
+          proxyMessageToPeers(removeArrayUpdateBuffer);
+          // console.log('iter 2');
         } else { // array mode
+          // console.log('dead hand array', arrayId);
           const array = dataClient.getArray(arrayId, {
             listen: false,
           });
           const removeUpdate = array.removeUpdate();
-          console.log('removing dead array', arrayId, removeUpdate.type);
           const removeUpdateBuffer = dataClient.serializeMessage(removeUpdate);
           proxyMessageToPeers(removeUpdateBuffer);
         }
+        // console.log('iter end');
       }
     };
 
