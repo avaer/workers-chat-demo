@@ -654,7 +654,7 @@ export class DataClient extends EventTarget {
     let update = null;
 
     const {method, args} = updateObject;
-    console.log('apply update object', {method, args});
+    // console.log('apply update object', {method, args});
     switch (method) {
       case UPDATE_METHODS.IMPORT: {
         const [crdtExport] = args;
@@ -1007,7 +1007,7 @@ export class DataClient extends EventTarget {
     return saveKeys;
   }
   emitUpdate(messageEvent) {
-    console.log('data client emit update', messageEvent.type);
+    // console.log('data client emit update', messageEvent.type);
     this.dispatchEvent(messageEvent);
   }
   
