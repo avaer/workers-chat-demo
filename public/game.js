@@ -351,17 +351,17 @@ z-index: 2;
             // const firstApp = realms.localPlayer.playerApps.first();
             const actions = realms.localPlayer.playerActions.toArray();
             const wearActionIndex = actions.findIndex(action => action.action === 'wear');
-            if (wearActionIndex === -1) {
-              debugger;
-            }
+            // if (wearActionIndex === -1) {
+            //   debugger;
+            // }
             const firstAction = realms.localPlayer.playerActions.getVirtualMapAt(wearActionIndex);
-            if (!firstAction) {
-              debugger;
-            }
+            // if (!firstAction) {
+            //   debugger;
+            // }
             const firstApp = realms.localPlayer.playerApps.getVirtualMapAt(wearActionIndex);
-            if (!firstApp) {
-              debugger;
-            }
+            // if (!firstApp) {
+            //   debugger;
+            // }
             
             // set dead hands
             // old location: player
@@ -396,24 +396,16 @@ z-index: 2;
             // remove from the old location (player)
             firstApp.remove();
             firstAction.remove();
+
+            const liveHandUpdate = targetRealm.dataClient.liveHandArrayMap(
+              'worldApps',
+              [firstApp.arrayIndexId],
+              realms.playerId,
+            );
+            targetRealm.emitUpdate(liveHandUpdate);
           } else {
             console.warn('no containing realm to drop to');
           }
-          
-          /* // data layer
-          const entity = virtualWorld.addEntity({
-            name: 'rock',
-            position: targetPosition.slice(),
-          });
-          console.log('added rock', entity);
-
-          // render layer
-          const item = inventoryItems.pop();
-          item.position = targetPosition.slice();
-          item.style.left = `${targetPosition[0]}px`;
-          item.style.top = `${targetPosition[2]}px`;
-          item.arrayIndexId = entity.arrayIndexId;
-          world.appendChild(item); */
         } else {
           console.warn('nothing to drop');
           debugger;
