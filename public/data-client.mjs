@@ -1141,6 +1141,8 @@ export class NetworkedDataClient extends EventTarget {
   static handlesMethod(method) {
     return [
       UPDATE_METHODS.IMPORT,
+      UPDATE_METHODS.IMPORT_MAP,
+      UPDATE_METHODS.IMPORT_ARRAY,
       UPDATE_METHODS.SYNC,
       UPDATE_METHODS.SET,
       UPDATE_METHODS.ADD,
