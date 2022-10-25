@@ -387,7 +387,9 @@ export class DCArray extends EventTarget {
       this.dataClient.crdt.delete(mapKey);
     }
 
-    return new MessageEvent('removeArray.' + this.arrayId);
+    return new MessageEvent('removeArray.' + this.arrayId, {
+      data: {},
+    });
   }
   // arrayListeners = new Map();
   listen() {
