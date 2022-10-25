@@ -161,10 +161,6 @@ export class GamePlayerCanvas {
     // console.log('virtual player update listen');
     const playerAppsEntityAdd = e => {
       console.log('html renderer got player apps add', e.data);
-      /* const {val} = e.data;
-      const [x, y, z] = val;
-      div.style.left = `${x}px`;
-      div.style.top = `${y}px`; */
       const {entityId, entity} = e.data;
       playerApps.set(entityId, entity);
       _renderPlayerApps();
