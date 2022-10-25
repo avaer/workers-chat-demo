@@ -335,7 +335,7 @@ z-index: 2;
 
     // action methods
     const _pickupDrop = () => {
-      // console.log('drop 1');
+      console.log('drop 1');
       const targetPosition = [
         localPlayerCanvas.position[0] + localPlayerCanvas.direction[0] * frameSize,
         0,
@@ -359,7 +359,7 @@ z-index: 2;
           position[2] >= box.min[2] && position[2] <= box.max[2];
       };
       
-      const collidedVirtualMap = Array.from(virtualWorld.virtualMaps.values()).find(virtualMap => {
+      const collidedVirtualMap = Array.from(virtualWorld.entityTracker.virtualMaps.values()).find(virtualMap => {
         const position = virtualMap.get('position');
         return _boxContains(targetBox, position);
       });
@@ -381,6 +381,8 @@ z-index: 2;
         if (realms.localPlayer.playerApps.getSize() > 0) {
           const targetRealm = realms.getClosestRealm(targetPosition);
           if (targetRealm) {
+            console.log('drop to target realm', targetRealm.key, targetRealm);
+
             // the app we will be dropping
             // const firstApp = realms.localPlayer.playerApps.first();
             const actions = realms.localPlayer.playerActions.toArray();
@@ -445,6 +447,7 @@ z-index: 2;
           debugger;
         }
       }
+      console.log('drop 2');
     };
   };
   _initRenderers();
