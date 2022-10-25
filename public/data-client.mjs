@@ -8,7 +8,7 @@ import {
 
 //
 
-const convertValToCrdtVal = val => {
+export const convertValToCrdtVal = val => {
   const startEpoch = 0;
   const crdtVal = {};
   for (const k in val) {
@@ -17,7 +17,7 @@ const convertValToCrdtVal = val => {
   }
   return crdtVal;
 }
-const convertCrdtValToVal = crdtVal => {
+export const convertCrdtValToVal = crdtVal => {
   const val = {};
   for (const k in crdtVal) {
     const [epoch, v] = crdtVal[k];
@@ -26,14 +26,14 @@ const convertCrdtValToVal = crdtVal => {
   return val;
 }
 
-const convertMapToObject = map => {
+export const convertMapToObject = map => {
   const o = {};
   for (const [key, val] of map) {
     o[key] = val;
   }
   return o;
 };
-const convertObjectToMap = map => {
+export const convertObjectToMap = map => {
   const o = new Map();
   for (const key in map) {
     const val = map[key];
@@ -665,7 +665,6 @@ export class DataClient extends EventTarget {
         // console.log('importing export', crdtExport, zbdecode(crdtExport));
         this.crdt = convertObjectToMap(zbdecode(crdtExport));
         // console.log('crdt imported', this.crdt);
-        // XXX tag this with keys and listen for it in DCArray and DCMap
         update = new MessageEvent('import', {
           data: {
             crdtExport,
