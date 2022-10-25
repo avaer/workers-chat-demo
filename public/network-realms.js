@@ -603,12 +603,35 @@ class VirtualEntityArray extends VirtualPlayersArray {
     }
     return null;
   }
+  getVirtualMapAt(index) {
+    let arrayIndexId = null;
+    let i = 0;
+    for (const arrayIndexId_ of this.virtualMaps.keys()) {
+      if (i === index) {
+        arrayIndexId = arrayIndexId_;
+        break;
+      }
+      i++;
+    }
+    return this.virtualMaps.get(arrayIndexId);
+  }
+  toArray() {
+    const headRealm = this.headTracker.getHeadRealm();
+    const array = headRealm.dataClient.getArray(this.arrayId, {
+      listen: false,
+    });
+    return array.toArray();
+  }
   linkedRealms = new Map();
   link(realm) {
     const {networkedDataClient} = realm;
     const dcArray = networkedDataClient.dataClient.getArray(this.arrayId); // note: auto listen
     
     // console.log('link', this.r, this.arrayId, dcArray.toArray());
+
+    // if (this.arrayId === 'worldApps') {
+    //   console.log('link world apps', dcArray.toArray());
+    // }
 
     if (!this.linkedRealms.has(realm.key)) {
       this.linkedRealms.set(realm.key, new Error().stack);
@@ -630,7 +653,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
           headTracker: this.headTracker,
         });
         this.virtualMaps.set(arrayIndexId, virtualMap);
-        localVirtualMaps.set(arrayIndexId, virtualMap);
+        // localVirtualMaps.set(arrayIndexId, virtualMap);
 
         virtualMap.addEventListener('garbagecollect', e => {
           this.dispatchEvent(new MessageEvent('entityremove', {
@@ -647,12 +670,15 @@ class VirtualEntityArray extends VirtualPlayersArray {
     
     const localLinks = new Map(); // arrayIndexId -> virtualMap
     const _linkMap = (realm, map) => { // XXX link map from 2 different realms
+      // if (this.arrayId === 'worldApps') {
+      //   console.log('link world map', this.r, map.arrayIndexId);
+      // }
       if (!map) {
         debugger;
       }
       const had = this.virtualMaps.has(map.arrayIndexId);
       const virtualMap = _getOrCreateVirtualMap(map.arrayIndexId);
-      console.log('link map', this.r, realm.key, Array.from(this.virtualMaps.entries()), map.arrayIndexId);
+      // console.log('link map', this.r, realm.key, Array.from(this.virtualMaps.entries()), map.arrayIndexId);
       virtualMap.link(realm);
       if (!had) {
         if (this.headTracker) {
@@ -673,10 +699,13 @@ class VirtualEntityArray extends VirtualPlayersArray {
       localLinks.set(map.arrayIndexId, virtualMap);
     };
     const _unlinkMap = (realm, arrayIndexId) => {
-      console.log('unlink map', this.r, realm.key, Array.from(this.virtualMaps.entries()), arrayIndexId);
+      // if (this.arrayId === 'worldApps') {
+      //   console.log('unlink world map', arrayIndexId);
+      // }
+      // console.log('unlink map', this.r, realm.key, Array.from(this.virtualMaps.entries()), arrayIndexId);
       const virtualMap = this.virtualMaps.get(arrayIndexId);
       if (!virtualMap) {
-        console.log('link stack', linkStack);
+        // console.log('link stack', linkStack);
         debugger;
       }
       virtualMap.unlink(realm, arrayIndexId);
@@ -689,7 +718,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
       const map = dcArray.getMap(arrayIndexId, {
         listen: false,
       });
-      console.log('VirtualEntityArray got entity add', this, arrayIndexId, realm.key, map);
+      // console.log('VirtualEntityArray got entity add', this, arrayIndexId, realm.key, map);
       _linkMap(realm, map);
     };
     dcArray.dataClient.addEventListener(addKey, onadd);
@@ -697,14 +726,14 @@ class VirtualEntityArray extends VirtualPlayersArray {
     const removeKey = 'remove.' + dcArray.arrayId;
     const onremove = e => {
       const {arrayIndexId} = e.data;
-      console.log('VirtualEntityArray got entity remove', this, arrayIndexId, realm.key, e.data, listenStack);
+      // console.log('VirtualEntityArray got entity remove', this, arrayIndexId, realm.key, e.data, listenStack);
       _unlinkMap(realm, arrayIndexId);
     };
     dcArray.dataClient.addEventListener(removeKey, onremove); // XXX listen to the base dataClient events, not each listener dcarray
     
     const removeArrayKey = 'removeArray.' + dcArray.arrayId;
     const onremovearray = e => {
-      console.log('got remove array', this, e.data);
+      // console.log('got remove array', this, e.data);
       const linkedArrayIds = Array.from(localLinks.keys());
       for (const arrayIndexId of linkedArrayIds) {
         _unlinkMap(realm, arrayIndexId);
@@ -714,7 +743,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
 
     const importArrayKey = 'importArray.' + this.arrayId;
     const onimportarray = e => {
-      console.log('VirtualEntityArray got importarray', e.data);
+      // console.log('VirtualEntityArray got importarray', e.data);
       const {arrayCrdtExport, mapCrdtExports} = e.data;
       for (const arrayIndexId in arrayCrdtExport) {
         const map = dcArray.dataClient.getArrayMap(this.arrayId, arrayIndexId, {

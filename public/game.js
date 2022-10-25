@@ -301,6 +301,7 @@ z-index: 2;
 
     // action methods
     const _pickupDrop = () => {
+      // console.log('drop 1');
       const targetPosition = [
         localPlayerCanvas.position[0] + localPlayerCanvas.direction[0] * frameSize,
         0,
@@ -347,7 +348,20 @@ z-index: 2;
           const targetRealm = realms.getClosestRealm(targetPosition);
           if (targetRealm) {
             // the app we will be dropping
-            const firstApp = realms.localPlayer.playerApps.first();
+            // const firstApp = realms.localPlayer.playerApps.first();
+            const actions = realms.localPlayer.playerActions.toArray();
+            const wearActionIndex = actions.findIndex(action => action.action === 'wear');
+            if (wearActionIndex === -1) {
+              debugger;
+            }
+            const firstAction = realms.localPlayer.playerActions.getVirtualMapAt(wearActionIndex);
+            if (!firstAction) {
+              debugger;
+            }
+            const firstApp = realms.localPlayer.playerApps.getVirtualMapAt(wearActionIndex);
+            if (!firstApp) {
+              debugger;
+            }
             
             // set dead hands
             // old location: player
@@ -381,6 +395,7 @@ z-index: 2;
 
             // remove from the old location (player)
             firstApp.remove();
+            firstAction.remove();
           } else {
             console.warn('no containing realm to drop to');
           }
