@@ -457,7 +457,7 @@ export class ChatRoom {
           const array = dataClient.getArray(arrayId, {
             listen: false,
           });
-          const removeUpdate = array.removeUpdate();
+          const removeUpdate = array.removeArrayUpdate();
           const removeUpdateBuffer = dataClient.serializeMessage(removeUpdate);
           proxyMessageToPeers(removeUpdateBuffer);
         }
