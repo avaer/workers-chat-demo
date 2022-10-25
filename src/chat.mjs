@@ -721,16 +721,21 @@ export class ChatRoom {
     // On "close" and "error" events, remove the WebSocket from the sessions list and broadcast
     // a quit message.
     let closeOrErrorHandler = evt => {
-      session.quit = true;
-      this.sessions = this.sessions.filter(member => member !== session);
-      
-      _triggerDeadHands();
+      try {
+        session.quit = true;
+        this.sessions = this.sessions.filter(member => member !== session);
+        
+        _triggerDeadHands();
 
-      _sendLeaveMessage();
-      
-      /* if (session.name) {
-        this.broadcast({quit: session.name});
-      } */
+        _sendLeaveMessage();
+        
+        /* if (session.name) {
+          this.broadcast({quit: session.name});
+        } */
+      } catch(err) {
+        console.warn(err.stack);
+        throw err;
+      }
     };
     webSocket.addEventListener("close", closeOrErrorHandler);
     webSocket.addEventListener("error", closeOrErrorHandler);
