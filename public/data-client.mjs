@@ -264,6 +264,8 @@ export class DCArray extends EventTarget {
     this.arrayId = arrayId;
     this.dataClient = dataClient;
 
+    this.r = Math.random();
+    this.stack = new Error().stack;
     this.cleanupFn = null;
   }
   getKeys() {
