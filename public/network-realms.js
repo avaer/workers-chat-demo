@@ -1,4 +1,4 @@
-import {DataClient, NetworkedDataClient, DCMap, DCArray} from './data-client.mjs';
+import {DataClient, NetworkedDataClient, DCMap, DCArray, convertCrdtValToVal} from './data-client.mjs';
 import {NetworkedIrcClient} from './irc-client.js';
 import {NetworkedAudioClient} from './audio-client.js';
 import {createWs, makePromise, makeId} from './util.mjs';
@@ -251,15 +251,19 @@ class VirtualPlayer extends HeadTrackedEntity {
       console.log('move realm ', playerId, oldHeadRealm.key, ' -> ', newHeadRealm.key);
 
       // set dead hands
+      const deadHandKeys = [
+        this.arrayId + '.' + this.arrayIndexId, // player
+        'playerApps:' + this.arrayIndexId, // playerApps
+        'playerActions:' + this.arrayIndexId, // playerActions
+      ];
       const _emitDeadHands = realm => {
-        const keys = [
-          this.arrayId + '.' + this.arrayIndexId, // player
-          'playerApps:' + this.arrayIndexId, // playerApps
-          'playerActions:' + this.arrayIndexId, // playerActions
-        ];
-        const deadHandupdate = realm.dataClient.deadHandKeys(keys, this.realms.playerId);
+        const deadHandupdate = realm.dataClient.deadHandKeys(deadHandKeys, this.realms.playerId);
         realm.emitUpdate(deadHandupdate);
       };
+      /* const _emitLiveHands = realm => {
+        const liveHandupdate = realm.dataClient.liveHandKeys(deadHandKeys, this.realms.playerId);
+        realm.emitUpdate(liveHandupdate);
+      }; */
       _emitDeadHands(oldHeadRealm);
       _emitDeadHands(newHeadRealm);
 
