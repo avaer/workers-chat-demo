@@ -201,9 +201,10 @@ class ReadableHeadTracker extends EventTarget {
 //
 
 class EntityTracker extends EventTarget {
-  constructor(headTracker = null) {
+  constructor(arrayId, headTracker = null) {
     super();
 
+    this.arrayId = arrayId;
     this.headTracker = headTracker;
 
     this.virtualMaps = new Map();
@@ -236,7 +237,7 @@ class EntityTracker extends EventTarget {
       return virtualMap;
     };
 
-    const added = this.virtualMaps.has(map.arrayIndexId);
+    const added = !this.virtualMaps.has(map.arrayIndexId);
     const virtualMap = _getOrCreateVirtualMap(map.arrayIndexId);
     // console.log('link map', this.r, realm.key, Array.from(this.virtualMaps.entries()), map.arrayIndexId);
     virtualMap.link(realm);
@@ -256,9 +257,10 @@ class EntityTracker extends EventTarget {
         },
       }));
     }
+    return virtualMap;
   }
   unlinkMap(realm, arrayIndexId) {
-    console.log('unlink map', this.r, realm.key, this.arrayId);
+    // console.log('unlink map', this.r, realm.key, this.arrayId);
     const virtualMap = this.virtualMaps.get(arrayIndexId);
     if (!virtualMap) {
       debugger;
@@ -273,14 +275,15 @@ class EntityTracker extends EventTarget {
     const localVirtualMaps = new Map();
 
     const addKey = 'add.' + dcArray.arrayId;
+    // console.log('listen add', addKey);
     const onadd = e => {
       const {arrayIndexId} = e.data;
       const map = dcArray.getMap(arrayIndexId, {
         listen: false,
       });
       // console.log('VirtualEntityArray got entity add', this, arrayIndexId, realm.key, map);
-      this.linkMap(realm, map);
-      localVirtualMaps.set(arrayIndexId, map);
+      const virtualMap = this.linkMap(realm, map);
+      localVirtualMaps.set(arrayIndexId, virtualMap);
     };
     dcArray.dataClient.addEventListener(addKey, onadd);
     const removeKey = 'remove.' + dcArray.arrayId;
@@ -294,9 +297,8 @@ class EntityTracker extends EventTarget {
     
     const removeArrayKey = 'removeArray.' + dcArray.arrayId;
     const onremovearray = e => {
-      debugger;
       // console.log('got remove array', this, e.data);
-      const linkedArrayIds = Array.from(localLinks.keys());
+      const linkedArrayIds = Array.from(localVirtualMaps.keys());
       for (const arrayIndexId of linkedArrayIds) {
         this.unlinkMap(realm, arrayIndexId);
         localVirtualMaps.delete(arrayIndexId);
@@ -311,8 +313,8 @@ class EntityTracker extends EventTarget {
         const map = dcArray.dataClient.getArrayMap(this.arrayId, arrayIndexId, {
           listen: false,
         });
-        this.linkMap(realm, map);
-        localVirtualMaps.set(arrayIndexId, map);
+        const virtualMap = this.linkMap(realm, map);
+        localVirtualMaps.set(arrayIndexId, virtualMap);
       }
     };
     dcArray.dataClient.addEventListener(importArrayKey, onimportarray);
@@ -321,11 +323,13 @@ class EntityTracker extends EventTarget {
     const arrayIndexIds = dcArray.getKeys();
     for (const arrayIndexId of arrayIndexIds) {
       const map = new DCMap(this.arrayId, arrayIndexId, realm.dataClient);
-      this.linkMap(realm, map);
-      localVirtualMaps.set(arrayIndexId, map);
+      const virtualMap = this.linkMap(realm, map);
+      localVirtualMaps.set(arrayIndexId, virtualMap);
     }
 
     this.cleanupFns.set(realm, () => {
+      // console.log('unlisten add', addKey);
+
       // unbind array virtual maps
       dcArray.unlisten();
       dcArray.dataClient.removeEventListener(addKey, onadd);
@@ -334,6 +338,9 @@ class EntityTracker extends EventTarget {
       dcArray.dataClient.removeEventListener(importArrayKey, onimportarray);
 
       for (const localVirtualMap of localVirtualMaps.values()) {
+        if (!localVirtualMap.unlinkFilter) {
+          debugger;
+        }
         localVirtualMap.unlinkFilter((arrayIndexId, map) => {
           if (!map?.dataClient?.userData?.realm) {
             debugger;
@@ -752,14 +759,16 @@ class VirtualEntityArray extends VirtualPlayersArray {
     super(arrayId, realms);
 
     this.headTracker = opts?.headTracker ?? null;
-    this.entityTracker = opts?.entityTracker ?? new EntityTracker(this.headTracker);
+    this.entityTracker = opts?.entityTracker ?? new EntityTracker(this.arrayId, this.headTracker);
 
     this.entityTracker.addEventListener('entityadd', e => {
+      console.log('entity tracker add', e.data);
       this.dispatchEvent(new MessageEvent('entityadd', {
         data: e.data,
       }));
     });
     this.entityTracker.addEventListener('entityremove', e => {
+      console.log('entity tracker remove', e.data);
       this.dispatchEvent(new MessageEvent('entityremove', {
         data: e.data,
       }));
@@ -963,7 +972,7 @@ class VirtualEntityMap extends HeadTrackedEntity {
     });
   }
   unlink(realm) {
-    console.log('unlink realm', realm.key, this.arrayIndexId);
+    // console.log('unlink realm', realm.key, this.arrayIndexId);
 
     // const map = this.maps.get(realm);
     // if (!map) {
