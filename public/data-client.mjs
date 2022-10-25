@@ -1,6 +1,10 @@
 import {zbencode, zbdecode} from "./encoding.mjs";
 import {UPDATE_METHODS} from "./update-types.js";
-import {parseUpdateObject, makeId, serializeMessage} from "./util.mjs";
+import {
+  parseUpdateObject,
+  makeId,
+  serializeMessage,
+} from "./util.mjs";
 
 //
 
