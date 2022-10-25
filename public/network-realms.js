@@ -911,12 +911,12 @@ class VirtualEntityMap extends HeadTrackedEntity {
     } */
 
     const map = this.maps.get(realm);
-    if (!map) {
-      debugger;
-    }
-    if (!this.links.has(realm)) {
-      debugger;
-    }
+    // if (!map) {
+    //   debugger;
+    // }
+    // if (!this.links.has(realm)) {
+    //   debugger;
+    // }
     this.links.delete(realm);
 
     // const {arrayIndexId} = map;
@@ -929,7 +929,7 @@ class VirtualEntityMap extends HeadTrackedEntity {
 
     // garbage collect
     if (this.maps.size === 0) {
-      console.log('garbage collect virtual entity map', this.arrayIndexId);
+      console.log('garbage collect virtual entity map', this.arrayId, this.arrayIndexId);
       this.dispatchEvent(new MessageEvent('garbagecollect'));
     }
   }
