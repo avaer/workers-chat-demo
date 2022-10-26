@@ -475,18 +475,14 @@ class VirtualPlayer extends HeadTrackedEntity {
     this.realms = realms;
     this.name = name;
 
-    if (!this.headTracker) {
-      debugger;
-    }
-
     const readableHeadTracker = this.headTracker.getReadable();
     this.playerApps = new VirtualEntityArray('playerApps:' + this.arrayIndexId, this.realms, {
       headTracker: readableHeadTracker,
-      entityTracker: opts?.entityTracker,
+      entityTracker: opts?.appsEntityTracker,
     });
     this.playerActions = new VirtualEntityArray('playerActions:' + this.arrayIndexId, this.realms, {
       headTracker: readableHeadTracker,
-      entityTracker: opts?.entityTracker,
+      entityTracker: opts?.actionsEntityTracker,
     });
     this.cleanupMapFns = new Map();
 
@@ -628,7 +624,8 @@ class VirtualPlayersArray extends EventTarget {
     let virtualPlayer = this.virtualPlayers.get(playerId);
     if (!virtualPlayer) {
       virtualPlayer = new VirtualPlayer(this.arrayId, playerId, this.parent, 'remote', {
-        entityTracker: this.opts?.entityTracker,
+        appsEntityTracker: this.opts?.appsEntityTracker,
+        actionsEntityTracker: this.opts?.actionsEntityTracker,
       });
       this.virtualPlayers.set(playerId, virtualPlayer);
     }
@@ -772,19 +769,26 @@ class VirtualEntityArray extends VirtualPlayersArray {
       const {entityId, entity} = e.data;
       const needledEntity = new NeedledVirtualEntityMap(entity, this.headTracker);
       
+      const linkedRealms = new Set();
       const onlink = e => {
         const {realm} = e.data;
         needledEntity.headTracker.linkRealm(realm);
+        linkedRealms.add(realm);
       };
       needledEntity.addEventListener('link', onlink);
 
       const onunlink = e => {
         const {realm} = e.data;
         needledEntity.headTracker.unlinkRealm(realm);
+        linkedRealms.remove(realm);
       };
       needledEntity.addEventListener('unlink', onunlink);
 
       needledEntity.cleanupFn = () => {
+        for (const realm of linkedRealms) {
+          needledEntity.headTracker.unlinkRealm(realm);
+        }
+
         needledEntity.removeEventListener('link', onlink);
         needledEntity.removeEventListener('unlink', onunlink);
       };
@@ -1063,7 +1067,7 @@ class HeadlessVirtualEntityMap extends EventTarget {
     // garbage collect
     if (this.maps.size === 0) {
       console.log('garbage collect virtual entity map', arrayId, this.arrayIndexId);
-      if (/playerApps/.test(this.parent.arrayId)) {
+      if (/playerApps/.test(arrayId)) {
         debugger;
       }
       this.dispatchEvent(new MessageEvent('garbagecollect'));
@@ -1256,22 +1260,25 @@ export class NetworkRealms extends EventTarget {
 
     this.lastPosition = [NaN, NaN, NaN];
     this.headTracker = new HeadTracker();
-    this.entityTracker = new EntityTracker();
+    this.appsEntityTracker = new EntityTracker();
+    this.actionsEntityTracker = new EntityTracker();
     this.localPlayer = new VirtualPlayer('players', this.playerId, this, 'local', {
       headTracker: this.headTracker,
-      entityTracker: this.entityTracker,
+      appsEntityTracker: this.appsEntityTracker,
+      actionsEntityTracker: this.actionsEntityTracker,
     });
 
     this.players = new VirtualPlayersArray('players', this, {
       headTracker: this.headTracker,
-      entityTracker: this.entityTracker,
+      appsEntityTracker: this.appsEntityTracker,
+      actionsEntityTracker: this.actionsEntityTracker,
     });
     this.headTracker.addEventListener('migrate', function(e) { // XXX bind local this -> this.localPlayer
       const {oldHeadRealm, newHeadRealm} = e.data;
 
-      if (typeof this.arrayIndexId !== 'string') {
-        debugger;
-      }
+      // if (typeof this.arrayIndexId !== 'string') {
+      //   debugger;
+      // }
 
       // old objects
       const oldPlayersArray = oldHeadRealm.dataClient.getArray(this.arrayId, {
@@ -1342,7 +1349,7 @@ export class NetworkRealms extends EventTarget {
     }.bind(this.localPlayer));
     
     this.world = new VirtualWorld('worldApps', this, {
-      entityTracker: this.entityTracker,
+      entityTracker: this.appsEntityTracker,
     });
     this.irc = new VirtualIrc(this);
     this.connectedRealms = new Set();
