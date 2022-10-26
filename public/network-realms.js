@@ -264,8 +264,7 @@ class EntityTracker extends EventTarget {
       let virtualMap = this.virtualMaps.get(map.arrayIndexId);
       if (!virtualMap) {
         // console.log('*** create new', arrayIndexId);
-        virtualMap = new HeadlessVirtualEntityMap(arrayIndexId); // XXX pass through head tracker?
-        // XXX emit virtual entity create event to bind head tracker?
+        virtualMap = new HeadlessVirtualEntityMap(arrayIndexId);
         if (!map.arrayIndexId) {
           debugger;
         }
@@ -360,7 +359,7 @@ class EntityTracker extends EventTarget {
       this.unlinkMap(realm, dcArray.arrayId, arrayIndexId);
       localVirtualMaps.delete(arrayIndexId);
     };
-    dcArray.dataClient.addEventListener(removeKey, onremove); // XXX listen to the base dataClient events, not each listener dcarray
+    dcArray.dataClient.addEventListener(removeKey, onremove);
     
     const removeArrayKey = 'removeArray.' + dcArray.arrayId;
     const onremovearray = e => {
@@ -430,19 +429,8 @@ class EntityTracker extends EventTarget {
     });
   }
   // returns whether the realm was linked
-  link(arrayId, realm) { // XXX pass in array id?
+  link(arrayId, realm) {
     this.#linkInternal(arrayId, realm);
-    return true;
-    /* if (!this.linkedRealms.has(realm.key)) {
-      this.linkedRealms.set(realm.key, 1);
-      this.#linkInternal(arrayId, realm);
-      return true;
-    } else {
-      let numRealms = this.linkedRealms.get(realm.key);
-      numRealms++;
-      this.linkedRealms.set(realm.key, numRealms);
-      return false;
-    } */
   }
   #unlinkInternal(arrayId, realm) {
     const key = arrayId + ':' + realm.key;
@@ -452,17 +440,6 @@ class EntityTracker extends EventTarget {
   // returns whether the realm was unlinked
   unlink(arrayId, realm) {
     this.#unlinkInternal(arrayId, realm);
-    return true;
-    /* let numRealms = this.linkedRealms.get(realm.key);
-    numRealms--;
-    if (numRealms > 0) {
-      this.linkedRealms.set(realm.key, numRealms);
-      return false;
-    } else {
-      this.#unlinkInternal(arrayId, realm);
-      this.linkedRealms.delete(realm.key);
-      return true;
-    } */
   }
 }
 
@@ -519,7 +496,6 @@ class VirtualPlayer extends HeadTrackedEntity {
         // console.log('initialize player add player app 1', appVal, appId);
         const map = this.playerApps.addEntityAt(appId, appVal, headRealm);
         // console.log('initialize player add player app 2', appVal, appId, map);
-        // XXX listen for this in the local player renderer
       }
     };
     _initializeApps();
@@ -534,7 +510,6 @@ class VirtualPlayer extends HeadTrackedEntity {
         // console.log('add entity 1');
         const map = this.playerActions.addEntityAt(actionId, actionVal, headRealm);
         // console.log('added player action', actionVal, actionId, map);
-        // XXX listen for this in the local player renderer
         // console.log('add entity 2');
       }
     };
