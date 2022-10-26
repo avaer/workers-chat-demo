@@ -45,7 +45,7 @@ export const startGame = async () => {
       const localPlayerApps = realms.localPlayer.playerApps;
       const localPlayerActions = realms.localPlayer.playerActions;
       const playersArray = dataClient.getArray('players');
-      const worldApps = dataClient.getArray('worldApps');
+      // const worldApps = dataClient.getArray('worldApps');
 
       const onentityadd = e => {
         // const {entity} = e.data;
@@ -88,27 +88,27 @@ export const startGame = async () => {
       const onentityadd2 = e => {
         // const {entity} = e.data;
         console.log('world app entity add', e.data);
+        debugger; // XXX render in the world until worn
         el.updateText(dataClient);
       };
-      worldApps.addEventListener('add', onentityadd2);
+      virtualWorld.addEventListener('entityadd', onentityadd2);
 
       const onentityremove2 = e => {
         // const {entity} = e.data;
         console.log('world app entity remove', e.data);
         el.updateText(dataClient);
       };
-      worldApps.addEventListener('remove', onentityremove2);
+      virtualWorld.addEventListener('entityremove', onentityremove2);
   
       realmCleanupFns.set(realm, () => {
         localPlayerApps.removeEventListener('entityadd', onentityadd);
         localPlayerActions.removeEventListener('entityadd', onentityadd);
         dataClient.removeEventListener('add', onadd);
         dataClient.removeEventListener('remove', onremove);
-        worldApps.removeEventListener('add', onentityadd2);
-        worldApps.removeEventListener('remove', onentityremove2);
+        virtualWorld.removeEventListener('entityadd', onentityadd2);
+        virtualWorld.removeEventListener('entityremove', onentityremove2);
 
         playersArray.unlisten();
-        worldApps.unlisten();
 
         // console.log('game players array cancel on realm', realm.key);
       });
