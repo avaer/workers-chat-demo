@@ -240,7 +240,7 @@ class EntityTracker extends EventTarget {
     const _getOrCreateVirtualMap = (arrayIndexId) => {
       let virtualMap = this.virtualMaps.get(map.arrayIndexId);
       if (!virtualMap) {
-        console.log('(*** create new', arrayIndexId);
+        // console.log('*** create new', arrayIndexId);
         virtualMap = new VirtualEntityMap(arrayIndexId); // XXX pass through head tracker?
         // XXX emit virtual entity create event to bind head tracker?
         this.virtualMaps.set(map.arrayIndexId, virtualMap);
@@ -255,7 +255,7 @@ class EntityTracker extends EventTarget {
           }));
         });
       } else {
-        console.log('*** create old', arrayIndexId);
+        // console.log('*** create old', arrayIndexId);
       }
       return virtualMap;
     };
