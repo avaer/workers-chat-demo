@@ -474,7 +474,7 @@ class VirtualPlayer extends HeadTrackedEntity {
 
     const readableHeadTracker = this.headTracker.getReadable();
     this.playerApps = new VirtualEntityArray('playerApps:' + this.arrayIndexId, this.realms, {
-      headTracker: readableHeadTracker,
+      headTracker: readableHeadTracker, // XXX does nothing due to entity tracker taking charge of virtual entity head tracker creation
       entityTracker: opts?.entityTracker,
     });
     this.playerActions = new VirtualEntityArray('playerActions:' + this.arrayIndexId, this.realms, {
@@ -514,7 +514,7 @@ class VirtualPlayer extends HeadTrackedEntity {
         headRealm.emitUpdate(deadHandUpdate);
 
         // console.log('initialize player add player app 1', appVal, appId);
-        const map = this.playerApps.addEntityAt(appId, appVal);
+        const map = this.playerApps.addEntityAt(appId, appVal, headRealm);
         // console.log('initialize player add player app 2', appVal, appId, map);
         // XXX listen for this in the local player renderer
       }
@@ -529,7 +529,7 @@ class VirtualPlayer extends HeadTrackedEntity {
         headRealm.emitUpdate(deadHandUpdate);
 
         // console.log('add entity 1');
-        const map = this.playerActions.addEntityAt(actionId, actionVal);
+        const map = this.playerActions.addEntityAt(actionId, actionVal, headRealm);
         // console.log('added player action', actionVal, actionId, map);
         // XXX listen for this in the local player renderer
         // console.log('add entity 2');
@@ -775,10 +775,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
       }));
     });
   }
-  addEntityAt(arrayIndexId, val) {
-    const position = val[positionKey] ?? [0, 0, 0];
-    const realm = this.parent.getClosestRealm(position);
-    
+  addEntityAt(arrayIndexId, val, realm) {
     // XXX remove this to retain objects
     const deadHandUpdate = realm.dataClient.deadHandArrayMap(this.arrayId, arrayIndexId, this.parent.playerId);
     realm.emitUpdate(deadHandUpdate);
@@ -788,7 +785,6 @@ class VirtualEntityArray extends VirtualPlayersArray {
       map,
       update,
     } = array.addAt(arrayIndexId, val);
-    // map.setHeadRealm(realm);
     realm.emitUpdate(update);
 
     return map;
@@ -796,9 +792,9 @@ class VirtualEntityArray extends VirtualPlayersArray {
   getSize() {
     return this.entityTracker.getSize();
   }
-  addEntity(val) {
-    return this.addEntityAt(makeId(), val);
-  }
+  /* addEntity(val, realm) {
+    return this.addEntityAt(makeId(), val, realm);
+  } */
   /* first() {
     for (const map of this.virtualMaps.values()) {
       return map;
