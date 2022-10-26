@@ -100,21 +100,21 @@ export const startGame = async () => {
         // const {entity} = e.data;
         el.updateText(dataClient);
       };
-      virtualWorld.addEventListener('entityadd', onentityadd2);
+      virtualWorld.addEventListener('needledentityadd', onentityadd2);
 
       const onentityremove2 = e => {
         // const {entity} = e.data;
         el.updateText(dataClient);
       };
-      virtualWorld.addEventListener('entityremove', onentityremove2);
+      virtualWorld.addEventListener('needledentityremove', onentityremove2);
   
       realmCleanupFns.set(realm, () => {
-        localPlayerApps.removeEventListener('entityadd', onentityadd);
-        localPlayerActions.removeEventListener('entityadd', onentityadd);
+        localPlayerApps.removeEventListener('needledentityadd', onentityadd);
+        localPlayerActions.removeEventListener('needledentityadd', onentityadd);
         dataClient.removeEventListener('add', onadd);
         dataClient.removeEventListener('remove', onremove);
-        virtualWorld.removeEventListener('entityadd', onentityadd2);
-        virtualWorld.removeEventListener('entityremove', onentityremove2);
+        virtualWorld.removeEventListener('needledentityadd', onentityadd2);
+        virtualWorld.removeEventListener('needledentityremove', onentityremove2);
 
         playersArray.unlisten();
 
@@ -405,6 +405,7 @@ z-index: 2;
             //   debugger;
             // }
             const firstAction = realms.localPlayer.playerActions.getVirtualMapAt(wearActionIndex);
+            debugger;
             // if (!firstAction) {
             //   debugger;
             // }
