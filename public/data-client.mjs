@@ -48,6 +48,10 @@ export class DCMap extends EventTarget {
   constructor(arrayId, arrayIndexId, dataClient) {
     super();
 
+    if (arrayId === undefined || arrayIndexId === undefined) {
+      debugger;
+    }
+
     this.arrayId = arrayId;
     this.arrayIndexId = arrayIndexId;
     this.dataClient = dataClient;
@@ -640,6 +644,9 @@ export class DataClient extends EventTarget {
     });
   }
   deadHandArrayMap(arrayId, arrayIndexId, deadHand) {
+    if (typeof arrayIndexId !== 'string') {
+      debugger;
+    }
     return this.deadHandKeys([arrayId + '.' + arrayIndexId], deadHand);
   }
   deadHandArrayMaps(arrayId, arrayIndexId, deadHand) {

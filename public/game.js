@@ -372,10 +372,20 @@ z-index: 2;
           position[1] >= box.min[1] && position[1] <= box.max[1] &&
           position[2] >= box.min[2] && position[2] <= box.max[2];
       };
+      const _needledEntityIsWorn = needledEntity => {
+        const actions = realms.localPlayer.playerActions.toArray();
+        const action = actions.find(action => action.action === 'wear' && action.appId === needledEntity.entityMap.arrayIndexId);
+        return !!action;
+      };
       
       const collidedVirtualMap = Array.from(virtualWorld.worldApps.needledVirtualEntities.values()).find(needledEntityMap => {
-        const position = needledEntityMap.get('position');
-        return !!position && _boxContains(targetBox, position);
+        const worn = _needledEntityIsWorn(needledEntityMap);
+        if (!worn) {
+          const position = needledEntityMap.get('position');
+          return !!position && _boxContains(targetBox, position);
+        } else {
+          return false;
+        }
       });
       // const inventory = document.querySelector('#inventory');
       // const inventoryItems = Array.from(inventory.querySelectorAll('.realms-item'));
@@ -405,7 +415,6 @@ z-index: 2;
             //   debugger;
             // }
             const firstAction = realms.localPlayer.playerActions.getVirtualMapAt(wearActionIndex);
-            debugger;
             // if (!firstAction) {
             //   debugger;
             // }
@@ -413,20 +422,26 @@ z-index: 2;
             // if (!firstApp) {
             //   debugger;
             // }
+
+            // console.log('set key value 1');
+            // firstApp.setKeyValue('position', targetPosition);
+            // console.log('set key value 2');
+            // firstAction.setKeyValue('position', targetPosition);
+            // console.log('set key value 3');
             
             // set dead hands
             // old location: player
             // the player already has deadhand on all of its apps, probably?
-            // const deadHandUpdate = firstApp.headRealm.dataClient.deadHandArrayMap(
+            // const deadHandUpdate = firstApp.headRealm.dataClient.deadHandArrayMaps(
             //   realms.localPlayer.playerApps.arrayId,
-            //   [firstApp.arrayIndexId],
+            //   [firstApp.entityMap.arrayIndexId],
             //   realms.playerId,
             // );
             // firstApp.headRealm.emitUpdate(deadHandUpdate);
             // new location: world
-            const deadHandUpdate = targetRealm.dataClient.deadHandArrayMap(
+            const deadHandUpdate = targetRealm.dataClient.deadHandArrayMaps(
               'worldApps',
-              [firstApp.arrayIndexId],
+              [firstApp.entityMap.arrayIndexId],
               realms.playerId,
             );
             targetRealm.emitUpdate(deadHandUpdate);
@@ -435,11 +450,14 @@ z-index: 2;
             const worldApps = targetRealm.dataClient.getArray('worldApps', {
               listen: false,
             });
+            if (!firstApp?.toObject) {
+              debugger;
+            }
             const firstAppJson = firstApp.toObject();
             const {
               update,
               // map,
-            } = worldApps.addAt(firstApp.arrayIndexId, firstAppJson, {
+            } = worldApps.addAt(firstApp.entityMap.arrayIndexId, firstAppJson, {
               listen: false,
             });
             targetRealm.emitUpdate(update);
@@ -450,7 +468,7 @@ z-index: 2;
 
             const liveHandUpdate = targetRealm.dataClient.liveHandArrayMap(
               'worldApps',
-              [firstApp.arrayIndexId],
+              [firstApp.entityMap.arrayIndexId],
               realms.playerId,
             );
             targetRealm.emitUpdate(liveHandUpdate);
