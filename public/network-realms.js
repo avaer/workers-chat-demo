@@ -844,11 +844,20 @@ class VirtualEntityArray extends VirtualPlayersArray {
     return needledEntity;
   }
   toArray() {
+    return Array.from(this.needledVirtualEntities.values()).map(needledEntity => {
+      const realm = needledEntity.headTracker.getHeadRealm();
+      const entityMap = needledEntity.entityMap;
+      const headMap = entityMap.getHeadMapFromRealm(realm);
+      return headMap.toObject();
+    });
+    /* if (!this.headTracker) {
+      debugger;
+    }
     const headRealm = this.headTracker.getHeadRealm();
     const array = headRealm.dataClient.getArray(this.arrayId, {
       listen: false,
     });
-    return array.toArray();
+    return array.toArray(); */
   }
   linkedRealms = new Map();
   link(realm) {
@@ -1182,7 +1191,9 @@ class VirtualWorld extends EventTarget {
   constructor(arrayId, realms, opts) {
     super();
 
-    this.worldApps = new VirtualEntityArray(arrayId, realms, opts);
+    this.worldApps = new VirtualEntityArray(arrayId, realms, {
+      entityTracker: opts?.entityTracker,
+    });
     const needledEntityCleanupFns = new Map();
     this.worldApps.addEventListener('needledentityadd', e => {
       // XXX this needs to filter for the arrayId we are interested in
@@ -1253,6 +1264,8 @@ export class NetworkRealms extends EventTarget {
     });
     this.headTracker.addEventListener('migrate', function(e) { // XXX bind local this -> this.localPlayer
       const {oldHeadRealm, newHeadRealm} = e.data;
+
+      debugger;
 
       // if (typeof this.arrayIndexId !== 'string') {
       //   debugger;

@@ -1,4 +1,5 @@
-import {makeId} from './util.mjs';
+import {makeId, zstringify} from './util.mjs';
+// import {zstringify} from './encoding.mjs';
 import {frameSize, realmSize} from './constants.js';
 
 import {RemotePlayerCursorHtmlRenderer, GameRealmsCanvases, GamePlayerCanvas, LocalPlayerHtmlRenderer, WorldItemHtmlRenderer} from "./renderers/html-renderer.js";
@@ -407,6 +408,22 @@ z-index: 2;
           if (targetRealm) {
             console.log('drop to target realm', targetRealm.key, targetRealm);
 
+            // const worldApps = targetRealm.dataClient.getArray('worldApps', {
+            //   listen: false,
+            // });
+
+            const _sanityCheck = () => {
+              const a = virtualWorld.worldApps.toArray();
+              const s = zstringify(a);
+              if (s.includes('{}')) {
+                debugger;
+                throw new Error('sanity check failed!');
+              }
+              return a;
+            };
+            _sanityCheck();
+            globalThis.sanityCheck = _sanityCheck;
+
             // the app we will be dropping
             // const firstApp = realms.localPlayer.playerApps.first();
             const actions = realms.localPlayer.playerActions.toArray();
@@ -414,14 +431,20 @@ z-index: 2;
             // if (wearActionIndex === -1) {
             //   debugger;
             // }
+            _sanityCheck();
+
             const firstAction = realms.localPlayer.playerActions.getVirtualMapAt(wearActionIndex);
             // if (!firstAction) {
             //   debugger;
             // }
+            _sanityCheck();
+
             const firstApp = realms.localPlayer.playerApps.getVirtualMapAt(wearActionIndex);
             // if (!firstApp) {
             //   debugger;
             // }
+            _sanityCheck();
+
 
             // console.log('set key value 1');
             // firstApp.setKeyValue('position', targetPosition);
@@ -446,25 +469,29 @@ z-index: 2;
             );
             targetRealm.emitUpdate(deadHandUpdate);
 
+            _sanityCheck();
+
             // add at the new location (world)
-            const worldApps = targetRealm.dataClient.getArray('worldApps', {
-              listen: false,
-            });
-            if (!firstApp?.toObject) {
+            const firstAppJson = firstApp.toObject();
+            if (!virtualWorld.worldApps.addAt) {
               debugger;
             }
-            const firstAppJson = firstApp.toObject();
             const {
               update,
-              // map,
-            } = worldApps.addAt(firstApp.entityMap.arrayIndexId, firstAppJson, {
+              map,
+            } = virtualWorld.worldApps.addAt(firstApp.entityMap.arrayIndexId, firstAppJson, {
               listen: false,
             });
             targetRealm.emitUpdate(update);
 
+            console.log('sanity check', map, _sanityCheck());
+            debugger;
+
             // remove from the old location (player)
             firstApp.remove();
+            _sanityCheck();
             firstAction.remove();
+            _sanityCheck();
 
             const liveHandUpdate = targetRealm.dataClient.liveHandArrayMap(
               'worldApps',
@@ -472,6 +499,10 @@ z-index: 2;
               realms.playerId,
             );
             targetRealm.emitUpdate(liveHandUpdate);
+
+            _sanityCheck();
+            
+            console.log('drop 2');
           } else {
             console.warn('no containing realm to drop to');
           }
@@ -480,7 +511,7 @@ z-index: 2;
           debugger;
         }
       }
-      console.log('drop 2');
+      console.log('drop 3');
     };
   };
   _initRenderers();

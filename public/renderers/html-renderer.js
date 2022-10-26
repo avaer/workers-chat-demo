@@ -385,6 +385,10 @@ z-index: 1;
 
             let worldAppsString = '';
             if (worldApps.getSize() > 0) {
+              const s = zstringify(worldApps.toArray());
+              if (s.includes('{}')) {
+                debugger;
+              }
               worldAppsString = `worldApps: [\n${zstringify(worldApps.toArray())}\n]`;
             } else {
               worldAppsString = `worldApps: []`;
