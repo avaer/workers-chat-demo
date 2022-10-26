@@ -806,6 +806,9 @@ class VirtualEntityArray extends VirtualPlayersArray {
     } = array.addAt(arrayIndexId, val);
     realm.emitUpdate(update);
 
+    const liveHandUpdate = realm.dataClient.liveHandArrayMap(this.arrayId, arrayIndexId, this.parent.playerId);
+    realm.emitUpdate(liveHandUpdate);
+
     return map;
   }
   getSize() {
