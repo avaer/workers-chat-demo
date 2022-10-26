@@ -476,13 +476,7 @@ z-index: 2;
             if (!virtualWorld.worldApps.addAt) {
               debugger;
             }
-            const {
-              update,
-              map,
-            } = virtualWorld.worldApps.addAt(firstApp.entityMap.arrayIndexId, firstAppJson, {
-              listen: false,
-            });
-            targetRealm.emitUpdate(update);
+            const map = virtualWorld.worldApps.addEntityAt(firstApp.entityMap.arrayIndexId, firstAppJson, targetRealm);
 
             console.log('sanity check', map, _sanityCheck());
             debugger;

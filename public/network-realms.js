@@ -734,6 +734,8 @@ class VirtualEntityArray extends VirtualPlayersArray {
   constructor(arrayId, realms, opts) {
     super(arrayId, realms);
 
+    // note: the head tracker is only for passing down to children
+    // we do not use it in this class, because arrays do not have a head
     this.headTracker = opts?.headTracker ?? null;
     this.entityTracker = opts?.entityTracker ?? null;
 
@@ -850,14 +852,6 @@ class VirtualEntityArray extends VirtualPlayersArray {
       const headMap = entityMap.getHeadMapFromRealm(realm);
       return headMap.toObject();
     });
-    /* if (!this.headTracker) {
-      debugger;
-    }
-    const headRealm = this.headTracker.getHeadRealm();
-    const array = headRealm.dataClient.getArray(this.arrayId, {
-      listen: false,
-    });
-    return array.toArray(); */
   }
   linkedRealms = new Map();
   link(realm) {
