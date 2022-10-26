@@ -31,6 +31,18 @@ export const startGame = async () => {
   const getRealmElement = realm => realmsCanvases.elements.find(el => {
     return el.min[0] === realm.min[0] && el.min[2] === realm.min[2];
   });
+
+  const onentityadd2 = e => {
+    // const {entity} = e.data;
+    console.log('world app entity add', e.data);
+  };
+  realms.getVirtualWorld().addEventListener('entityadd', onentityadd2);
+  const onentityremove2 = e => {
+    // const {entity} = e.data;
+    console.log('world app entity remove', e.data);
+  };
+  realms.getVirtualWorld().addEventListener('entityremove', onentityremove2);
+
   realms.addEventListener('realmjoin', e => {
     const {realm} = e.data;
     const el = getRealmElement(realm);
@@ -49,7 +61,6 @@ export const startGame = async () => {
 
       const onentityadd = e => {
         // const {entity} = e.data;
-        console.log('got entity add', e.data);
         el.updateText(dataClient);
       };
       localPlayerApps.addEventListener('entityadd', onentityadd);
@@ -87,15 +98,12 @@ export const startGame = async () => {
 
       const onentityadd2 = e => {
         // const {entity} = e.data;
-        console.log('world app entity add', e.data);
-        debugger; // XXX render in the world until worn
         el.updateText(dataClient);
       };
       virtualWorld.addEventListener('entityadd', onentityadd2);
 
       const onentityremove2 = e => {
         // const {entity} = e.data;
-        console.log('world app entity remove', e.data);
         el.updateText(dataClient);
       };
       virtualWorld.addEventListener('entityremove', onentityremove2);

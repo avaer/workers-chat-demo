@@ -261,6 +261,10 @@ export class DCMap extends EventTarget {
 export class DCArray extends EventTarget {
   constructor(arrayId, dataClient) {
     super();
+
+    if (!arrayId) {
+      debugger;
+    }
     this.arrayId = arrayId;
     this.dataClient = dataClient;
 
@@ -1079,6 +1083,7 @@ export class DataClient extends EventTarget {
         throw new Error('array index id not found in crdt');
       }
     } else {
+      debugger;
       throw new Error('array index not found in array');
     }
   }

@@ -101,9 +101,10 @@ class WritableHeadTracker extends EventTarget {
   }
   #headRealm = null;
   getHeadRealm() {
-    if (!this.#headRealm) {
-      console.warn('head tracker has no head! need to call updateHeadRealm()');
-    }
+    /* if (!this.#headRealm) {
+      debugger;
+      throw new Error('head tracker has no head! need to call updateHeadRealm()');
+    } */
     return this.#headRealm;
   }
   getReadable() {
@@ -200,16 +201,22 @@ class ReadableHeadTracker extends EventTarget {
 
 //
 
+let etCount = 0;
 class EntityTracker extends EventTarget {
-  constructor(headTracker, parent) {
+  constructor() {
     super();
 
-    this.headTracker = headTracker;
-    this.parent = parent;
+    console.log('make entity tracker', new Error().stack);
+    if (etCount > 0) {
+      debugger;
+    }
+    etCount++;
 
     this.virtualMaps = new Map();
     this.linkedRealms = new Map();
     this.cleanupFns = new Map();
+
+    this.stack = new Error().stack;
   }
   getSize() {
     return this.virtualMaps.size;
@@ -217,16 +224,13 @@ class EntityTracker extends EventTarget {
   linkMap(realm, map) {
     console.log('entity tracker link map', realm, map);
 
-    const key = map.arrayId + ':' + map.arrayIndexId;
-
     // bind local array maps to virtual maps
     const _getOrCreateVirtualMap = (arrayIndexId) => {
-      let virtualMap = this.virtualMaps.get(key);
+      let virtualMap = this.virtualMaps.get(map.arrayIndexId);
       if (!virtualMap) {
-        virtualMap = new VirtualEntityMap(arrayIndexId, this.parent, {
-          headTracker: this.headTracker,
-        });
-        this.virtualMaps.set(key, virtualMap);
+        console.log('(*** create new', arrayIndexId);
+        virtualMap = new VirtualEntityMap(arrayIndexId);
+        this.virtualMaps.set(map.arrayIndexId, virtualMap);
 
         virtualMap.addEventListener('garbagecollect', e => {
           this.dispatchEvent(new MessageEvent('entityremove', {
@@ -237,21 +241,23 @@ class EntityTracker extends EventTarget {
             },
           }));
         });
+      } else {
+        console.log('*** create old', arrayIndexId);
       }
       return virtualMap;
     };
 
-    const added = !this.virtualMaps.has(key);
+    const added = !this.virtualMaps.has(map.arrayIndexId);
     const virtualMap = _getOrCreateVirtualMap(map.arrayIndexId);
     // console.log('link map', this.r, realm.key, Array.from(this.virtualMaps.entries()), map.arrayIndexId);
-    virtualMap.link(realm); // XXX needs to support linking to multiple copies of the same realm
+    virtualMap.link(map.arrayId, realm); // XXX needs to support linking to multiple copies of the same realm
     if (added) {
-      if (this.headTracker) {
+      /* if (this.headTracker) {
         const initialPosition = map.getKey('position');
         if (initialPosition) {
           this.headTracker.updateHeadRealm(initialPosition);
         }
-      }
+      } */
 
       this.dispatchEvent(new MessageEvent('entityadd', {
         data: {
@@ -263,23 +269,27 @@ class EntityTracker extends EventTarget {
     }
     return virtualMap;
   }
-  unlinkMap(realm, arrayIndexId) {
+  unlinkMap(realm, arrayId, arrayIndexId) {
     console.log('entity tracker unlink map', realm, arrayIndexId);
 
-    if (window.lol) {
-      debugger;
-    }
+    // if (window.lol) {
+    //   debugger;
+    // }
 
-    const key = this.parent.arrayId + ':' + arrayIndexId;
-    const virtualMap = this.virtualMaps.get(key);
+    const virtualMap = this.virtualMaps.get(arrayIndexId);
     if (!virtualMap) {
       debugger;
     }
-    virtualMap.unlink(realm, arrayIndexId);
+    virtualMap.unlink(arrayId, realm);
   }
   // each realm will only be linked once
   #linkInternal(arrayId, realm) {
     const key = arrayId + ':' + realm.key;
+
+    if (!this.linkStacks) {
+      this.linkStacks = new Map();
+      this.linkStacks.set(key, new Error().stack);
+    }
 
     const {dataClient} = realm;
     const dcArray = dataClient.getArray(arrayId); // note: auto listen
@@ -302,7 +312,7 @@ class EntityTracker extends EventTarget {
     const onremove = e => {
       const {arrayIndexId} = e.data;
       console.log('VirtualEntityArray got entity remove', this, arrayIndexId, realm.key, e.data);
-      this.unlinkMap(realm, arrayIndexId);
+      this.unlinkMap(realm, dcArray.arrayId, arrayIndexId);
       localVirtualMaps.delete(arrayIndexId);
     };
     dcArray.dataClient.addEventListener(removeKey, onremove); // XXX listen to the base dataClient events, not each listener dcarray
@@ -313,7 +323,7 @@ class EntityTracker extends EventTarget {
       const linkedArrayIds = Array.from(localVirtualMaps.keys());
       for (const arrayIndexId of linkedArrayIds) {
         console.log('VirtualEntityArray got entity remove', this, arrayIndexId, realm.key, e.data);
-        this.unlinkMap(realm, arrayIndexId);
+        this.unlinkMap(realm, dcArray.arrayId, arrayIndexId);
         localVirtualMaps.delete(arrayIndexId);
       }
     };
@@ -412,12 +422,15 @@ class HeadTrackedEntity extends EventTarget {
 
     this.headTracker = headTracker || new WritableHeadTracker(this);
   }
-  get headRealm() {
+  setHeadTracker(headTracker) {
+    this.headTracker = headTracker;
+  }
+  /* get headRealm() {
     debugger;
   }
   set headRealm(v) {
     debugger;
-  }
+  } */
   isLinked() {
     debugger;
     return this.headTracker.isLinked();
@@ -432,91 +445,22 @@ class HeadTrackedEntity extends EventTarget {
 }
 
 class VirtualPlayer extends HeadTrackedEntity {
-  constructor(arrayId, arrayIndexId, realms, name) {
-    super();
+  constructor(arrayId, arrayIndexId, realms, name, opts) {
+    super(opts?.headTracker);
 
     this.arrayId = arrayId;
     this.arrayIndexId = arrayIndexId;
     this.realms = realms;
     this.name = name;
 
-    this.headTracker.addEventListener('migrate', e => {
-      const {oldHeadRealm, newHeadRealm} = e.data;
-
-      // old objects
-      const oldPlayersArray = oldHeadRealm.dataClient.getArray(this.arrayId, {
-        listen: false,
-      });
-      const oldPlayerAppsArray = oldHeadRealm.dataClient.getArray('playerApps:' + this.realms.playerId, {
-        listen: false,
-      });
-      const oldPlayerActionsArray = oldHeadRealm.dataClient.getArray('playerActions:' + this.realms.playerId, {
-        listen: false,
-      });
-      const oldPlayerMap = oldPlayersArray.getMap(this.arrayIndexId, {
-        listen: false,
-      });
-
-      // new objects
-      const newPlayersArray = newHeadRealm.dataClient.getArray(this.arrayId, {
-        listen: false,
-      });
-      const newPlayerAppsArray = newHeadRealm.dataClient.getArray('playerApps:' + this.realms.playerId, {
-        listen: false,
-      });
-      const newPlayerActionsArray = newHeadRealm.dataClient.getArray('playerActions:' + this.realms.playerId, {
-        listen: false,
-      });
-
-      const playerId = this.realms.playerId;
-      console.log('move realm ', playerId, oldHeadRealm.key, ' -> ', newHeadRealm.key);
-
-      // set dead hands
-      const deadHandKeys = [
-        this.arrayId + '.' + this.arrayIndexId, // player
-        'playerApps:' + this.arrayIndexId, // playerApps
-        'playerActions:' + this.arrayIndexId, // playerActions
-      ];
-      const _emitDeadHands = realm => {
-        const deadHandupdate = realm.dataClient.deadHandKeys(deadHandKeys, this.realms.playerId);
-        realm.emitUpdate(deadHandupdate);
-      };
-      /* const _emitLiveHands = realm => {
-        const liveHandupdate = realm.dataClient.liveHandKeys(deadHandKeys, this.realms.playerId);
-        realm.emitUpdate(liveHandupdate);
-      }; */
-      _emitDeadHands(oldHeadRealm);
-      _emitDeadHands(newHeadRealm);
-
-      // add new
-      // import apps
-      const playerAppsImportMessage = newPlayerAppsArray.importArrayUpdate(oldPlayerAppsArray);
-      newHeadRealm.emitUpdate(playerAppsImportMessage);
-      // import actions
-      const playerActionsImportMessage = newPlayerActionsArray.importArrayUpdate(oldPlayerActionsArray);
-      newHeadRealm.emitUpdate(playerActionsImportMessage);
-      // import player
-      const playerImportMessage = newPlayersArray.importMapUpdate(oldPlayerMap);
-      newHeadRealm.emitUpdate(playerImportMessage);
-
-      // delete old
-      // delete apps
-      const playerAppsDeleteMessage = oldPlayerAppsArray.removeArrayUpdate();
-      oldHeadRealm.emitUpdate(playerAppsDeleteMessage);
-      // delete actions
-      const playerActionsDeleteMessage = oldPlayerActionsArray.removeArrayUpdate();
-      oldHeadRealm.emitUpdate(playerActionsDeleteMessage);
-      // delete player
-      const oldPlayerRemoveUpdate = oldPlayerMap.removeUpdate();
-      oldHeadRealm.emitUpdate(oldPlayerRemoveUpdate);
-    });
-
     const readableHeadTracker = this.headTracker.getReadable();
     this.playerApps = new VirtualEntityArray('playerApps:' + this.arrayIndexId, this.realms, {
       headTracker: readableHeadTracker,
+      entityTracker: opts?.entityTracker,
     });
     this.playerActions = new VirtualEntityArray('playerActions:' + this.arrayIndexId, this.realms, {
       headTracker: readableHeadTracker,
+      entityTracker: opts?.entityTracker,
     });
     this.cleanupMapFns = new Map();
 
@@ -635,11 +579,12 @@ class VirtualPlayer extends HeadTrackedEntity {
 }
 
 class VirtualPlayersArray extends EventTarget {
-  constructor(arrayId, parent) {
+  constructor(arrayId, parent, opts) {
     super();
 
     this.arrayId = arrayId;
     this.parent = parent;
+    this.opts = opts;
 
     this.virtualPlayers = new Map();
     this.cleanupFns = new Map();
@@ -647,7 +592,9 @@ class VirtualPlayersArray extends EventTarget {
   getOrCreateVirtualPlayer(playerId) {
     let virtualPlayer = this.virtualPlayers.get(playerId);
     if (!virtualPlayer) {
-      virtualPlayer = new VirtualPlayer(this.arrayId, playerId, this.parent, 'remote');
+      virtualPlayer = new VirtualPlayer(this.arrayId, playerId, this.parent, 'remote', {
+        entityTracker: this.opts?.entityTracker,
+      });
       this.virtualPlayers.set(playerId, virtualPlayer);
     }
     return virtualPlayer;
@@ -660,38 +607,45 @@ class VirtualPlayersArray extends EventTarget {
 
       const _linkPlayer = arrayIndexId => {
         const playerId = arrayIndexId;
-
-        const created = !this.virtualPlayers.has(playerId);
-        const virtualPlayer = this.getOrCreateVirtualPlayer(playerId);
-        virtualPlayer.link(realm);
-        if (created) {
-          this.dispatchEvent(new MessageEvent('join', {
-            data: {
-              player: virtualPlayer,
-              playerId,
-            },
-          }));
-        }
-      };
-      const _unlinkPlayer = arrayIndexId => {
-        const playerId = arrayIndexId;
-
-        const virtualPlayer = this.virtualPlayers.get(playerId);
-        if (virtualPlayer) {
-          virtualPlayer.unlink(realm);
-          if (!virtualPlayer.headTracker.isLinked()) {
-            this.virtualPlayers.delete(playerId);
-            
-            virtualPlayer.dispatchEvent(new MessageEvent('leave'));
-            this.dispatchEvent(new MessageEvent('leave', {
+        if (playerId === this.parent.playerId) {
+          // this.parent.localPlayer;
+        } else {
+          const created = !this.virtualPlayers.has(playerId);
+          const virtualPlayer = this.getOrCreateVirtualPlayer(playerId);
+          virtualPlayer.link(realm);
+          if (created) {
+            this.dispatchEvent(new MessageEvent('join', {
               data: {
                 player: virtualPlayer,
                 playerId,
               },
             }));
           }
+        }
+      };
+      const _unlinkPlayer = arrayIndexId => {
+        const playerId = arrayIndexId;
+
+        if (playerId == this.parent.playerId) {
+          // this.parent.localPlayer;
         } else {
-          console.warn('removing nonexistent player', playerId, this.players);
+          const virtualPlayer = this.virtualPlayers.get(playerId);
+          if (virtualPlayer) {
+            virtualPlayer.unlink(realm);
+            if (!virtualPlayer.headTracker.isLinked()) {
+              this.virtualPlayers.delete(playerId);
+              
+              virtualPlayer.dispatchEvent(new MessageEvent('leave'));
+              this.dispatchEvent(new MessageEvent('leave', {
+                data: {
+                  player: virtualPlayer,
+                  playerId,
+                },
+              }));
+            }
+          } else {
+            console.warn('removing nonexistent player', playerId, this.players);
+          }
         }
       };
 
@@ -781,7 +735,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
     super(arrayId, realms);
 
     this.headTracker = opts?.headTracker ?? null;
-    this.entityTracker = opts?.entityTracker ?? new EntityTracker(this.headTracker, this);
+    this.entityTracker = opts?.entityTracker ?? null;
 
     this.entityTracker.addEventListener('entityadd', e => {
       console.log('entity tracker add', e.data);
@@ -919,57 +873,101 @@ class VirtualIrc {
 //
 
 class VirtualEntityMap extends HeadTrackedEntity {
-  constructor(arrayIndexId, parent, opts) {
-    super(opts?.headTracker);
+  constructor(arrayIndexId) {
+    super();
+
+    console.log('new virtual entity map', arrayIndexId);
+
+    if (window.lol) {
+      debugger;
+    }
     
     this.arrayIndexId = arrayIndexId;
-    this.parent = parent;
 
     this.maps = new Map(); // bound dc maps
     this.cleanupFns = new Map();
   }
-  get(key) {
+  getHeadMap() {
     const headRealm = this.headTracker.getHeadRealm();
-    const map = headRealm.dataClient.getArrayMap(this.parent.arrayId, this.arrayIndexId, {
+    if (headRealm) {
+      for (const map of this.maps.values()) {
+        if (map.dataClient === headRealm.dataClient) {
+          return map;
+        }
+      }
+    }
+    if (this.maps.size === 1) {
+      return this.maps.values().next().value.map; // note: peeling off the object
+    } else {
+      throw new Error('cannot get ambiguous head map from set size ' + this.map.size);
+      // return null;
+    }
+  }
+  get(key) {
+    const map = this.getHeadMap();
+    if (!map) {
+      debugger;
+    }
+    /* const map = headRealm.dataClient.getArrayMap(this.parent.arrayId, this.arrayIndexId, {
       listen: false,
-    });
+    }); */
     return map.getKey(key);
   }
   set(key, val) {
     throw new Error('not implemented');
   }
   remove() {
-    // console.log('remove from head realm', this.headRealm);
-    const headRealm = this.headTracker.getHeadRealm();
-    const array = headRealm.dataClient.getArray(this.parent.arrayId, {
+    const map = this.getHeadMap();
+    if (!map) {
+      debugger;
+    }
+    const array = map.dataClient.getArray(map.arrayId, map.arrayIndexId, {
       listen: false,
     });
+    /* const array = headRealm.dataClient.getArray(this.parent.arrayId, {
+      listen: false,
+    }); */
     const update = array.removeAt(this.arrayIndexId);
     headRealm.emitUpdate(update);
   }
   toObject() {
-    const headRealm = this.headTracker.getHeadRealm();
-    const array = headRealm.dataClient.getArray(this.parent.arrayId, {
+    const map = this.getHeadMap();
+    if (!map) {
+      debugger;
+    }
+    if (!map.toObject) {
+      debugger;
+    }
+    // const array = map.dataClient.getArray(map.arrayId, map.arrayIndexId, {
+    //   listen: false,
+    // });
+    /* const array = headRealm.dataClient.getArray(this.parent.arrayId, {
       listen: false,
     });
     const map = array.getMap(this.arrayIndexId, {
       listen: false,
-    });
+    }); */
     return map.toObject();
   }
   links = new Set();
-  link(realm) {
+  link(arrayId, realm) {
     /* if (typeof arrayIndexId !== 'string') {
       debugger;
     } */
-
-    if (this.links.has(realm)) {
+    if (!realm?.key) {
       debugger;
     }
-    this.links.add(realm);
+
+    console.log('link realm', realm.key, arrayId, this.arrayIndexId);
+
+    const key = arrayId + ':' + realm.key;
+    if (this.links.has(key)) { // XXX need to support multi-link based on arrayId
+      debugger;
+    }
+    this.links.add(key);
 
     // listen
-    const map = new DCMap(this.parent.arrayId, this.arrayIndexId, realm.dataClient);
+    const map = new DCMap(arrayId, this.arrayIndexId, realm.dataClient);
     map.listen();
     const update = e => {
       const {key, val} = e.data;
@@ -985,47 +983,56 @@ class VirtualEntityMap extends HeadTrackedEntity {
     };
     map.addEventListener('update', update);
 
-    this.maps.set(realm, map);
+    this.maps.set(key, {
+      map,
+      realm,
+    });
     this.headTracker.linkRealm(realm);
 
-    this.cleanupFns.set(realm, () => {
+    this.cleanupFns.set(key, () => {
       map.unlisten();
       map.removeEventListener('update', update);
     });
   }
-  unlink(realm) {
-    // console.log('unlink realm', realm.key, this.arrayIndexId);
+  unlink(arrayId, realm) {
+    console.log('unlink realm', realm.key, this.arrayIndexId);
 
     // const map = this.maps.get(realm);
     // if (!map) {
     //   debugger;
     // }
-    if (!this.links.has(realm)) {
+    const key = arrayId + ':' + realm.key;
+    if (!this.links.has(key)) {
       debugger;
     }
-    this.links.delete(realm);
+    this.links.delete(key);
 
     // const {arrayIndexId} = map;
 
-    this.cleanupFns.get(realm)();
-    this.cleanupFns.delete(realm);
+    this.cleanupFns.get(key)();
+    this.cleanupFns.delete(key);
 
-    this.maps.delete(realm);
+    /* if (this.maps.size >= 2 || window.lol) {
+      window.lol = true;
+      debugger;
+    } */
+
+    this.maps.delete(key);
     this.headTracker.unlinkRealm(realm);
 
     // garbage collect
     if (this.maps.size === 0) {
-      console.log('garbage collect virtual entity map', this.parent.arrayId, this.arrayIndexId);
-      if (/playerApps/.test(this.parent.arrayId)) {
+      console.log('garbage collect virtual entity map', arrayId, this.arrayIndexId);
+      // if (/playerApps/.test(this.parent.arrayId)) {
         debugger;
-      }
+      // }
       this.dispatchEvent(new MessageEvent('garbagecollect'));
     }
   }
   unlinkFilter(fn) {
-    for (const [realm, map] of this.maps.entries()) {
+    for (const [key, {map, realm}] of this.maps.entries()) {
       if (fn(map.arrayIndexId, map)) {
-        this.unlink(realm);
+        this.unlink(map.arrayId, realm);
       }
     }
   }
@@ -1104,10 +1111,89 @@ export class NetworkRealms extends EventTarget {
     this.playerId = playerId;
 
     this.lastPosition = [NaN, NaN, NaN];
-    this.players = new VirtualPlayersArray('players', this);
-    this.localPlayer = new VirtualPlayer('players', this.playerId, this, 'local');
+    this.headTracker = new WritableHeadTracker();
+    this.entityTracker = new EntityTracker();
+    this.localPlayer = new VirtualPlayer('players', this.playerId, this, 'local', {
+      headTracker: this.headTracker,
+      entityTracker: this.entityTracker,
+    });
+    this.players = new VirtualPlayersArray('players', this, {
+      headTracker: this.headTracker,
+      entityTracker: this.entityTracker,
+    });
+    this.headTracker.addEventListener('migrate', function(e) { // XXX bind local this -> this.localPlayer
+      const {oldHeadRealm, newHeadRealm} = e.data;
+
+      // old objects
+      const oldPlayersArray = oldHeadRealm.dataClient.getArray(this.arrayId, {
+        listen: false,
+      });
+      const oldPlayerAppsArray = oldHeadRealm.dataClient.getArray('playerApps:' + this.realms.playerId, {
+        listen: false,
+      });
+      const oldPlayerActionsArray = oldHeadRealm.dataClient.getArray('playerActions:' + this.realms.playerId, {
+        listen: false,
+      });
+      const oldPlayerMap = oldPlayersArray.getMap(this.arrayIndexId, {
+        listen: false,
+      });
+
+      // new objects
+      const newPlayersArray = newHeadRealm.dataClient.getArray(this.arrayId, {
+        listen: false,
+      });
+      const newPlayerAppsArray = newHeadRealm.dataClient.getArray('playerApps:' + this.realms.playerId, {
+        listen: false,
+      });
+      const newPlayerActionsArray = newHeadRealm.dataClient.getArray('playerActions:' + this.realms.playerId, {
+        listen: false,
+      });
+
+      const playerId = this.realms.playerId;
+      console.log('move realm ', playerId, oldHeadRealm.key, ' -> ', newHeadRealm.key);
+
+      // set dead hands
+      const deadHandKeys = [
+        this.arrayId + '.' + this.arrayIndexId, // player
+        'playerApps:' + this.arrayIndexId, // playerApps
+        'playerActions:' + this.arrayIndexId, // playerActions
+      ];
+      const _emitDeadHands = realm => {
+        const deadHandupdate = realm.dataClient.deadHandKeys(deadHandKeys, this.realms.playerId);
+        realm.emitUpdate(deadHandupdate);
+      };
+      /* const _emitLiveHands = realm => {
+        const liveHandupdate = realm.dataClient.liveHandKeys(deadHandKeys, this.realms.playerId);
+        realm.emitUpdate(liveHandupdate);
+      }; */
+      _emitDeadHands(oldHeadRealm);
+      _emitDeadHands(newHeadRealm);
+
+      // add new
+      // import apps
+      const playerAppsImportMessage = newPlayerAppsArray.importArrayUpdate(oldPlayerAppsArray);
+      newHeadRealm.emitUpdate(playerAppsImportMessage);
+      // import actions
+      const playerActionsImportMessage = newPlayerActionsArray.importArrayUpdate(oldPlayerActionsArray);
+      newHeadRealm.emitUpdate(playerActionsImportMessage);
+      // import player
+      const playerImportMessage = newPlayersArray.importMapUpdate(oldPlayerMap);
+      newHeadRealm.emitUpdate(playerImportMessage);
+
+      // delete old
+      // delete apps
+      const playerAppsDeleteMessage = oldPlayerAppsArray.removeArrayUpdate();
+      oldHeadRealm.emitUpdate(playerAppsDeleteMessage);
+      // delete actions
+      const playerActionsDeleteMessage = oldPlayerActionsArray.removeArrayUpdate();
+      oldHeadRealm.emitUpdate(playerActionsDeleteMessage);
+      // delete player
+      const oldPlayerRemoveUpdate = oldPlayerMap.removeUpdate();
+      oldHeadRealm.emitUpdate(oldPlayerRemoveUpdate);
+    }.bind(this.localPlayer));
+    
     this.world = new VirtualEntityArray('worldApps', this, {
-      entityTracker: this.localPlayer.playerApps.entityTracker,
+      entityTracker: this.entityTracker,
     });
     this.irc = new VirtualIrc(this);
     this.connectedRealms = new Set();
