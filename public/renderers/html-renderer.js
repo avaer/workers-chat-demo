@@ -41,6 +41,7 @@ export class RemotePlayerCursorHtmlRenderer {
     this.virtualPlayer = virtualPlayer;
 
     const div = document.createElement('div');
+    div.className = 'remotePlayerCursor';
     div.style.cssText = `\
       position: fixed;
       top: 0;
@@ -53,24 +54,26 @@ export class RemotePlayerCursorHtmlRenderer {
     `;
     document.body.appendChild(div);
 
+    console.log('new cursor');
+
     // const map = this.dataClient.getArrayMap('players', this.remotePlayerId);
     // console.log('virtual player update listen');
     const update = e => {
       // console.log('html renderer got player map update', e.data);
 
-      const {val} = e.data;
-      const [x, y, z] = val;
-      div.style.left = `${x}px`;
-      div.style.top = `${y}px`;
-
-      // console.log('got update', e.data);
+      const {key, val} = e.data;
+      // console.log('got key', key);
+      if (key === 'cursorPosition') {
+        const [x, y, z] = val;
+        div.style.left = `${x}px`;
+        div.style.top = `${y}px`;
+      }
     };
     virtualPlayer.addEventListener('update', update);
 
     this.cleanupFn = () => {
       document.body.removeChild(div);
 
-      // console.log('virtual player update unlisten');
       virtualPlayer.removeEventListener('update', update);
     };
   }

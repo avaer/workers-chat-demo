@@ -93,8 +93,10 @@ const _getHeadRealm = (position, realms) => {
 
 //
 
-class WritableHeadTracker extends EventTarget {
-  constructor() {
+class HeadTracker extends EventTarget {
+  constructor({
+    position = [0, 0, 0],
+  } = {}) {
     super();
 
     this.connectedRealms = new Map();
@@ -113,6 +115,9 @@ class WritableHeadTracker extends EventTarget {
       debugger;
       throw new Error('head tracker has no head! need to call updateHeadRealm()');
     }
+  }
+  hasHeadRealm() {
+    return this.connectedRealms.size === 1 || this.#headRealm !== null;
   }
   getReadable() {
     return new ReadableHeadTracker(this);
@@ -360,9 +365,10 @@ class EntityTracker extends EventTarget {
       localVirtualMaps.set(arrayIndexId, virtualMap);
     }
 
-    console.log('link key', key);
+    // console.log('link key', key);
     this.cleanupFns.set(key, () => {
-      // console.log('unlisten add', addKey);
+      const key = arrayId + ':' + realm.key;
+      // console.log('unlink key', key);
 
       // unbind array virtual maps
       dcArray.unlisten();
@@ -371,7 +377,11 @@ class EntityTracker extends EventTarget {
       dcArray.dataClient.removeEventListener(removeArrayKey, onremovearray);
       dcArray.dataClient.removeEventListener(importArrayKey, onimportarray);
 
-      for (const localVirtualMap of localVirtualMaps.values()) {
+      for (const arrayIndexId of localVirtualMaps.keys()) {
+        this.unlinkMap(realm, dcArray.arrayId, arrayIndexId);
+      }
+
+      /* for (const localVirtualMap of localVirtualMaps.values()) {
         if (!localVirtualMap.unlinkFilter) {
           debugger;
         }
@@ -381,7 +391,7 @@ class EntityTracker extends EventTarget {
           }
           return realm === map.dataClient.userData.realm;
         });
-      }
+      } */
     });
   }
   // returns whether the realm was linked
@@ -401,7 +411,6 @@ class EntityTracker extends EventTarget {
   }
   #unlinkInternal(arrayId, realm) {
     const key = arrayId + ':' + realm.key;
-    console.log('unlink key', key);
     this.cleanupFns.get(key)();
     this.cleanupFns.delete(key);
   }
@@ -428,7 +437,9 @@ class HeadTrackedEntity extends EventTarget {
   constructor(headTracker) {
     super();
 
-    this.headTracker = headTracker || new WritableHeadTracker(this);
+    this.headTracker = headTracker || new HeadTracker({
+      
+    });
   }
   setHeadTracker(headTracker) {
     this.headTracker = headTracker;
@@ -492,6 +503,7 @@ class VirtualPlayer extends HeadTrackedEntity {
     actionVals = [],
     actionValIds = [],
   } = {}) {
+    this.headTracker.updateHeadRealm(o.position);
     const headRealm = this.headTracker.getHeadRealm();
 
     const _initializeApps = () => {
@@ -543,16 +555,21 @@ class VirtualPlayer extends HeadTrackedEntity {
     _initializePlayer();
   }
   link(realm) {
-    
     this.headTracker.linkRealm(realm);
     
     const {dataClient} = realm;
     const map = dataClient.getArrayMap(this.arrayId, this.arrayIndexId);
     const update = e => {
+      const {key, val} = e.data;
+
       // console.log('virtual player map got update', this.name, e);
       this.dispatchEvent(new MessageEvent('update', {
         data: e.data,
       }));
+
+      if (key === positionKey) {
+        this.headTracker.updateHeadRealm(val);
+      }
     };
     map.addEventListener('update', update);
     
@@ -1124,12 +1141,13 @@ export class NetworkRealms extends EventTarget {
     this.playerId = playerId;
 
     this.lastPosition = [NaN, NaN, NaN];
-    this.headTracker = new WritableHeadTracker();
+    this.headTracker = new HeadTracker();
     this.entityTracker = new EntityTracker();
     this.localPlayer = new VirtualPlayer('players', this.playerId, this, 'local', {
       headTracker: this.headTracker,
       entityTracker: this.entityTracker,
     });
+
     this.players = new VirtualPlayersArray('players', this, {
       headTracker: this.headTracker,
       entityTracker: this.entityTracker,
@@ -1285,11 +1303,7 @@ export class NetworkRealms extends EventTarget {
             }
           }
 
-          if (foundRealm) {
-            // if (arrayEquals(foundRealm.min, snappedPosition)) {
-            //   this.centerRealm = foundRealm;
-            // }
-          } else {
+          if (!foundRealm) {
             realm.dispatchEvent(new Event('connecting'));
             this.dispatchEvent(new MessageEvent('realmconnecting', {
               data: {
@@ -1328,10 +1342,8 @@ export class NetworkRealms extends EventTarget {
         }
         await Promise.all(connectPromises);
 
+        // if this is the first network configuration, initialize our local player
         if (oldNumConnectedRealms === 0 && connectPromises.length > 0) {
-          // if this is the first network configuration, initialize our local player
-          this.localPlayer.headTracker.updateHeadRealm(position);
-          
           const appVals = [
             {
               start_url: 'rock',
@@ -1346,6 +1358,7 @@ export class NetworkRealms extends EventTarget {
           for (let i = 0; i < appIds.length; i++) {
             appIds[i] = makeId();
           }
+          console.log('initialize player', position);
           this.localPlayer.initializePlayer({
             position,
             cursorPosition: new Float32Array(3),
@@ -1364,10 +1377,6 @@ export class NetworkRealms extends EventTarget {
               },
             ],
           });
-          // this.sendRegisterMessage();
-        } else {
-          // else if we're just moving around, update the local player's position
-          this.localPlayer.headTracker.updateHeadRealm(position);
         }
 
         // check if we need to disconnect from any realms
@@ -1395,6 +1404,10 @@ export class NetworkRealms extends EventTarget {
         // emit the fact that the network was reconfigured
         this.dispatchEvent(new MessageEvent('networkreconfigure'));
       });
+    }
+
+    if (this.localPlayer.headTracker.hasHeadRealm()) {
+      this.localPlayer.setKeyValue('position', position);
     }
   }
 }

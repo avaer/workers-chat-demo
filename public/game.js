@@ -365,6 +365,9 @@ z-index: 2;
         ],
       };
       const _boxContains = (box, position) => {
+        if (!position) {
+          debugger;
+        }
         return position[0] >= box.min[0] && position[0] <= box.max[0] &&
           position[1] >= box.min[1] && position[1] <= box.max[1] &&
           position[2] >= box.min[2] && position[2] <= box.max[2];
