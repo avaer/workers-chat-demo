@@ -170,6 +170,9 @@ export const startGame = async () => {
       }
     });
 
+    // local player
+    const localPlayerCursorRenderer = new RemotePlayerCursorHtmlRenderer(realms.playerId, realms.playerId, realms.localPlayer);
+
     // players
     const playerCursorRenderers = [];
     // console.log('listen to players', virtualPlayers);
