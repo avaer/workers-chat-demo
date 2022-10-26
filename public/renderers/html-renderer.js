@@ -96,12 +96,20 @@ export class WorldItemHtmlRenderer {
       div.style.left = `${x}px`;
       div.style.top = `${y}px`;
     };
-    virtualWorld.addEventListener('entityadd', entityadd);
+    virtualWorld.addEventListener('needledentityadd', entityadd);
+
+    const entityremove = e => {
+      const {val} = e.data;
+      // const [x, y, z] = val;
+      console.log('removed', val);
+    };
+    virtualWorld.addEventListener('needledentityremove', entityremove);
 
     this.cleanupFn = () => {
       document.body.removeChild(div);
 
-      virtualWorld.removeEventListener('entityadd', entityadd);
+      virtualWorld.removeEventListener('needledentityadd', entityadd);
+      virtualWorld.removeEventListener('needledentityremove', entityremove);
     };
   }
   destroy() {
@@ -147,6 +155,9 @@ export class GamePlayerCanvas {
       playerAppsEl.innerHTML = '';
 
       for (const actionMap of playerActions) {
+        if (!actionMap?.toObject) {
+          debugger;
+        }
         const actionJson = actionMap.toObject();
         // console.log('got action map', actionJson);
         const {action} = actionJson;
@@ -164,33 +175,33 @@ export class GamePlayerCanvas {
     // console.log('virtual player update listen');
     const playerAppsEntityAdd = e => {
       console.log('html renderer got player apps add', e.data);
-      const {entityId, entity} = e.data;
-      playerApps.set(entityId, entity);
+      const {entityId, needledEntity} = e.data;
+      playerApps.set(entityId, needledEntity);
       _renderPlayerApps();
     };
-    virtualPlayer.playerApps.addEventListener('entityadd', playerAppsEntityAdd);
+    virtualPlayer.playerApps.addEventListener('needledentityadd', playerAppsEntityAdd);
     const playerAppsEntityRemove = e => {
       console.log('html renderer got player apps remove', e.data);
       const {entityId} = e.data;
       playerApps.delete(entityId);
       _renderPlayerApps();
     };
-    virtualPlayer.playerApps.addEventListener('entityremove', playerAppsEntityRemove);
+    virtualPlayer.playerApps.addEventListener('needledentityremove', playerAppsEntityRemove);
 
     const playerActionsEntityAdd = e => {
       console.log('html renderer got player actions add', e.data);
-      const {entity} = e.data;
-      playerActions.add(entity);
+      const {needledEntity} = e.data;
+      playerActions.add(needledEntity);
       _renderPlayerApps();
     };
-    virtualPlayer.playerActions.addEventListener('entityadd', playerActionsEntityAdd);
+    virtualPlayer.playerActions.addEventListener('needledentityadd', playerActionsEntityAdd);
     const playerActionsEntityRemove = e => {
       console.log('html renderer got player actions remove', e.data);
-      const {entity} = e.data;
-      playerActions.delete(entity);
+      const {needledEntity} = e.data;
+      playerActions.delete(needledEntity);
       _renderPlayerApps();
     };
-    virtualPlayer.playerActions.addEventListener('entityremove', playerActionsEntityRemove);
+    virtualPlayer.playerActions.addEventListener('needledentityremove', playerActionsEntityRemove);
   }
   setSprite(spriteImg) {
     this.spriteImg = spriteImg;

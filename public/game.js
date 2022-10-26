@@ -36,12 +36,12 @@ export const startGame = async () => {
     // const {entity} = e.data;
     console.log('world app entity add', e.data);
   };
-  realms.getVirtualWorld().addEventListener('entityadd', onentityadd2);
+  realms.getVirtualWorld().worldApps.addEventListener('needledentityadd', onentityadd2);
   const onentityremove2 = e => {
     // const {entity} = e.data;
     console.log('world app entity remove', e.data);
   };
-  realms.getVirtualWorld().addEventListener('entityremove', onentityremove2);
+  realms.getVirtualWorld().worldApps.addEventListener('entityremove', onentityremove2);
 
   realms.addEventListener('realmjoin', e => {
     const {realm} = e.data;
@@ -373,8 +373,8 @@ z-index: 2;
           position[2] >= box.min[2] && position[2] <= box.max[2];
       };
       
-      const collidedVirtualMap = Array.from(virtualWorld.entityTracker.virtualMaps.values()).find(virtualMap => {
-        const position = virtualMap.get('position');
+      const collidedVirtualMap = Array.from(virtualWorld.worldApps.needledVirtualEntities.values()).find(needledEntityMap => {
+        const position = needledEntityMap.get('position');
         return !!position && _boxContains(targetBox, position);
       });
       // const inventory = document.querySelector('#inventory');
