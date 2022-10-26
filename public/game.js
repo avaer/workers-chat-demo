@@ -372,7 +372,7 @@ z-index: 2;
       
       const collidedVirtualMap = Array.from(virtualWorld.entityTracker.virtualMaps.values()).find(virtualMap => {
         const position = virtualMap.get('position');
-        return _boxContains(targetBox, position);
+        return !!position && _boxContains(targetBox, position);
       });
       // const inventory = document.querySelector('#inventory');
       // const inventoryItems = Array.from(inventory.querySelectorAll('.realms-item'));
