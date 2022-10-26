@@ -473,13 +473,9 @@ z-index: 2;
 
             // add at the new location (world)
             const firstAppJson = firstApp.toObject();
-            if (!virtualWorld.worldApps.addAt) {
-              debugger;
-            }
             const map = virtualWorld.worldApps.addEntityAt(firstApp.entityMap.arrayIndexId, firstAppJson, targetRealm);
 
             console.log('sanity check', map, _sanityCheck());
-            debugger;
 
             // remove from the old location (player)
             firstApp.remove();
