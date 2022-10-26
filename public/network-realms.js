@@ -105,7 +105,14 @@ class WritableHeadTracker extends EventTarget {
       debugger;
       throw new Error('head tracker has no head! need to call updateHeadRealm()');
     } */
-    return this.#headRealm;
+    if (this.connectedRealms.size === 1) {
+      return this.connectedRealms.keys().next().value;
+    } else if (this.#headRealm) {
+      return this.#headRealm;
+    } else {
+      debugger;
+      throw new Error('head tracker has no head! need to call updateHeadRealm()');
+    }
   }
   getReadable() {
     return new ReadableHeadTracker(this);
@@ -229,7 +236,8 @@ class EntityTracker extends EventTarget {
       let virtualMap = this.virtualMaps.get(map.arrayIndexId);
       if (!virtualMap) {
         console.log('(*** create new', arrayIndexId);
-        virtualMap = new VirtualEntityMap(arrayIndexId);
+        virtualMap = new VirtualEntityMap(arrayIndexId); // XXX pass through head tracker?
+        // XXX emit virtual entity create event to bind head tracker?
         this.virtualMaps.set(map.arrayIndexId, virtualMap);
 
         virtualMap.addEventListener('garbagecollect', e => {
@@ -888,19 +896,20 @@ class VirtualEntityMap extends HeadTrackedEntity {
     this.cleanupFns = new Map();
   }
   getHeadMap() {
+    // tryt to use a map from the current head realm
     const headRealm = this.headTracker.getHeadRealm();
     if (headRealm) {
       for (const map of this.maps.values()) {
-        if (map.dataClient === headRealm.dataClient) {
-          return map;
+        if (map.map.dataClient === headRealm.dataClient) {
+          return map.map;
         }
       }
     }
+    // otherwise, try to use the only map
     if (this.maps.size === 1) {
-      return this.maps.values().next().value.map; // note: peeling off the object
+      return this.maps.values().next().value.map;
     } else {
-      throw new Error('cannot get ambiguous head map from set size ' + this.map.size);
-      // return null;
+      return null;
     }
   }
   get(key) {
@@ -917,6 +926,10 @@ class VirtualEntityMap extends HeadTrackedEntity {
     throw new Error('not implemented');
   }
   remove() {
+    const headRealm = this.headTracker.getHeadRealm();
+    if (!headRealm?.emitUpdate) {
+      debugger;
+    }
     const map = this.getHeadMap();
     if (!map) {
       debugger;
