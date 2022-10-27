@@ -36,12 +36,11 @@ export const startGame = async () => {
 
   const onentityadd2 = e => {
     // const {entity} = e.data;
-    console.log('world app entity add', e.data);
+    // console.log('world app entity add', e.data);
   };
   realms.getVirtualWorld().worldApps.addEventListener('needledentityadd', onentityadd2);
   const onentityremove2 = e => {
-    // const {entity} = e.data;
-    console.log('world app entity remove', e.data);
+    // console.log('world app entity remove', e.data);
   };
   realms.getVirtualWorld().worldApps.addEventListener('entityremove', onentityremove2);
 
@@ -63,25 +62,26 @@ export const startGame = async () => {
 
       const onentityadd = e => {
         // const {entity} = e.data;
+        // console.log('got entity add', e.data);
         el.updateText(dataClient);
       };
       localPlayerApps.addEventListener('needledentityadd', onentityadd);
       const onentityremove = e => {
         // const {entity} = e.data;
-        console.log('got entity remove', e.data);
+        // console.log('got entity remove', e.data);
         el.updateText(dataClient);
       };
       localPlayerApps.addEventListener('needledentityremove', onentityremove);
 
       const onentityadd2 = e => {
-        const {entity} = e.data;
-        console.log('got local player action add', entity);
+        // const {entity} = e.data;
+        // console.log('got local player action add', entity);
         el.updateText(dataClient);
       };
       localPlayerActions.addEventListener('needledentityadd', onentityadd2);
       const onentityremove2 = e => {
-        const {entity} = e.data;
-        console.log('got local player action remove', entity);
+        // const {entity} = e.data;
+        // console.log('got local player action remove', entity);
         el.updateText(dataClient);
       };
       localPlayerActions.addEventListener('needledentityremove', onentityremove2);
@@ -418,7 +418,7 @@ z-index: 2;
         collidedItem.style.top = null; */
       } else {
         // console.log('got player apps', realms.localPlayer.playerApps.getSize());
-        if (realms.localPlayer.playerApps.getSize() > 0) {
+        if (realms.localPlayer.playerActions.getSize() > 0) {
           const targetRealm = realms.getClosestRealm(targetPosition);
           if (targetRealm) {
             console.log('drop to target realm', targetRealm.key, targetRealm);
@@ -438,24 +438,16 @@ z-index: 2;
             const appIds = realms.localPlayer.playerApps.getKeys();
             const wearAppIndex = appIds.indexOf(appId);
 
-            // XXX after the first removal, realms.localPlayer.playerActions.toArray() should have size 1 but it doesn't...
-
             const firstAction = realms.localPlayer.playerActions.getVirtualMapAt(wearActionIndex);
-            // if (!firstAction) {
-            //   debugger;
-            // }
-
             const firstApp = realms.localPlayer.playerApps.getVirtualMapAt(wearAppIndex);
-            // if (!firstApp) {
-            //   debugger;
-            // }
 
-            // console.log('set key value 1');
             firstApp.set('position', targetPosition);
-            // console.log('set key value 2');
-            // firstAction.setKeyValue('position', targetPosition);
-            // console.log('set key value 3');
-            
+            // XXX might need a head tracker manager, because head trackers are mismanaged and polluted across arrays
+            // XXX or, listen for needledentityadd on the entity tracker, and update all of the head trackers there,
+            // XXX handling all of the special player wear cases/position does not exist.
+            // XXX there is no need for readable/writable trackers and overrides, or cross-array pollution.
+            // XXX we can just operate head tracking at the needled virtual entity level.
+
             // set dead hands
             // old location: player
             // the player already has deadhand on all of its apps, probably?
@@ -476,13 +468,11 @@ z-index: 2;
             // add at the new location (world)
             const firstAppJson = firstApp.toObject();
             // console.log('adding', firstAction.toObject(), firstApp.entityMap.arrayIndexId, firstAppJson);
-            // XXX adding the smae thing twice since the world and player share an app manager...
-            // XXX or, instead of index math, look up the actual app by appId on the wear action
             const map = virtualWorld.worldApps.addEntityAt(firstApp.entityMap.arrayIndexId, firstAppJson, targetRealm);
 
             // remove from the old location (player)
             firstApp.remove();
-            const oldSize = realms.localPlayer.playerActions.getSize();
+            // const oldSize = realms.localPlayer.playerActions.getSize();
             firstAction.remove();
 
             // if (realms.localPlayer.playerApps.getVirtualMapAt(0).entityMap.arrayIndexId === firstApp.entityMap.arrayIndexId) {
@@ -506,7 +496,6 @@ z-index: 2;
           }
         } else {
           console.warn('nothing to drop');
-          debugger;
         }
       }
       console.log('drop 3');
