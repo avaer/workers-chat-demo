@@ -259,11 +259,13 @@ class EntityTracker extends EventTarget {
   linkMap(realm, map) {
     console.log('entity tracker link map', realm, map);
 
+    // XXX two entities from the same realm would hit this...
+
     // bind local array maps to virtual maps
     const _getOrCreateVirtualMap = (arrayIndexId) => {
       let virtualMap = this.virtualMaps.get(map.arrayIndexId);
       if (!virtualMap) {
-        // console.log('*** create new', arrayIndexId);
+        console.log('*** create new', map.arrayId, arrayIndexId);
         virtualMap = new HeadlessVirtualEntityMap(arrayIndexId);
         if (!map.arrayIndexId) {
           debugger;
@@ -282,7 +284,7 @@ class EntityTracker extends EventTarget {
           }));
         });
       } else {
-        // console.log('*** create old', arrayIndexId);
+        console.log('*** create old', map.arrayId, arrayIndexId);
       }
       return virtualMap;
     };
@@ -290,9 +292,9 @@ class EntityTracker extends EventTarget {
     const added = !this.virtualMaps.has(map.arrayIndexId);
     const virtualMap = _getOrCreateVirtualMap(map.arrayIndexId);
     
-    virtualMap.link(map.arrayId, realm);
+    virtualMap.link(map.arrayId, realm); // XXX second link by the same arrayId (two items from the same array) will crash
     if (added) {
-      this.dispatchEvent(new MessageEvent('entityadd', { // XXX
+      this.dispatchEvent(new MessageEvent('entityadd', {
         data: {
           entityId: map.arrayIndexId,
           entity: virtualMap,
@@ -338,7 +340,7 @@ class EntityTracker extends EventTarget {
       const map = dcArray.getMap(arrayIndexId, {
         listen: false,
       });
-      console.log('VirtualEntityArray got entity add', this, arrayIndexId, realm.key, map);
+      console.log('VirtualEntityArray got entity add', arrayIndexId, realm.key, map);
       const virtualMap = this.linkMap(realm, map);
       localVirtualMaps.set(arrayIndexId, virtualMap);
     };
@@ -346,7 +348,7 @@ class EntityTracker extends EventTarget {
     const removeKey = 'remove.' + dcArray.arrayId;
     const onremove = e => {
       const {arrayIndexId} = e.data;
-      console.log('VirtualEntityArray got entity remove', this, arrayIndexId, realm.key, e.data);
+      console.log('VirtualEntityArray got entity remove', arrayIndexId, realm.key, e.data);
       if (window.lol) {
         debugger;
       }
@@ -810,6 +812,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
       map,
       update,
     } = array.addAt(arrayIndexId, val);
+    console.log('add!!!', arrayIndexId); // XXX adding the same thing twice...
     realm.emitUpdate(update);
 
     const liveHandUpdate = realm.dataClient.liveHandArrayMap(this.arrayId, arrayIndexId, this.parent.playerId);
@@ -830,24 +833,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
     return null;
   } */
   getVirtualMapAt(index) {
-    let arrayIndexId = null;
-    let i = 0;
-    for (const arrayIndexId_ of this.entityTracker.virtualMaps.keys()) {
-      if (i === index) {
-        arrayIndexId = arrayIndexId_;
-        break;
-      }
-      i++;
-    }
-    const entityMap = this.entityTracker.virtualMaps.get(arrayIndexId);
-    if (!entityMap) {
-      debugger;
-    }
-    const needledEntity = this.needledVirtualEntities.get(entityMap);
-    if (!needledEntity) {
-      debugger;
-    }
-    return needledEntity;
+    return Array.from(this.needledVirtualEntities.values())[index];
   }
   toArray() {
     return Array.from(this.needledVirtualEntities.values()).map(needledEntity => {
@@ -1040,17 +1026,10 @@ class HeadlessVirtualEntityMap extends EventTarget {
     }
     this.links.delete(key);
 
-    // const {arrayIndexId} = map;
+    this.maps.delete(key);
 
     this.cleanupFns.get(key)();
     this.cleanupFns.delete(key);
-
-    /* if (this.maps.size >= 2 || window.lol) {
-      window.lol = true;
-      debugger;
-    } */
-
-    this.maps.delete(key);
 
     // garbage collect
     if (this.maps.size === 0) {
@@ -1096,6 +1075,10 @@ class NeedledVirtualEntityMap extends HeadTrackedEntity {
     const update = map.setKeyValueUpdate(key, val);
     // console.log('got update', update);
     realm.emitUpdate(update);
+
+    /* if (key === positionKey) {
+      this.headTracker.updateHeadRealm(val);
+    } */
   }
   remove() {
     const realm = this.headTracker.getHeadRealm();
@@ -1114,14 +1097,22 @@ class NeedledVirtualEntityMap extends HeadTrackedEntity {
 
     // the head might have changed if it pointed at this entity map
     // in that case, we need to update the head as if this were an initialization
-    // const initialPosition = this.entityMap.getInitial(positionKey);
+    this.snapHeadRealm();
+  }
+  snapHeadRealm() {
+    if (this.entityMap.maps.size > 0) {
+      const initialPosition = this.entityMap.getInitial(positionKey);
+      if (initialPosition) {
+        this.headTracker.updateHeadRealm(initialPosition);
+      }
+    }
   }
   toObject() {
     const realm = this.headTracker.getHeadRealm();
     const map = this.entityMap.getHeadMapFromRealm(realm);
-    if (!map?.toObject) {
-      debugger;
-    }
+    // if (!map?.toObject) {
+    //   debugger;
+    // }
     return map.toObject();
   }
 }

@@ -472,12 +472,19 @@ z-index: 2;
 
             // add at the new location (world)
             const firstAppJson = firstApp.toObject();
+            // console.log('adding', firstAction.toObject(), firstApp.entityMap.arrayIndexId, firstAppJson);
+            // XXX adding the smae thing twice since the world and player share an app manager...
+            // XXX or, instead of index math, look up the actual app by appId on the wear action
             const map = virtualWorld.worldApps.addEntityAt(firstApp.entityMap.arrayIndexId, firstAppJson, targetRealm);
 
             // remove from the old location (player)
             firstApp.remove();
             const oldSize = realms.localPlayer.playerActions.getSize();
             firstAction.remove();
+
+            // if (realms.localPlayer.playerApps.getVirtualMapAt(0).entityMap.arrayIndexId === firstApp.entityMap.arrayIndexId) {
+            //   debugger;
+            // }
 
             /* if (realms.localPlayer.playerActions.getSize() !== 1) {
               debugger;

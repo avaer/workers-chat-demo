@@ -174,14 +174,14 @@ export class GamePlayerCanvas {
     // const map = this.dataClient.getArrayMap('players', this.remotePlayerId);
     // console.log('virtual player update listen');
     const playerAppsEntityAdd = e => {
-      console.log('html renderer got player apps add', e.data);
+      // console.log('html renderer got player apps add', e.data);
       const {entityId, needledEntity} = e.data;
       playerApps.set(entityId, needledEntity);
       _renderPlayerApps();
     };
     virtualPlayer.playerApps.addEventListener('needledentityadd', playerAppsEntityAdd);
     const playerAppsEntityRemove = e => {
-      console.log('html renderer got player apps remove', e.data);
+      // console.log('html renderer got player apps remove', e.data);
       const {entityId} = e.data;
       playerApps.delete(entityId);
       _renderPlayerApps();
@@ -189,14 +189,14 @@ export class GamePlayerCanvas {
     virtualPlayer.playerApps.addEventListener('needledentityremove', playerAppsEntityRemove);
 
     const playerActionsEntityAdd = e => {
-      console.log('html renderer got player actions add', e.data);
+      // console.log('html renderer got player actions add', e.data);
       const {needledEntity} = e.data;
       playerActions.add(needledEntity);
       _renderPlayerApps();
     };
     virtualPlayer.playerActions.addEventListener('needledentityadd', playerActionsEntityAdd);
     const playerActionsEntityRemove = e => {
-      console.log('html renderer got player actions remove', e.data);
+      // console.log('html renderer got player actions remove', e.data);
       const {needledEntity} = e.data;
       playerActions.delete(needledEntity);
       _renderPlayerApps();
