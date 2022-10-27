@@ -308,6 +308,7 @@ const _drawRectangle = (ctx, color) => {
 };
 export class GameRealmsCanvases {
   constructor(realms) {
+    // realm sections
     this.elements = [];
     for (let dx = -1; dx <= 1; dx++) {
       for (let dz = -1; dz <= 1; dz++) {
@@ -330,6 +331,9 @@ export class GameRealmsCanvases {
         // text2.textContent = `${dx}:${dz}`;
         text.appendChild(text2);
 
+        const worldAppsEl = document.createElement('div');
+        worldAppsEl.className = 'world-apps';
+
         const div = document.createElement('div');
         div.className = 'network-realm';
         div.style.cssText = `\
@@ -340,6 +344,7 @@ z-index: 1;
         `;
         div.appendChild(canvas);
         div.appendChild(text);
+        div.appendChild(worldAppsEl);
         div.min = [x * realmSize, 0, z * realmSize];
         div.size = realmSize;
         div.setColor = color => {
@@ -355,6 +360,27 @@ z-index: 1;
           const worldApps = dataClient.getArray('worldApps', {
             listen: false,
           });
+
+          let appIndex = 0;
+          const _pushWorldApp = app => {
+            let appEl = worldAppsEl.children[appIndex];
+            if (!appEl) {
+              appEl = rockImg.cloneNode();
+              appEl.classList.add('world-app');
+              worldAppsEl.appendChild(appEl);
+            }
+            // set the position
+            const position = app.position ?? [0, 0, 0];
+            appEl.style.left = `${position[0] - x * realmSize}px`;
+            appEl.style.top = `${position[2] - z * realmSize}px`;
+
+            appIndex++;
+          };
+          const _finalizeWorldApps = () => {
+            while (worldAppsEl.children.length > appIndex) {
+              worldAppsEl.removeChild(worldAppsEl.lastChild);
+            }
+          }
 
           const _formatArray = array => {
             array = array.getKeys().map(arrayIndexId => {
@@ -402,11 +428,16 @@ z-index: 1;
 
             let worldAppsString = '';
             if (worldApps.getSize() > 0) {
-              const s = zstringify(worldApps.toArray());
-              if (s.includes('{}')) {
-                debugger;
+              // const s = zstringify(worldApps.toArray());
+              // if (s.includes('{}')) {
+              //   debugger;
+              // }
+              const worldAppsArray = worldApps.toArray();
+              for (const worldApp of worldAppsArray) {
+                _pushWorldApp(worldApp);
               }
-              worldAppsString = `worldApps: [\n${zstringify(worldApps.toArray())}\n]`;
+              _finalizeWorldApps();
+              worldAppsString = `worldApps: [\n${zstringify(worldAppsArray)}\n]`;
             } else {
               worldAppsString = `worldApps: []`;
             }
