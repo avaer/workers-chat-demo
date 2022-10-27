@@ -835,6 +835,11 @@ class VirtualEntityArray extends VirtualPlayersArray {
   getVirtualMapAt(index) {
     return Array.from(this.needledVirtualEntities.values())[index];
   }
+  getKeys() {
+    return Array.from(this.needledVirtualEntities.keys()).map(entityMap => {
+      return entityMap.arrayIndexId;
+    });
+  }
   toArray() {
     return Array.from(this.needledVirtualEntities.values()).map(needledEntity => {
       const realm = needledEntity.headTracker.getHeadRealm();

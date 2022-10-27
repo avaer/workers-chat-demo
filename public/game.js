@@ -428,12 +428,15 @@ z-index: 2;
             // });
 
             // the app we will be dropping
-            // const firstApp = realms.localPlayer.playerApps.first();
             const actions = realms.localPlayer.playerActions.toArray();
             const wearActionIndex = actions.findIndex(action => action.action === 'wear');
-            // if (wearActionIndex === -1) {
-            //   debugger;
-            // }
+            const wearAction = actions[wearActionIndex];
+            const {appId} = wearAction;
+            // debugger;
+            console.log('drop app', appId);
+
+            const appIds = realms.localPlayer.playerApps.getKeys();
+            const wearAppIndex = appIds.indexOf(appId);
 
             // XXX after the first removal, realms.localPlayer.playerActions.toArray() should have size 1 but it doesn't...
 
@@ -442,7 +445,7 @@ z-index: 2;
             //   debugger;
             // }
 
-            const firstApp = realms.localPlayer.playerApps.getVirtualMapAt(wearActionIndex);
+            const firstApp = realms.localPlayer.playerApps.getVirtualMapAt(wearAppIndex);
             // if (!firstApp) {
             //   debugger;
             // }
