@@ -1301,10 +1301,10 @@ export class NetworkRealms extends EventTarget {
         const deadHandupdate = realm.dataClient.deadHandKeys(deadHandKeys, this.realms.playerId);
         realm.emitUpdate(deadHandupdate);
       };
-      /* const _emitLiveHands = realm => {
+      const _emitLiveHands = realm => {
         const liveHandupdate = realm.dataClient.liveHandKeys(deadHandKeys, this.realms.playerId);
         realm.emitUpdate(liveHandupdate);
-      }; */
+      };
       _emitDeadHands(oldHeadRealm);
       _emitDeadHands(newHeadRealm);
 
@@ -1329,6 +1329,8 @@ export class NetworkRealms extends EventTarget {
       // delete player
       const oldPlayerRemoveUpdate = oldPlayerMap.removeUpdate();
       oldHeadRealm.emitUpdate(oldPlayerRemoveUpdate);
+
+      _emitLiveHands(oldHeadRealm);
     }.bind(this.localPlayer));
     
     this.world = new VirtualWorld('worldApps', this, {
