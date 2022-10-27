@@ -271,6 +271,8 @@ class EntityTracker extends EventTarget {
         this.virtualMaps.set(map.arrayIndexId, virtualMap);
 
         virtualMap.addEventListener('garbagecollect', e => {
+          this.virtualMaps.delete(map.arrayIndexId);
+
           this.dispatchEvent(new MessageEvent('entityremove', {
             data: {
               entityId: arrayIndexId,
@@ -312,6 +314,8 @@ class EntityTracker extends EventTarget {
       debugger;
     }
     virtualMap.unlink(arrayId, realm);
+
+    // this.virtualMaps.delete(arrayIndexId);
   }
   // each realm will only be linked once
   #linkInternal(arrayId, realm) {
@@ -733,6 +737,10 @@ class VirtualEntityArray extends VirtualPlayersArray {
     this.allNeedledVirtualEntities = new Map(); // entity -> needled entity
 
     this.entityTracker.addEventListener('entityadd', e => {
+      // if (/playerActions/.test(arrayId)) {
+      //   debugger;
+      // }
+      
       // console.log('virtual entity add', e.data);
       const {entityId, entity} = e.data;
       const needledEntity = new NeedledVirtualEntityMap(entity, this.headTracker);
@@ -748,7 +756,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
       const onunlink = e => {
         const {realm} = e.data;
         needledEntity.headTracker.unlinkRealm(realm);
-        linkedRealms.remove(realm);
+        linkedRealms.delete(realm);
       };
       needledEntity.addEventListener('unlink', onunlink);
 
@@ -771,6 +779,9 @@ class VirtualEntityArray extends VirtualPlayersArray {
       }));
     });
     this.entityTracker.addEventListener('entityremove', e => {
+      /* if (/playerActions/.test(arrayId)) {
+        debugger;
+      } */
       console.log('entity tracker remove', e.data);
       const {entityId, entity} = e.data;
 

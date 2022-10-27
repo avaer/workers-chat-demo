@@ -65,14 +65,26 @@ export const startGame = async () => {
         // const {entity} = e.data;
         el.updateText(dataClient);
       };
-      localPlayerApps.addEventListener('entityadd', onentityadd);
-
+      localPlayerApps.addEventListener('needledentityadd', onentityadd);
       const onentityremove = e => {
         // const {entity} = e.data;
         console.log('got entity remove', e.data);
         el.updateText(dataClient);
       };
-      localPlayerApps.addEventListener('entityremove', onentityremove);
+      localPlayerApps.addEventListener('needledentityremove', onentityremove);
+
+      const onentityadd2 = e => {
+        const {entity} = e.data;
+        console.log('got local player action add', entity);
+        el.updateText(dataClient);
+      };
+      localPlayerActions.addEventListener('needledentityadd', onentityadd2);
+      const onentityremove2 = e => {
+        const {entity} = e.data;
+        console.log('got local player action remove', entity);
+        el.updateText(dataClient);
+      };
+      localPlayerActions.addEventListener('needledentityremove', onentityremove2);
       
       const onadd = e => {
         // console.log('game players array add', realm.key, e.data, playersArray.toArray());
@@ -98,25 +110,27 @@ export const startGame = async () => {
       };
       playersArray.addEventListener('remove', onremove);
 
-      const onentityadd2 = e => {
+      const onentityadd3 = e => {
         // const {entity} = e.data;
         el.updateText(dataClient);
       };
-      virtualWorld.addEventListener('needledentityadd', onentityadd2);
+      virtualWorld.addEventListener('needledentityadd', onentityadd3);
 
-      const onentityremove2 = e => {
+      const onentityremove3 = e => {
         // const {entity} = e.data;
         el.updateText(dataClient);
       };
-      virtualWorld.addEventListener('needledentityremove', onentityremove2);
+      virtualWorld.addEventListener('needledentityremove', onentityremove3);
   
       realmCleanupFns.set(realm, () => {
         localPlayerApps.removeEventListener('needledentityadd', onentityadd);
-        localPlayerActions.removeEventListener('needledentityadd', onentityadd);
+        localPlayerApps.removeEventListener('needledentityremove', onentityremove);
+        localPlayerActions.removeEventListener('needledentityadd', onentityadd2);
+        localPlayerActions.removeEventListener('needledentityremove', onentityremove2);
         dataClient.removeEventListener('add', onadd);
         dataClient.removeEventListener('remove', onremove);
-        virtualWorld.removeEventListener('needledentityadd', onentityadd2);
-        virtualWorld.removeEventListener('needledentityremove', onentityremove2);
+        virtualWorld.removeEventListener('needledentityadd', onentityadd3);
+        virtualWorld.removeEventListener('needledentityremove', onentityremove3);
 
         playersArray.unlisten();
 
@@ -462,7 +476,12 @@ z-index: 2;
 
             // remove from the old location (player)
             firstApp.remove();
+            const oldSize = realms.localPlayer.playerActions.getSize();
             firstAction.remove();
+
+            /* if (realms.localPlayer.playerActions.getSize() !== 1) {
+              debugger;
+            } */
 
             const liveHandUpdate = targetRealm.dataClient.liveHandArrayMap(
               'worldApps',
