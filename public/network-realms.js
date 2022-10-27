@@ -1107,9 +1107,7 @@ class NeedledVirtualEntityMap extends HeadTrackedEntity {
 
     // the head might have changed if it pointed at this entity map
     // in that case, we need to update the head as if this were an initialization
-    const initialPosition = this.entityMap.getInitial(positionKey);
-    // XXX delete conflict due to not prefixing crdt keys for the maps as playerApps:ARRAYID:ARRAYINDEXID
-    debugger;
+    // const initialPosition = this.entityMap.getInitial(positionKey);
   }
   toObject() {
     const realm = this.headTracker.getHeadRealm();
