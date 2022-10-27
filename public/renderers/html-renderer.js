@@ -377,7 +377,7 @@ z-index: 1;
               });
               if (playerActionsArray.getSize()) {
                 playerActionsString = `  playerActions: [\n${_formatArray(playerActionsArray)}\n]`;
-              } else {www
+              } else {
                 playerActionsString = `  playerActions: []`;
               }
               playersString += '\n' + playerActionsString;
