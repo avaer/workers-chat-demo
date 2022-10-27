@@ -187,7 +187,7 @@ class HeadTracker extends EventTarget {
     /* if (this.#connectedRealms.has(realm)) {
       debugger;
     } */
-    let val = this.#connectedRealms.get(positionKey) ?? 0;
+    let val = this.#connectedRealms.get(realm) ?? 0;
     val++;
     this.#connectedRealms.set(realm, val);
   }
@@ -983,7 +983,7 @@ class HeadlessVirtualEntityMap extends EventTarget {
 
     // listen
     const map = new DCMap(arrayId, this.arrayIndexId, realm.dataClient);
-    map.listen();
+    /* map.listen();
     const update = e => {
       const {key, val} = e.data;
         
@@ -993,10 +993,13 @@ class HeadlessVirtualEntityMap extends EventTarget {
       }));
 
       if (key === positionKey) {
+        if (!this.updateHeadRealm) {
+          debugger;
+        }
         this.updateHeadRealm(val);
       }
     };
-    map.addEventListener('update', update);
+    map.addEventListener('update', update); */
 
     this.maps.set(key, {
       map,
@@ -1010,8 +1013,8 @@ class HeadlessVirtualEntityMap extends EventTarget {
     }));
 
     this.cleanupFns.set(key, () => {
-      map.unlisten();
-      map.removeEventListener('update', update);
+      // map.unlisten();
+      // map.removeEventListener('update', update);
 
       this.dispatchEvent(new MessageEvent('unlink', {
         data: {
@@ -1087,7 +1090,7 @@ class NeedledVirtualEntityMap extends HeadTrackedEntity {
       debugger;
     }
     const update = map.setKeyValueUpdate(key, val);
-    console.log('got update', update);
+    // console.log('got update', update);
     realm.emitUpdate(update);
   }
   remove() {
@@ -1199,7 +1202,7 @@ class VirtualWorld extends EventTarget {
 
       console.log('world needled app add', e.data);
       const {needledEntity} = e.data;
-      let position = needledEntity.entityMap.getInitial('position');
+      let position = needledEntity.entityMap.getInitial(positionKey);
       console.log('needled identity add', needledEntity, position);
       if (!position) {
         position = [0, 0, 0];
@@ -1517,7 +1520,7 @@ export class NetworkRealms extends EventTarget {
     }
 
     if (this.localPlayer.headTracker.hasHeadRealm()) {
-      this.localPlayer.setKeyValue('position', position);
+      this.localPlayer.setKeyValue(positionKey, position);
     }
   }
 }
