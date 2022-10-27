@@ -1263,12 +1263,6 @@ export class NetworkRealms extends EventTarget {
     this.headTracker.addEventListener('migrate', function(e) { // XXX bind local this -> this.localPlayer
       const {oldHeadRealm, newHeadRealm} = e.data;
 
-      debugger;
-
-      // if (typeof this.arrayIndexId !== 'string') {
-      //   debugger;
-      // }
-
       // old objects
       const oldPlayersArray = oldHeadRealm.dataClient.getArray(this.arrayId, {
         listen: false,
