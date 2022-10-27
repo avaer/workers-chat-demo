@@ -19,6 +19,7 @@ export const startGame = async () => {
   
   // realms
   const realms = new NetworkRealms(playerId);
+  globalThis.realms = realms; // XXX for testing
   const realmCleanupFns = new Map();
   realms.addEventListener('realmconnecting', e => {
     const {realm} = e.data;
@@ -419,6 +420,8 @@ z-index: 2;
             // if (wearActionIndex === -1) {
             //   debugger;
             // }
+
+            // XXX after the first removal, realms.localPlayer.playerActions.toArray() should have size 1 but it doesn't...
 
             const firstAction = realms.localPlayer.playerActions.getVirtualMapAt(wearActionIndex);
             // if (!firstAction) {

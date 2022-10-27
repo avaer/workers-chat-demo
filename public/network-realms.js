@@ -287,19 +287,9 @@ class EntityTracker extends EventTarget {
 
     const added = !this.virtualMaps.has(map.arrayIndexId);
     const virtualMap = _getOrCreateVirtualMap(map.arrayIndexId);
-    // console.log('link map', this.r, realm.key, Array.from(this.virtualMaps.entries()), map.arrayIndexId);
     
-    // XXX 'preentityadd' event to capture the link event
-    // XXX or, capture the missing links in needledentityadd construction (VirtualWorld entityadd handler)
     virtualMap.link(map.arrayId, realm);
     if (added) {
-      /* if (this.headTracker) {
-        const initialPosition = map.getKey('position');
-        if (initialPosition) {
-          this.headTracker.updateHeadRealm(initialPosition);
-        }
-      } */
-
       this.dispatchEvent(new MessageEvent('entityadd', { // XXX
         data: {
           entityId: map.arrayIndexId,
@@ -533,9 +523,9 @@ class VirtualPlayer extends HeadTrackedEntity {
     _initializePlayer();
   }
   link(realm) {
-    if (!this.headTracker) {
+    /* if (!this.headTracker) {
       debugger;
-    }
+    } */
     this.headTracker.linkRealm(realm);
     
     const {dataClient} = realm;
@@ -740,6 +730,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
     this.entityTracker = opts?.entityTracker ?? null;
 
     this.needledVirtualEntities = new Map(); // entity -> needled entity
+    this.allNeedledVirtualEntities = new Map(); // entity -> needled entity
 
     this.entityTracker.addEventListener('entityadd', e => {
       // console.log('virtual entity add', e.data);
@@ -770,6 +761,8 @@ class VirtualEntityArray extends VirtualPlayersArray {
         needledEntity.removeEventListener('unlink', onunlink);
       };
       this.needledVirtualEntities.set(entity, needledEntity);
+      this.allNeedledVirtualEntities.set(entity, needledEntity);
+
       this.dispatchEvent(new MessageEvent('needledentityadd', {
         data: {
           entityId,
@@ -782,9 +775,9 @@ class VirtualEntityArray extends VirtualPlayersArray {
       const {entityId, entity} = e.data;
 
       const needledEntity = this.needledVirtualEntities.get(entity);
-      if (!needledEntity) {
-        debugger;
-      }
+      // if (!needledEntity) {
+      //   debugger;
+      // }
       needledEntity.cleanupFn();
       this.needledVirtualEntities.delete(entity);
 
