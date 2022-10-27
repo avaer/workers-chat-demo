@@ -447,7 +447,7 @@ z-index: 2;
 
 
             // console.log('set key value 1');
-            // firstApp.setKeyValue('position', targetPosition);
+            firstApp.set('position', targetPosition);
             // console.log('set key value 2');
             // firstAction.setKeyValue('position', targetPosition);
             // console.log('set key value 3');
