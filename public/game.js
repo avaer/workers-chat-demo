@@ -421,7 +421,7 @@ z-index: 2;
         if (realms.localPlayer.playerActions.getSize() > 0) {
           const targetRealm = realms.getClosestRealm(targetPosition);
           if (targetRealm) {
-            console.log('drop to target realm', targetRealm.key, targetRealm);
+            // console.log('drop to target realm', targetRealm.key, targetRealm);
 
             // const worldApps = targetRealm.dataClient.getArray('worldApps', {
             //   listen: false,
@@ -432,8 +432,7 @@ z-index: 2;
             const wearActionIndex = actions.findIndex(action => action.action === 'wear');
             const wearAction = actions[wearActionIndex];
             const {appId} = wearAction;
-            // debugger;
-            console.log('drop app', appId);
+            // console.log('drop app', appId);
 
             const appIds = realms.localPlayer.playerApps.getKeys();
             const wearAppIndex = appIds.indexOf(appId);
@@ -442,11 +441,6 @@ z-index: 2;
             const firstApp = realms.localPlayer.playerApps.getVirtualMapAt(wearAppIndex);
 
             firstApp.set('position', targetPosition);
-            // XXX might need a head tracker manager, because head trackers are mismanaged and polluted across arrays
-            // XXX or, listen for needledentityadd on the entity tracker, and update all of the head trackers there,
-            // XXX handling all of the special player wear cases/position does not exist.
-            // XXX there is no need for readable/writable trackers and overrides, or cross-array pollution.
-            // XXX we can just operate head tracking at the needled virtual entity level.
 
             // set dead hands
             // old location: player
@@ -490,7 +484,7 @@ z-index: 2;
             );
             targetRealm.emitUpdate(liveHandUpdate);
 
-            console.log('drop 2');
+            // console.log('drop 2');
           } else {
             console.warn('no containing realm to drop to');
           }
@@ -498,7 +492,7 @@ z-index: 2;
           console.warn('nothing to drop');
         }
       }
-      console.log('drop 3');
+      // console.log('drop 3');
     };
   };
   _initRenderers();
