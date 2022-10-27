@@ -3,6 +3,11 @@ import {zstringify} from '../util.mjs';
 
 //
 
+const rockImg = new Image();
+rockImg.src = '/public/images/rock.png';
+
+//
+
 export class LocalPlayerHtmlRenderer {
   constructor(localPlayerId, virtualPlayer) {
     this.localPlayerId = localPlayerId;
@@ -152,22 +157,34 @@ export class GamePlayerCanvas {
     const playerActions = new Set();
     const _renderPlayerApps = () => {
       // remove all elements
-      playerAppsEl.innerHTML = '';
+      // playerAppsEl.innerHTML = '';
 
+      let index = 0;
       for (const actionMap of playerActions) {
-        if (!actionMap?.toObject) {
+        /* if (!actionMap?.toObject) {
           debugger;
-        }
+        } */
         const actionJson = actionMap.toObject();
         // console.log('got action map', actionJson);
         const {action} = actionJson;
         if (action === 'wear') {
-          const wornApp = playerApps.get(actionJson.appId);
-          const appDiv = document.createElement('div');
-          appDiv.className = 'player-app';
-          appDiv.innerHTML = `<img src="/public/images/rock.png" >`;
-          playerAppsEl.appendChild(appDiv);
+          // const wornApp = playerApps.get(actionJson.appId);
+
+          if (!playerAppsEl.childNodes[index]) {
+            const appDiv = document.createElement('div');
+            appDiv.className = 'player-app';
+            // appDiv.innerHTML = `<img src="/public/images/rock.png" >`;
+            const img = rockImg.cloneNode();
+            appDiv.appendChild(img);
+            playerAppsEl.appendChild(appDiv);
+          }
+          index++;
         }
+      }
+
+      // remove extra elements from the end of playerAppsEl childNodes
+      while (playerAppsEl.childNodes[index]) {
+        playerAppsEl.removeChild(playerAppsEl.childNodes[index]);
       }
     };
 
