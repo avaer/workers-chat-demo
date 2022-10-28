@@ -312,7 +312,7 @@ z-index: 2;
 
     // action methods
     const _pickupDrop = () => {
-      console.log('drop 1');
+      // console.log('drop 1');
       const targetPosition = [
         localPlayerCanvas.position[0] + localPlayerCanvas.direction[0] * frameSize,
         0,
@@ -436,10 +436,10 @@ z-index: 2;
 
             // console.log('drop 2');
           } else {
-            console.warn('no containing realm to drop to');
+            // console.warn('no containing realm to drop to');
           }
         } else {
-          console.warn('nothing to drop');
+          // console.warn('nothing to drop');
         }
       }
       // console.log('drop 3');

@@ -124,7 +124,7 @@ class HeadTracker extends EventTarget {
   constructor(name, parent) {
     super();
 
-    console.log('new head tracker', new Error().stack);
+    // console.log('new head tracker', new Error().stack);
 
     this.name = name;
     this.parent = parent;
@@ -288,7 +288,7 @@ class EntityTracker extends EventTarget {
     return this.virtualMaps.size;
   }
   linkMap(realm, map) {
-    console.log('entity tracker link map', map.arrayId, map.arrayIndexId);
+    // console.log('entity tracker link map', map.arrayId, map.arrayIndexId);
 
     // bind local array maps to virtual maps
     const _getOrCreateVirtualMap = (arrayIndexId) => {
@@ -475,7 +475,7 @@ class EntityTracker extends EventTarget {
 
     // console.log('link key', key);
     this.cleanupFns.set(key, () => {
-      console.log('unlink key', key);
+      // console.log('unlink key', key);
 
       // if (/worldApps/.test(arrayId)) {
       //   debugger;
@@ -826,10 +826,10 @@ class VirtualEntityArray extends VirtualPlayersArray {
       //   debugger;
       // }
 
-      if (/worldApps/.test(arrayId)) {
-        console.log('world apps entity add', arrayId);
-        // debugger;
-      }
+      // if (/worldApps/.test(arrayId)) {
+      //   console.log('world apps entity add', arrayId);
+      //   debugger;
+      // }
       
       // console.log('virtual entity add', e.data);
       const {entityId, entity} = e.data;
@@ -894,7 +894,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
 
     const needledEntityCleanupFns = new Map();
     this.addEventListener('needledentityadd', e => {
-      console.log('app add', e.data);
+      // console.log('app add', e.data);
       const {needledEntity} = e.data;
       let position = needledEntity.entityMap.getInitial(positionKey);
       // console.log('virtual world needled identity add', needledEntity, position);
@@ -1207,13 +1207,13 @@ class NeedledVirtualEntityMap extends HeadTrackedEntity {
 
     const onlink = e => {
       const {realm} = e.data;
-      console.log('needled entity map link', realm.key);
+      // console.log('needled entity map link', realm.key);
       this.headTracker.linkRealm(realm);
     };
     this.entityMap.addEventListener('link', onlink);
     const onunlink = e => {
       const {realm} = e.data;
-      console.log('needled entity map unlink', realm.key);
+      // console.log('needled entity map unlink', realm.key);
       this.headTracker.unlinkRealm(realm);
     };
     this.entityMap.addEventListener('unlink', onunlink);
@@ -1426,7 +1426,7 @@ export class NetworkRealms extends EventTarget {
       });
 
       const playerId = this.realms.playerId;
-      console.log('move realm ', playerId, oldHeadRealm.key, ' -> ', newHeadRealm.key);
+      // console.log('move realm ', playerId, oldHeadRealm.key, ' -> ', newHeadRealm.key);
 
       // set dead hands
       const deadHandKeys = [
@@ -1602,7 +1602,7 @@ export class NetworkRealms extends EventTarget {
           for (let i = 0; i < appIds.length; i++) {
             appIds[i] = makeId();
           }
-          console.log('initialize player', position);
+          // console.log('initialize player', position);
           this.localPlayer.initializePlayer({
             position,
             cursorPosition: new Float32Array(3),
