@@ -388,8 +388,6 @@ class EntityTracker extends EventTarget {
       const map = dcArray.getMap(arrayIndexId, {
         listen: false,
       });
-      // XXX this link needs to go out to all virutal arrays wrapping this entity tracker
-      // XXX not just the ones where the arrayId matches
       _bind(map);
     };
     dcArray.dataClient.addEventListener(addKey, onadd);
@@ -453,9 +451,10 @@ class EntityTracker extends EventTarget {
       dcArray.dataClient.removeEventListener(importArrayKey, onimportarray);
 
       for (const arrayIndexId of localVirtualMaps.keys()) {
+        // console.log('unlink', [realm, dcArray.arrayId, arrayIndexId]);
         this.unlinkMap(realm, dcArray.arrayId, arrayIndexId);
       }
-      localVirtualMaps.clear();
+      // localVirtualMaps.clear();
 
       /* for (const localVirtualMap of localVirtualMaps.values()) {
         if (!localVirtualMap.unlinkFilter) {
@@ -821,6 +820,9 @@ class VirtualEntityArray extends VirtualPlayersArray {
         needledEntity.removeEventListener('unlink', onunlink);
       }; */
       needledEntity.cleanupFn = () => {
+        // if (/worldApps/.test(arrayId)) {
+        //   debugger;
+        // }
         this.dispatchEvent(new MessageEvent('needledentityremove', {
           data: {
             entityId,
@@ -1024,10 +1026,18 @@ class HeadlessVirtualEntityMap extends EventTarget {
 
     // listen
     const map = new DCMap(arrayId, this.arrayIndexId, realm.dataClient);
+    map.listen();
     this.maps.set(key, {
       map,
       realm,
     });
+
+    const update = e => {
+      this.dispatchEvent(new MessageEvent('update', {
+        data: e.data,
+      }));
+    };
+    map.addEventListener('update', update);
 
     // if (/worldApps/.test(arrayId)) {
     //   debugger;
@@ -1041,6 +1051,8 @@ class HeadlessVirtualEntityMap extends EventTarget {
     }));
 
     this.cleanupFns.set(key, () => {
+      map.removeEventListener('update', update);
+
       this.dispatchEvent(new MessageEvent('unlink', {
         data: {
           realm,
@@ -1071,14 +1083,13 @@ class HeadlessVirtualEntityMap extends EventTarget {
     this.cleanupFns.delete(key);
 
     // garbage collect
-    console.log('check maps size', arrayId, Array.from(this.maps.keys()), Array.from(this.maps.values()));
+    // console.log('check maps size', arrayId, Array.from(this.maps.keys()), Array.from(this.maps.values()));
     if (this.maps.size === 0) {
       // console.log('garbage collect virtual entity map', arrayId, this.arrayIndexId);
       // if (/playerApps/.test(arrayId)) {
       //   debugger;
       // }
       this.dispatchEvent(new MessageEvent('garbagecollect'));
-      debugger;
     }
   }
 }
@@ -1251,11 +1262,6 @@ class VirtualWorld extends EventTarget {
       debugger;
     }); */
     this.worldApps.addEventListener('needledentityadd', e => {
-      // XXX this needs to filter for the arrayId we are interested in
-      // XXX we really need two different entity trackers: apps and actions
-
-      // debugger;
-
       // console.log('world needled app add', e.data);
       const {needledEntity} = e.data;
       let position = needledEntity.entityMap.getInitial(positionKey);
@@ -1273,7 +1279,7 @@ class VirtualWorld extends EventTarget {
 
       const update = e => {
         const {key, val} = e.data;
-        console.log('virtual world needled entity got update', {key, val}); // XXX need to update the position of playerApps before dropping them to the world
+        console.log('virtual world needled entity got update', {key, val});
         if (key === positionKey) {
           needledEntity.headTracker.updateHeadRealm(val);
           console.log('virtual world update head realm', arrayId, structuredClone(val), needledEntity.headTracker.getHeadRealm());

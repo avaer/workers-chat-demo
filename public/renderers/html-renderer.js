@@ -124,6 +124,75 @@ export class WorldItemHtmlRenderer {
 
 //
 
+export class AppsHtmlRenderer {
+  constructor(virtualWorld) {
+    const worldAppsEl = document.getElementById('world-apps');
+
+    const _render = () => {
+      let appIndex = 0;
+      const _pushWorldApp = app => {
+        let appEl = worldAppsEl.children[appIndex];
+        if (!appEl) {
+          appEl = rockImg.cloneNode();
+          appEl.classList.add('world-app');
+          worldAppsEl.appendChild(appEl);
+        }
+        // set the position
+        const position = app.position ?? [0, 0, 0];
+        appEl.style.left = `${position[0]}px`;
+        appEl.style.top = `${position[2]}px`;
+
+        appIndex++;
+      };
+      const _finalizeWorldApps = () => {
+        while (worldAppsEl.children.length > appIndex) {
+          worldAppsEl.removeChild(worldAppsEl.lastChild);
+        }
+      };
+
+      for (const virtualEntity of worldAppEntities) {
+        _pushWorldApp(virtualEntity.toObject());
+      }
+      _finalizeWorldApps();
+    };
+
+    const worldAppEntities = new Set();
+    window.worldAppEntities = worldAppEntities;
+    virtualWorld.worldApps.addEventListener('needledentityadd', e => {
+      const {needledEntity} = e.data;
+      // for (const {map, realm} of needledEntity.entityMap.maps.values()) {
+        // const {dataClient} = realm;
+
+        worldAppEntities.add(needledEntity);
+      
+        needledEntity.entityMap.addEventListener('update', e => {
+          // console.log('got update', e.data);
+          _render();
+        });
+      // }
+      _render();
+    });
+    virtualWorld.worldApps.addEventListener('needledentityremove', e => {
+      const {needledEntity} = e.data;
+      const realm = needledEntity.headTracker.getHeadRealm();
+
+      // const {dataClient} = realm;
+
+      worldAppEntities.delete(needledEntity);
+
+      _render();
+
+      /* const el = getRealmElement(realm);
+      if (el) {
+        debugger;
+        el.updateText(dataClient);
+      } */
+    });
+  }
+}
+
+//
+
 export class GameObjectCanvas {
 
 }
@@ -200,8 +269,10 @@ export class GamePlayerCanvas {
     const playerAppsEntityRemove = e => {
       // console.log('html renderer got player apps remove', e.data);
       const {entityId} = e.data;
-      playerApps.delete(entityId);
-      _renderPlayerApps();
+      if (playerApps.has(entityId)) {
+        playerApps.delete(entityId);
+        _renderPlayerApps();
+      }
     };
     virtualPlayer.playerApps.addEventListener('needledentityremove', playerAppsEntityRemove);
 
@@ -331,9 +402,6 @@ export class GameRealmsCanvases {
         // text2.textContent = `${dx}:${dz}`;
         text.appendChild(text2);
 
-        const worldAppsEl = document.createElement('div');
-        worldAppsEl.className = 'world-apps';
-
         const div = document.createElement('div');
         div.className = 'network-realm';
         div.style.cssText = `\
@@ -344,7 +412,6 @@ z-index: 1;
         `;
         div.appendChild(canvas);
         div.appendChild(text);
-        div.appendChild(worldAppsEl);
         div.min = [x * realmSize, 0, z * realmSize];
         div.size = realmSize;
         div.setColor = color => {
@@ -360,27 +427,6 @@ z-index: 1;
           const worldApps = dataClient.getArray('worldApps', {
             listen: false,
           });
-
-          let appIndex = 0;
-          const _pushWorldApp = app => {
-            let appEl = worldAppsEl.children[appIndex];
-            if (!appEl) {
-              appEl = rockImg.cloneNode();
-              appEl.classList.add('world-app');
-              worldAppsEl.appendChild(appEl);
-            }
-            // set the position
-            const position = app.position ?? [0, 0, 0];
-            appEl.style.left = `${position[0] - x * realmSize}px`;
-            appEl.style.top = `${position[2] - z * realmSize}px`;
-
-            appIndex++;
-          };
-          const _finalizeWorldApps = () => {
-            while (worldAppsEl.children.length > appIndex) {
-              worldAppsEl.removeChild(worldAppsEl.lastChild);
-            }
-          }
 
           const _formatArray = array => {
             array = array.getKeys().map(arrayIndexId => {
@@ -432,12 +478,7 @@ z-index: 1;
               // if (s.includes('{}')) {
               //   debugger;
               // }
-              const worldAppsArray = worldApps.toArray();
-              for (const worldApp of worldAppsArray) {
-                _pushWorldApp(worldApp);
-              }
-              _finalizeWorldApps();
-              worldAppsString = `worldApps: [\n${zstringify(worldAppsArray)}\n]`;
+              worldAppsString = `worldApps: [\n${zstringify(worldApps.toArray())}\n]`;
             } else {
               worldAppsString = `worldApps: []`;
             }

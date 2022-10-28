@@ -2,14 +2,12 @@ import {makeId, zstringify} from './util.mjs';
 // import {zstringify} from './encoding.mjs';
 import {frameSize, realmSize} from './constants.js';
 
-import {RemotePlayerCursorHtmlRenderer, GameRealmsCanvases, GamePlayerCanvas} from "./renderers/html-renderer.js";
+import {RemotePlayerCursorHtmlRenderer, AppsHtmlRenderer, GameRealmsCanvases, GamePlayerCanvas} from "./renderers/html-renderer.js";
 import {NetworkRealms} from "./network-realms.js";
 
 //
 
 // XXX wait for sync before we finally disconnect, or else the message might not have been sent befor we disconnect
-// XXX render app icons on top of the player
-// XXX add multi-deadhand/livehand support to server
 
 //
 
@@ -55,36 +53,8 @@ export const startGame = async () => {
 
       el.updateText(dataClient);
 
-      const localPlayerApps = realms.localPlayer.playerApps;
-      const localPlayerActions = realms.localPlayer.playerActions;
       const playersArray = dataClient.getArray('players');
       // const worldApps = dataClient.getArray('worldApps');
-
-      const onentityadd = e => {
-        // const {entity} = e.data;
-        // console.log('got entity add', e.data);
-        el.updateText(dataClient);
-      };
-      localPlayerApps.addEventListener('needledentityadd', onentityadd);
-      const onentityremove = e => {
-        // const {entity} = e.data;
-        // console.log('got entity remove', e.data);
-        el.updateText(dataClient);
-      };
-      localPlayerApps.addEventListener('needledentityremove', onentityremove);
-
-      const onentityadd2 = e => {
-        // const {entity} = e.data;
-        // console.log('got local player action add', entity);
-        el.updateText(dataClient);
-      };
-      localPlayerActions.addEventListener('needledentityadd', onentityadd2);
-      const onentityremove2 = e => {
-        // const {entity} = e.data;
-        // console.log('got local player action remove', entity);
-        el.updateText(dataClient);
-      };
-      localPlayerActions.addEventListener('needledentityremove', onentityremove2);
       
       const onadd = e => {
         // console.log('game players array add', realm.key, e.data, playersArray.toArray());
@@ -118,16 +88,11 @@ export const startGame = async () => {
 
       const onentityremove3 = e => {
         // const {entity} = e.data;
-        debugger;
         el.updateText(dataClient);
       };
       virtualWorld.worldApps.addEventListener('needledentityremove', onentityremove3);
   
       realmCleanupFns.set(realm, () => {
-        localPlayerApps.removeEventListener('needledentityadd', onentityadd);
-        localPlayerApps.removeEventListener('needledentityremove', onentityremove);
-        localPlayerActions.removeEventListener('needledentityadd', onentityadd2);
-        localPlayerActions.removeEventListener('needledentityremove', onentityremove2);
         dataClient.removeEventListener('add', onadd);
         dataClient.removeEventListener('remove', onremove);
         virtualWorld.worldApps.removeEventListener('needledentityadd', onentityadd3);
@@ -169,32 +134,10 @@ export const startGame = async () => {
     // XXX can move this to html-renderer GameRealmsCanvases
     // XXX track active needed entities for updates
     // XXX or just track needled entities in a separate html renderer
-    virtualWorld.worldApps.addEventListener('needledentityadd', e => {
-      const {needledEntity} = e.data;
-      for (const {map, realm} of needledEntity.entityMap.maps.values()) {
-        const {dataClient} = realm;
-      
-        const el = getRealmElement(realm);
-        if (el) {
-          el.updateText(dataClient);
-        }
-      }
-    });
-    virtualWorld.worldApps.addEventListener('needledentityremove', e => {
-      const {needledEntity} = e.data;
-      // debugger;
-      for (const {map, realm} of needledEntity.entityMap.maps.values()) {
-        const {dataClient} = realm;
-      
-        const el = getRealmElement(realm);
-        if (el) {
-          el.updateText(dataClient);
-        }
-      }
-    });
 
     // local player
     const localPlayerCursorRenderer = new RemotePlayerCursorHtmlRenderer(realms.playerId, realms.playerId, realms.localPlayer);
+    const appsRenderer = new AppsHtmlRenderer(realms.world);
 
     // players
     const playerCursorRenderers = [];
