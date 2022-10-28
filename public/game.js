@@ -114,13 +114,14 @@ export const startGame = async () => {
         // const {entity} = e.data;
         el.updateText(dataClient);
       };
-      virtualWorld.addEventListener('needledentityadd', onentityadd3);
+      virtualWorld.worldApps.addEventListener('needledentityadd', onentityadd3);
 
       const onentityremove3 = e => {
         // const {entity} = e.data;
+        debugger;
         el.updateText(dataClient);
       };
-      virtualWorld.addEventListener('needledentityremove', onentityremove3);
+      virtualWorld.worldApps.addEventListener('needledentityremove', onentityremove3);
   
       realmCleanupFns.set(realm, () => {
         localPlayerApps.removeEventListener('needledentityadd', onentityadd);
@@ -129,8 +130,8 @@ export const startGame = async () => {
         localPlayerActions.removeEventListener('needledentityremove', onentityremove2);
         dataClient.removeEventListener('add', onadd);
         dataClient.removeEventListener('remove', onremove);
-        virtualWorld.removeEventListener('needledentityadd', onentityadd3);
-        virtualWorld.removeEventListener('needledentityremove', onentityremove3);
+        virtualWorld.worldApps.removeEventListener('needledentityadd', onentityadd3);
+        virtualWorld.worldApps.removeEventListener('needledentityremove', onentityremove3);
 
         playersArray.unlisten();
 
@@ -163,26 +164,32 @@ export const startGame = async () => {
 
   const _initLogic = () => {
     // world
-    const worldItemRenderers = [];
+    // const worldItemRenderers = [];
     // bind
-    virtualWorld.addEventListener('entityadd', e => {
-      // console.log('add virtual world app', e.data);
-      const {realm} = e.data;
-      const {dataClient} = realm;
+    // XXX can move this to html-renderer GameRealmsCanvases
+    // XXX track active needed entities for updates
+    // XXX or just track needled entities in a separate html renderer
+    virtualWorld.worldApps.addEventListener('needledentityadd', e => {
+      const {needledEntity} = e.data;
+      for (const {map, realm} of needledEntity.entityMap.maps.values()) {
+        const {dataClient} = realm;
       
-      const el = getRealmElement(realm);
-      if (el) {
-        el.updateText(dataClient);
+        const el = getRealmElement(realm);
+        if (el) {
+          el.updateText(dataClient);
+        }
       }
     });
-    virtualWorld.addEventListener('entityremove', e => {
-      // console.log('remove virtual world app', e.data);
-      const {realm} = e.data;
-      const {dataClient} = realm;
+    virtualWorld.worldApps.addEventListener('needledentityremove', e => {
+      const {needledEntity} = e.data;
+      // debugger;
+      for (const {map, realm} of needledEntity.entityMap.maps.values()) {
+        const {dataClient} = realm;
       
-      const el = getRealmElement(realm);
-      if (el) {
-        el.updateText(dataClient);
+        const el = getRealmElement(realm);
+        if (el) {
+          el.updateText(dataClient);
+        }
       }
     });
 
