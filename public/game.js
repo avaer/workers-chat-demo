@@ -137,7 +137,7 @@ export const startGame = async () => {
 
     // local player
     const localPlayerCursorRenderer = new RemotePlayerCursorHtmlRenderer(realms.playerId, realms.playerId, realms.localPlayer);
-    const appsRenderer = new AppsHtmlRenderer(realms.world);
+    const appsRenderer = new AppsHtmlRenderer(realms);
 
     // players
     const playerCursorRenderers = [];
@@ -240,7 +240,6 @@ export const startGame = async () => {
       const spriteImg = await GamePlayerCanvas.loadFromUrl('/public/images/fire-mage.png');
       localPlayerCanvas.setSprite(spriteImg);
     })();
-    // console.log('got canvas', localPlayerCanvas);
     localPlayerCanvas.element.style.cssText = `\
 position: fixed;
 outline: none;

@@ -88,19 +88,12 @@ export class RemotePlayerCursorHtmlRenderer {
 }
 
 export class WorldItemHtmlRenderer {
-  constructor(virtualWorld) {
-    this.virtualWorld = virtualWorld;
+  constructor(realms) {
 
     const div = document.createElement('div');
     div.id = 'world-items';
     document.body.appendChild(div);
 
-    const entityadd = e => {
-      const {val} = e.data;
-      const [x, y, z] = val;
-      div.style.left = `${x}px`;
-      div.style.top = `${y}px`;
-    };
     virtualWorld.addEventListener('needledentityadd', entityadd);
 
     const entityremove = e => {
@@ -125,69 +118,174 @@ export class WorldItemHtmlRenderer {
 //
 
 export class AppsHtmlRenderer {
-  constructor(virtualWorld) {
-    const worldAppsEl = document.getElementById('world-apps');
-
+  constructor(realms) {
     const _render = () => {
-      let appIndex = 0;
-      const _pushWorldApp = app => {
-        let appEl = worldAppsEl.children[appIndex];
-        if (!appEl) {
-          appEl = rockImg.cloneNode();
-          appEl.classList.add('world-app');
-          worldAppsEl.appendChild(appEl);
-        }
-        // set the position
-        const position = app.position ?? [0, 0, 0];
-        appEl.style.left = `${position[0]}px`;
-        appEl.style.top = `${position[2]}px`;
+      const worldAppsEl = document.getElementById('world-apps');
+      const localPlayerAppsEl = document.getElementById(`player-${realms.playerId}`)
+        .querySelector('.player-apps');
 
-        appIndex++;
+      let worldAppIndex = 0;
+      let localPlayerAppIndex = 0;
+      const _makeAppEl = () => {
+        const appEl = rockImg.cloneNode();
+        appEl.classList.add('world-app');
+        return appEl;
+      };
+      const _pushWorldApp = needledEntity => {
+        // if (playerActions.size > 0) {
+        //   debugger;
+        // }
+
+        const wearSpec = _getWearSpec(needledEntity);
+        // const wearPlayerId = '';
+        if (wearSpec) {
+          const {
+            wearPlayerId,
+            wearNeedledEntity,
+          } = wearSpec;
+          if (wearPlayerId !== realms.playerId) {
+            throw new Error('only local player is supported');
+          }
+
+          const had = !!localPlayerAppsEl.childNodes[localPlayerAppIndex];
+          const appEl = localPlayerAppsEl.childNodes[localPlayerAppIndex] || _makeAppEl();
+
+          // const playerEl = document.getElementById(`player-${wearPlayerId}`);
+          // const localPlayerAppsEl = playerEl.querySelector('.player-apps');
+
+          appEl.style.left = `${localPlayerAppIndex * inventoryFrameSize}px`;
+          appEl.style.top = null;
+
+          !had && localPlayerAppsEl.appendChild(appEl);
+
+          localPlayerAppIndex++;
+        } else {
+          const had = !!worldAppsEl.childNodes[worldAppIndex];
+          const appEl = worldAppsEl.childNodes[worldAppIndex] || _makeAppEl();
+          
+          const app = needledEntity.toObject();
+          const position = app.position ?? [0, 0, 0];
+          appEl.style.left = `${position[0]}px`;
+          appEl.style.top = `${position[2]}px`;
+          
+          // if (position[0] === 0 && position[2] === 0) {
+          //   debugger;
+          // }
+
+          !had && worldAppsEl.appendChild(appEl);
+
+          worldAppIndex++;
+        }
+        // console.log('got style', appEl.style.cssText);
       };
       const _finalizeWorldApps = () => {
-        while (worldAppsEl.children.length > appIndex) {
+        while (worldAppsEl.children.length > worldAppIndex) {
           worldAppsEl.removeChild(worldAppsEl.lastChild);
+        }
+        while (localPlayerAppsEl.children.length > localPlayerAppIndex) {
+          localPlayerAppsEl.removeChild(localPlayerAppsEl.lastChild);
         }
       };
 
-      for (const virtualEntity of worldAppEntities) {
-        _pushWorldApp(virtualEntity.toObject());
+      for (const needledEntity of worldAppEntities.values()) {
+        _pushWorldApp(needledEntity);
       }
       _finalizeWorldApps();
     };
+    const update = e => {
+      _render();
+    };
+    const _getWearSpec = virtualEntity => {
+      const actions = Array.from(playerActions.values()).map(playerAction => playerAction.toObject());
+      // console.log('got actions', actions);
+      const wearAction = actions.find(action => action.action === 'wear' && action.appId === virtualEntity.entityMap.arrayIndexId);
+      // console.log('got wear action', actions, wearAction, virtualEntity);
+      /* if (actions.length > 0 && !wearAction) {
+        debugger;
+      } */
+      // console.log('got action', wearAction);
+      if (wearAction) {
+        // console.log('got wear action', wearAction, virtualEntity.entityMap.arrayIndexId);
+        const wearPlayerId = realms.playerId;
+        // if (!playerApps.get) {
+        //   debugger;
+        // }
+        const wearNeedledEntity = playerApps.get(wearAction.appId);
+        if (!wearNeedledEntity) {
+          debugger;
+        }
+        return {
+          wearPlayerId,
+          wearNeedledEntity,
+        };
+      } else {
+        return null;
+      }
+    };
 
-    const worldAppEntities = new Set();
-    window.worldAppEntities = worldAppEntities;
+    const playerApps = new Map();
+    const playerActions = new Map();
+    realms.localPlayer.playerApps.addEventListener('needledentityadd', e => {
+      // console.log('got app', e.data);
+      const {needledEntity} = e.data;
+      playerApps.set(needledEntity.entityMap.arrayIndexId, needledEntity);
+
+      needledEntity.addEventListener('update', update);
+
+      // update();
+    });
+    realms.localPlayer.playerApps.addEventListener('needledentityremove', e => {
+      // console.log('remove app', e.data);
+      const {needledEntity} = e.data;
+      if (!playerApps.has(needledEntity.entityMap.arrayIndexId)) {
+        debugger;
+      }
+
+      needledEntity.removeEventListener('update', update);
+
+      playerApps.delete(needledEntity.entityMap.arrayIndexId);
+      
+      // update();
+    });
+    realms.localPlayer.playerActions.addEventListener('needledentityadd', e => {
+      const {needledEntity} = e.data;
+      playerActions.set(needledEntity.entityMap.arrayIndexId, needledEntity);
+
+      update();
+    });
+    realms.localPlayer.playerActions.addEventListener('needledentityremove', e => {
+      const {needledEntity} = e.data;
+      // debugger;
+      playerActions.delete(needledEntity.entityMap.arrayIndexId);
+
+      update();
+    });
+    
+    const worldAppEntities = new Map();
+    const virtualWorld = realms.getVirtualWorld();
     virtualWorld.worldApps.addEventListener('needledentityadd', e => {
       const {needledEntity} = e.data;
-      // for (const {map, realm} of needledEntity.entityMap.maps.values()) {
-        // const {dataClient} = realm;
 
-        worldAppEntities.add(needledEntity);
-      
-        needledEntity.entityMap.addEventListener('update', e => {
-          // console.log('got update', e.data);
-          _render();
-        });
-      // }
-      _render();
+      worldAppEntities.set(needledEntity.entityMap.arrayIndexId, needledEntity);
+    
+      needledEntity.addEventListener('update', update);
+
+      update();
     });
     virtualWorld.worldApps.addEventListener('needledentityremove', e => {
       const {needledEntity} = e.data;
-      const realm = needledEntity.headTracker.getHeadRealm();
+      // const realm = needledEntity.headTracker.getHeadRealm();
 
-      // const {dataClient} = realm;
+      worldAppEntities.delete(needledEntity.entityMap.arrayIndexId);
 
-      worldAppEntities.delete(needledEntity);
+      needledEntity.removeEventListener('update', update);
 
-      _render();
-
-      /* const el = getRealmElement(realm);
-      if (el) {
-        debugger;
-        el.updateText(dataClient);
-      } */
+      update();
     });
+
+    window.playerApps = playerApps;
+    window.playerActions = playerActions;
+    window.worldAppEntities = worldAppEntities;
   }
 }
 
@@ -196,10 +294,11 @@ export class AppsHtmlRenderer {
 export class GamePlayerCanvas {
   constructor(virtualPlayer) {
     this.virtualPlayer = virtualPlayer;
-    
+
     this.spriteImg = null;
 
     this.element = document.createElement('div');
+    this.element.id = `player-${virtualPlayer.arrayIndexId}`;
     this.element.className = 'game-player';
     
     this.canvas = document.createElement('canvas');
@@ -221,6 +320,7 @@ export class GamePlayerCanvas {
     const playerApps = new Map();
     const playerActions = new Set();
     const _renderPlayerApps = () => {
+      return;
       let wearIndex = 0;
       for (const actionMap of playerActions) {
         const actionJson = actionMap.toObject();
@@ -247,7 +347,7 @@ export class GamePlayerCanvas {
       }
     };
 
-    // const map = this.dataClient.getArrayMap('players', this.remotePlayerId);
+    /* // const map = this.dataClient.getArrayMap('players', this.remotePlayerId);
     // console.log('virtual player update listen');
     const playerAppsEntityAdd = e => {
       // console.log('html renderer got player apps add', e.data);
@@ -279,7 +379,7 @@ export class GamePlayerCanvas {
       playerActions.delete(needledEntity);
       _renderPlayerApps();
     };
-    virtualPlayer.playerActions.addEventListener('needledentityremove', playerActionsEntityRemove);
+    virtualPlayer.playerActions.addEventListener('needledentityremove', playerActionsEntityRemove); */
   }
   setSprite(spriteImg) {
     this.spriteImg = spriteImg;
@@ -389,7 +489,6 @@ export class GameRealmsCanvases {
         text1.textContent = `${x}:${z}`;
         text.appendChild(text1);
         const text2 = document.createElement('div');
-        // text2.textContent = `${dx}:${dz}`;
         text.appendChild(text2);
 
         const div = document.createElement('div');
@@ -464,10 +563,6 @@ z-index: 1;
 
             let worldAppsString = '';
             if (worldApps.getSize() > 0) {
-              // const s = zstringify(worldApps.toArray());
-              // if (s.includes('{}')) {
-              //   debugger;
-              // }
               worldAppsString = `worldApps: [\n${zstringify(worldApps.toArray())}\n]`;
             } else {
               worldAppsString = `worldApps: []`;

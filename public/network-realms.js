@@ -357,6 +357,10 @@ class EntityTracker extends EventTarget {
   #linkInternal(arrayId, realm) {
     const key = arrayId + ':' + realm.key;
 
+    if (this.cleanupFns.get(key)) {
+      debugger;
+    }
+
     if (!this.linkStacks) {
       this.linkStacks = new Map();
       this.linkStacks.set(key, new Error().stack);
@@ -514,6 +518,9 @@ class EntityTracker extends EventTarget {
   }
   #unlinkInternal(arrayId, realm) {
     const key = arrayId + ':' + realm.key;
+    if (!this.cleanupFns.get(key)) {
+      debugger;
+    }
     this.cleanupFns.get(key)();
     this.cleanupFns.delete(key);
   }
@@ -960,6 +967,9 @@ class VirtualEntityArray extends VirtualPlayersArray {
     }
     return null;
   } */
+  getVirtualMap(arrayIndexId) {
+    return this.entityTracker.virtualMaps.get(arrayIndexId);
+  }
   getVirtualMapAt(index) {
     return Array.from(this.needledVirtualEntities.values())[index];
   }
