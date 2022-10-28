@@ -1,4 +1,4 @@
-import {frameSize, realmSize} from '../constants.js';
+import {frameSize, realmSize, inventoryFrameSize} from '../constants.js';
 import {zstringify} from '../util.mjs';
 
 //
@@ -193,10 +193,6 @@ export class AppsHtmlRenderer {
 
 //
 
-export class GameObjectCanvas {
-
-}
-
 export class GamePlayerCanvas {
   constructor(virtualPlayer) {
     this.virtualPlayer = virtualPlayer;
@@ -225,35 +221,29 @@ export class GamePlayerCanvas {
     const playerApps = new Map();
     const playerActions = new Set();
     const _renderPlayerApps = () => {
-      // remove all elements
-      // playerAppsEl.innerHTML = '';
-
-      let index = 0;
+      let wearIndex = 0;
       for (const actionMap of playerActions) {
-        /* if (!actionMap?.toObject) {
-          debugger;
-        } */
         const actionJson = actionMap.toObject();
-        // console.log('got action map', actionJson);
         const {action} = actionJson;
         if (action === 'wear') {
-          // const wornApp = playerApps.get(actionJson.appId);
-
-          if (!playerAppsEl.childNodes[index]) {
+          if (!playerAppsEl.childNodes[wearIndex]) {
+            const x = wearIndex;
+            
             const appDiv = document.createElement('div');
             appDiv.className = 'player-app';
-            // appDiv.innerHTML = `<img src="/public/images/rock.png" >`;
+            appDiv.style.left = `${x * inventoryFrameSize}px`;
+
             const img = rockImg.cloneNode();
             appDiv.appendChild(img);
             playerAppsEl.appendChild(appDiv);
           }
-          index++;
+          wearIndex++;
         }
       }
 
       // remove extra elements from the end of playerAppsEl childNodes
-      while (playerAppsEl.childNodes[index]) {
-        playerAppsEl.removeChild(playerAppsEl.childNodes[index]);
+      while (playerAppsEl.childNodes[wearIndex]) {
+        playerAppsEl.removeChild(playerAppsEl.childNodes[wearIndex]);
       }
     };
 
