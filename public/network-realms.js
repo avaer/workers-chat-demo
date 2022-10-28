@@ -381,9 +381,9 @@ class EntityTracker extends EventTarget {
     const addKey = 'add.' + dcArray.arrayId;
     // console.log('listen add', addKey);
     const onadd = e => {
-      if (/worldApps/.test(arrayId)) {
-        debugger;
-      }
+      // if (/worldApps/.test(arrayId)) {
+      //   debugger;
+      // }
       const {arrayIndexId} = e.data;
       const map = dcArray.getMap(arrayIndexId, {
         listen: false,
@@ -395,9 +395,9 @@ class EntityTracker extends EventTarget {
     dcArray.dataClient.addEventListener(addKey, onadd);
     const removeKey = 'remove.' + dcArray.arrayId;
     const onremove = e => {
-      if (/worldApps/.test(arrayId)) {
-        debugger;
-      }
+      // if (/worldApps/.test(arrayId)) {
+      //   debugger;
+      // }
       const {arrayIndexId} = e.data;
       _unbind(arrayIndexId);
     };
@@ -405,9 +405,9 @@ class EntityTracker extends EventTarget {
     
     const removeArrayKey = 'removeArray.' + dcArray.arrayId;
     const onremovearray = e => {
-      if (/worldApps/.test(arrayId)) {
-        debugger;
-      }
+      // if (/worldApps/.test(arrayId)) {
+      //   debugger;
+      // }
       // console.log('got remove array', this, e.data);
       const linkedArrayIds = Array.from(localVirtualMaps.keys());
       _unbindAll(linkedArrayIds);
@@ -416,9 +416,9 @@ class EntityTracker extends EventTarget {
 
     const importArrayKey = 'importArray.' + arrayId;
     const onimportarray = e => {
-      if (/worldApps/.test(arrayId)) {
-        debugger;
-      }
+      // if (/worldApps/.test(arrayId)) {
+      //   debugger;
+      // }
       const {arrayCrdtExport, mapCrdtExports} = e.data;
       const linkedArrayIds = Object.keys(arrayCrdtExport);
       _bindAll(linkedArrayIds);
