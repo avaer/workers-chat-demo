@@ -534,11 +534,11 @@ class VirtualPlayer extends HeadTrackedEntity {
 
     const readableHeadTracker = this.headTracker.getReadable();
     this.playerApps = new VirtualEntityArray('playerApps:' + this.arrayIndexId, this.realms, {
-      // headTracker: readableHeadTracker,
+      headTracker: readableHeadTracker,
       entityTracker: opts?.appsEntityTracker,
     });
     this.playerActions = new VirtualEntityArray('playerActions:' + this.arrayIndexId, this.realms, {
-      // headTracker: readableHeadTracker,
+      headTracker: readableHeadTracker,
       entityTracker: opts?.actionsEntityTracker,
     });
     this.cleanupMapFns = new Map();
