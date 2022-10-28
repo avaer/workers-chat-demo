@@ -331,9 +331,6 @@ z-index: 2;
         ],
       };
       const _boxContains = (box, position) => {
-        // if (!position) {
-        //   debugger;
-        // }
         return position[0] >= box.min[0] && position[0] <= box.max[0] &&
           position[1] >= box.min[1] && position[1] <= box.max[1] &&
           position[2] >= box.min[2] && position[2] <= box.max[2];
@@ -362,6 +359,9 @@ z-index: 2;
           realms.playerId,
         );
         sourceRealm.emitUpdate(deadHandUpdate);
+        
+        // track
+        collidedVirtualMap.setHeadTracker(realms.localPlayer.headTracker);
 
         // add app to the new location (player)
         const collidedAppJson = collidedVirtualMap.toObject();
@@ -371,6 +371,11 @@ z-index: 2;
           collidedAppJson,
           targetRealm
         );
+
+        // XXX collidedVirtualMap needs to get the new headTracker
+        if (!realms.localPlayer.headTracker) {
+          debugger;
+        }
 
         // add new action
         const action = {
@@ -429,11 +434,13 @@ z-index: 2;
 
             // add at the new location (world)
             const firstAppJson = firstApp.toObject();
-            const map = virtualWorld.worldApps.addEntityAt(
+            const newPlayerApp = virtualWorld.worldApps.addEntityAt(
               firstApp.entityMap.arrayIndexId,
               firstAppJson,
               targetRealm
             );
+
+            // XXX newPlayerApp needs to get the new headTracker
 
             // remove from the old location (player)
             firstApp.remove();
