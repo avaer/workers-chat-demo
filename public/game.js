@@ -331,9 +331,9 @@ z-index: 2;
         ],
       };
       const _boxContains = (box, position) => {
-        if (!position) {
-          debugger;
-        }
+        // if (!position) {
+        //   debugger;
+        // }
         return position[0] >= box.min[0] && position[0] <= box.max[0] &&
           position[1] >= box.min[1] && position[1] <= box.max[1] &&
           position[2] >= box.min[2] && position[2] <= box.max[2];
@@ -354,8 +354,41 @@ z-index: 2;
         }
       });
       if (collidedVirtualMap) {
-        // data layer
+        // deadhand
+        const sourceRealm = collidedVirtualMap.headTracker.getHeadRealm();
+        const deadHandUpdate = sourceRealm.dataClient.deadHandArrayMaps(
+          realms.localPlayer.playerApps.arrayId,
+          [collidedVirtualMap.entityMap.arrayIndexId],
+          realms.playerId,
+        );
+        sourceRealm.emitUpdate(deadHandUpdate);
+
+        // add app to the new location (player)
+        const collidedAppJson = collidedVirtualMap.toObject();
+        const targetRealm = realms.localPlayer.headTracker.getHeadRealm();
+        const newAppMap = realms.localPlayer.playerApps.addEntityAt(
+          collidedVirtualMap.entityMap.arrayIndexId,
+          collidedAppJson,
+          targetRealm
+        );
+
+        // add new action
+        const action = {
+          action: 'wear',
+          appId: collidedVirtualMap.entityMap.arrayIndexId,
+        };
+        const newActionMap = realms.localPlayer.playerActions.addEntity(action, targetRealm);
+
+        // remove from the old location (world)
         collidedVirtualMap.remove();
+
+        // livehand
+        const liveHandUpdate = targetRealm.dataClient.liveHandArrayMaps(
+          realms.localPlayer.playerApps.arrayId,
+          [collidedVirtualMap.entityMap.arrayIndexId],
+          realms.playerId,
+        );
+        sourceRealm.emitUpdate(liveHandUpdate);
       } else {
         // console.log('got player apps', realms.localPlayer.playerApps.getSize());
         if (realms.localPlayer.playerActions.getSize() > 0) {
@@ -396,8 +429,11 @@ z-index: 2;
 
             // add at the new location (world)
             const firstAppJson = firstApp.toObject();
-            // console.log('adding', firstAction.toObject(), firstApp.entityMap.arrayIndexId, firstAppJson);
-            const map = virtualWorld.worldApps.addEntityAt(firstApp.entityMap.arrayIndexId, firstAppJson, targetRealm);
+            const map = virtualWorld.worldApps.addEntityAt(
+              firstApp.entityMap.arrayIndexId,
+              firstAppJson,
+              targetRealm
+            );
 
             // remove from the old location (player)
             firstApp.remove();

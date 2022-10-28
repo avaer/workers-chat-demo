@@ -951,9 +951,9 @@ class VirtualEntityArray extends VirtualPlayersArray {
   getSize() {
     return this.entityTracker.getSize();
   }
-  /* addEntity(val, realm) {
+  addEntity(val, realm) {
     return this.addEntityAt(makeId(), val, realm);
-  } */
+  }
   /* first() {
     for (const map of this.virtualMaps.values()) {
       return map;
