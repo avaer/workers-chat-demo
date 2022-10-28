@@ -215,9 +215,9 @@ class HeadTracker extends EventTarget {
     })(this.#headRealm.ws.close);
   }
   linkRealm(realm) {
-    if (this.#connectedRealms.has(realm)) {
+    /* if (this.#connectedRealms.has(realm)) {
       debugger;
-    }
+    } */
     let val = this.#connectedRealms.get(realm) ?? 0;
     val++;
     this.#connectedRealms.set(realm, val);
@@ -439,20 +439,23 @@ class EntityTracker extends EventTarget {
     const removeArrayKey = 'removeArray.' + dcArray.arrayId;
     const onremovearray = e => {
       // if (/worldApps/.test(arrayId)) {
-      //   debugger;
+        // debugger;
       // }
       // console.log('got remove array', this, e.data);
       const linkedArrayIds = Array.from(localVirtualMaps.keys());
       _unbindAll(linkedArrayIds);
+      localVirtualMaps.clear();
     };
-    // dcArray.dataClient.addEventListener(removeArrayKey, onremovearray);
+    dcArray.dataClient.addEventListener(removeArrayKey, onremovearray);
 
-    const importArrayKey = 'importArray.' + arrayId;
+    const importArrayKey = 'importArray.' + dcArray.arrayId;
     const onimportarray = e => {
       // if (/worldApps/.test(arrayId)) {
       //   debugger;
       // }
+      // XXX it better be our array
       const {arrayCrdtExport, mapCrdtExports} = e.data;
+      // debugger;
       const linkedArrayIds = Object.keys(arrayCrdtExport);
       _bindAll(linkedArrayIds);
     };
@@ -483,7 +486,7 @@ class EntityTracker extends EventTarget {
       dcArray.dataClient.removeEventListener('import', onimport);
       dcArray.dataClient.removeEventListener(addKey, onadd);
       dcArray.dataClient.removeEventListener(removeKey, onremove);
-      // dcArray.dataClient.removeEventListener(removeArrayKey, onremovearray);
+      dcArray.dataClient.removeEventListener(removeArrayKey, onremovearray);
       dcArray.dataClient.removeEventListener(importArrayKey, onimportarray);
 
       for (const arrayIndexId of localVirtualMaps.keys()) {
@@ -531,11 +534,11 @@ class VirtualPlayer extends HeadTrackedEntity {
 
     const readableHeadTracker = this.headTracker.getReadable();
     this.playerApps = new VirtualEntityArray('playerApps:' + this.arrayIndexId, this.realms, {
-      headTracker: readableHeadTracker,
+      // headTracker: readableHeadTracker,
       entityTracker: opts?.appsEntityTracker,
     });
     this.playerActions = new VirtualEntityArray('playerActions:' + this.arrayIndexId, this.realms, {
-      headTracker: readableHeadTracker,
+      // headTracker: readableHeadTracker,
       entityTracker: opts?.actionsEntityTracker,
     });
     this.cleanupMapFns = new Map();
@@ -1049,6 +1052,8 @@ class VirtualIrc {
 
 //
 
+window.bannedLinks = [];
+
 // one per arrayIndexId per EntityTracker
 class HeadlessVirtualEntityMap extends EventTarget {
   constructor(arrayIndexId) {
@@ -1096,11 +1101,25 @@ class HeadlessVirtualEntityMap extends EventTarget {
     return null;
   }
   links = new Set();
+  lastLinks = [];
+  bannedLinks = [];
   link(arrayId, realm) {
     const key = arrayId + ':' + realm.key;
+
+    if (window.lol && realm.key === '0:0:0') {
+      debugger;
+    }
+
+    if (this.bannedLinks.includes(key)) {
+      debugger;
+    }
     if (this.links.has(key)) {
       debugger;
     }
+    this.lastLinks.push([
+      key,
+      new Error().stack,
+    ]);
     this.links.add(key);
     this.linkStacks.set(key, new Error().stack);
 
@@ -1146,9 +1165,13 @@ class HeadlessVirtualEntityMap extends EventTarget {
     const key = arrayId + ':' + realm.key;
 
     // if (/worldApps/.test(arrayId)) {
-    if (window.lol) {  
-      debugger;
-    }
+    // if (window.lol) {  
+      // debugger;
+      this.bannedLinks.push([
+        key,
+        new Error().stack,
+      ]);
+    // }
     // }
 
     if (!this.links.has(key)) {
@@ -1200,9 +1223,9 @@ class NeedledVirtualEntityMap extends HeadTrackedEntity {
       this.entityMap.removeEventListener('unlink', onunlink);
     };
 
-    /* for (const {map, realm} of this.entityMap.maps.values()) {
+    for (const {map, realm} of this.entityMap.maps.values()) {
       this.headTracker.linkRealm(realm);
-    } */
+    }
   }
   get(key) {
     const realm = this.headTracker.getHeadRealm();
@@ -1444,7 +1467,7 @@ export class NetworkRealms extends EventTarget {
       const oldPlayerRemoveUpdate = oldPlayerMap.removeUpdate();
       oldHeadRealm.emitUpdate(oldPlayerRemoveUpdate);
 
-      _emitLiveHands(oldHeadRealm);
+      // _emitLiveHands(oldHeadRealm);
     }.bind(this.localPlayer));
     
     this.irc = new VirtualIrc(this);
