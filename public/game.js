@@ -353,19 +353,9 @@ z-index: 2;
           return false;
         }
       });
-      // const inventory = document.querySelector('#inventory');
-      // const inventoryItems = Array.from(inventory.querySelectorAll('.realms-item'));
-      // const world = document.querySelector('#world');
-      // const worldItems = Array.from(world.querySelectorAll('.realms-item'));
-      // const collidedItem = worldItems.find(item => _boxContains(targetBox, item.position));
       if (collidedVirtualMap) {
         // data layer
         collidedVirtualMap.remove();
-        
-        /* // render layer
-        inventory.appendChild(collidedItem);
-        collidedItem.style.left = null;
-        collidedItem.style.top = null; */
       } else {
         // console.log('got player apps', realms.localPlayer.playerApps.getSize());
         if (realms.localPlayer.playerActions.getSize() > 0) {
@@ -373,16 +363,11 @@ z-index: 2;
           if (targetRealm) {
             // console.log('drop to target realm', targetRealm.key, targetRealm);
 
-            // const worldApps = targetRealm.dataClient.getArray('worldApps', {
-            //   listen: false,
-            // });
-
             // the app we will be dropping
             const actions = realms.localPlayer.playerActions.toArray();
             const wearActionIndex = actions.findIndex(action => action.action === 'wear');
             const wearAction = actions[wearActionIndex];
             const {appId} = wearAction;
-            // console.log('drop app', appId);
 
             const appIds = realms.localPlayer.playerApps.getKeys();
             const wearAppIndex = appIds.indexOf(appId);
@@ -416,16 +401,7 @@ z-index: 2;
 
             // remove from the old location (player)
             firstApp.remove();
-            // const oldSize = realms.localPlayer.playerActions.getSize();
             firstAction.remove();
-
-            // if (realms.localPlayer.playerApps.getVirtualMapAt(0).entityMap.arrayIndexId === firstApp.entityMap.arrayIndexId) {
-            //   debugger;
-            // }
-
-            /* if (realms.localPlayer.playerActions.getSize() !== 1) {
-              debugger;
-            } */
 
             const liveHandUpdate = targetRealm.dataClient.liveHandArrayMap(
               'worldApps',
@@ -434,15 +410,13 @@ z-index: 2;
             );
             targetRealm.emitUpdate(liveHandUpdate);
 
-            // console.log('drop 2');
           } else {
-            // console.warn('no containing realm to drop to');
+            console.warn('no containing realm to drop to');
           }
         } else {
-          // console.warn('nothing to drop');
+          console.warn('nothing to drop');
         }
       }
-      // console.log('drop 3');
     };
   };
   _initRenderers();
