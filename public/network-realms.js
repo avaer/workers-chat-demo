@@ -467,15 +467,13 @@ class EntityTracker extends EventTarget {
 
     // initial listen for existing elements
     const arrayIndexIds = dcArray.getKeys();
-    if (arrayIndexIds.length > 0) {
+    /* if (arrayIndexIds.length > 0) {
       debugger;
-    }
-    /* for (const arrayIndexId of arrayIndexIds) {
-      const map = new DCMap(arrayId, arrayIndexId, realm.dataClient);
-      // console.log('VirtualEntityArray got entity add', this, arrayIndexId, realm.key, map);
-      const virtualMap = this.linkMap(realm, map);
-      localVirtualMaps.set(arrayIndexId, virtualMap);
     } */
+    for (const arrayIndexId of arrayIndexIds) {
+      const map = new DCMap(arrayId, arrayIndexId, realm.dataClient);
+      _bind(map);
+    }
 
     // console.log('link key', key);
     this.cleanupFns.set(key, () => {
