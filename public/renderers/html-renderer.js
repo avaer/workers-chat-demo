@@ -305,7 +305,11 @@ export class GamePlayerCanvas {
 
     this.element = document.createElement('div');
     this.element.id = `player-${virtualPlayer.arrayIndexId}`;
-    this.element.className = 'game-player';
+    // this.element.className = 'game-player';
+    this.element.classList.add('game-player');
+    this.element.classList.add('player-sprite');
+
+    this.element.tabIndex = -1;
     
     this.canvas = document.createElement('canvas');
     this.canvas.width = frameSize;
