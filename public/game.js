@@ -264,14 +264,16 @@ export const startGame = async ({
   const _initRenderers = () => {
     GamePlayerCanvas.waitForLoad(); // note: not actually waiting
 
+    // players wrapper element
+    const playersEl = document.createElement('div');
+    playersEl.id = 'players';
+    playersEl.classList.add('players');
+    gameEl.appendChild(playersEl);
+
+    // local player rendering
     localPlayerCanvas = new GamePlayerCanvas(realms.localPlayer, {
       initialCoord,
     });
-    localPlayerCanvas.element.style.cssText = `\
-outline: none;
-z-index: 2;
-    `;
-    localPlayerCanvas.element.classList.add('player-sprite');
     let localPlayerFocused = false;
     localPlayerCanvas.element.addEventListener('focus', e => {
       // console.log('character focus 1');
@@ -328,18 +330,36 @@ z-index: 2;
         }
       }
     });
-    localPlayerCanvas.element.tabIndex = -1;
-    
-    const playersEl = document.createElement('div');
-    playersEl.id = 'players';
-    playersEl.classList.add('players');
-    playersEl.appendChild(localPlayerCanvas.element);
-
-    gameEl.appendChild(playersEl);
-    
     localPlayerCanvas.element.focus();
     document.body.addEventListener('click', e => {
       localPlayerCanvas.element.focus();
+    });
+    playersEl.appendChild(localPlayerCanvas.element);
+
+    // remote players rendering
+    const remotePlayerCanvases = new Map();
+    realms.players.addEventListener('join', e => {
+      const {playerId, player} = e.data;
+      console.log('join', e.data);
+
+      if (playerId !== realms.playerId) {
+        const remotePlayer = player;
+        const remotePlayerCanvas = new GamePlayerCanvas(remotePlayer, {
+          // initialCoord,
+        });
+        playersEl.appendChild(remotePlayerCanvas.element);
+      }
+    });
+    realms.players.addEventListener('leave', e => {
+      const {playerId} = e.data;
+      console.log('leave', e.data);
+
+      if (playerId !== realms.playerId) {
+        const remotePlayerCanvas = remotePlayerCanvases.get(playerId);
+        remotePlayerCanvas.element.parent.removeChild(remotePlayerCanvas.element);
+        remotePlayerCanvas.destroy();
+        remotePlayerCanvases.delete(playerId);
+      }
     });
 
     // action methods
