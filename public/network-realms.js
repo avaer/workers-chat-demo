@@ -852,10 +852,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
       }));
     });
     this.entityTracker.addEventListener('entityremove', e => {
-      // console.log('entity tracker remove', e.data);
       const {entityId, entity} = e.data;
-
-      // debugger;
 
       const needledEntity = this.needledVirtualEntities.get(entity);
       needledEntity.cleanupFn();
@@ -864,10 +861,8 @@ class VirtualEntityArray extends VirtualPlayersArray {
 
     const needledEntityCleanupFns = new Map();
     this.addEventListener('needledentityadd', e => {
-      // console.log('app add', e.data);
       const {needledEntity} = e.data;
       let position = needledEntity.entityMap.getInitial(positionKey);
-      // console.log('virtual world needled identity add', needledEntity, position);
       if (!position) {
         position = [0, 0, 0];
       }
@@ -876,18 +871,15 @@ class VirtualEntityArray extends VirtualPlayersArray {
         throw new Error('expected a single value at binding time');
       }
       const realm = needledEntity.entityMap.maps.values().next().value.map.dataClient.userData.realm;
-      if (!needledEntity.headTracker.setHeadRealm) {
+      if (!realm) {
         debugger;
       }
       needledEntity.headTracker.setHeadRealm(realm);
-      // console.log('virtual world set initial realm', realm);
 
       const update = e => {
         const {key, val} = e.data;
-        // console.log('virtual world needled entity got update', {key, val});
         if (key === positionKey) {
           needledEntity.headTracker.updateHeadRealm(val);
-          // console.log('virtual world update head realm', arrayId, structuredClone(val), needledEntity.headTracker.getHeadRealm());
         }
       };
       needledEntity.addEventListener('update', update);
@@ -1081,9 +1073,9 @@ class HeadlessVirtualEntityMap extends EventTarget {
   link(arrayId, realm) {
     const key = arrayId + ':' + realm.key;
 
-    if (window.lol && realm.key === '0:0:0') {
-      debugger;
-    }
+    // if (window.lol && realm.key === '0:0:0') {
+    //   debugger;
+    // }
 
     if (this.bannedLinks.includes(key)) {
       debugger;
