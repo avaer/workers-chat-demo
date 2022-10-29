@@ -337,8 +337,9 @@ export class GamePlayerCanvas {
 
     const update = e => {
       const {key, val} = e.data;
-      if (key === 'position') {
+      if (['position', 'direction'].includes(key)) {
         // console.log('game player canvas virutal player update position', val);
+        this.draw();
       }
     };
     virtualPlayer.addEventListener('update', update);
@@ -355,9 +356,9 @@ export class GamePlayerCanvas {
     const position = structuredClone(this.virtualPlayer.getKey('position'));
     const direction = structuredClone(this.virtualPlayer.getKey('direction'));
     
-    if (!position) {
-      debugger;
-    }
+    // if (!position) {
+    //   debugger;
+    // }
 
     const speed = 5;
     position[0] += this.velocity[0] * speed;
@@ -389,12 +390,14 @@ export class GamePlayerCanvas {
   }
   draw() {
     if (GamePlayerCanvas.#spriteImg) {
+      const direction = this.virtualPlayer.getKey('direction');
+
       let row;
-      if (this.direction[0] === -1) {
+      if (direction[0] === -1) {
         row = 1;
-      } else if (this.direction[0] === 1) {
+      } else if (direction[0] === 1) {
         row = 2;
-      } else if (this.direction[2] === -1) {
+      } else if (direction[2] === -1) {
         row = 3;
       } else {
         row = 0;
