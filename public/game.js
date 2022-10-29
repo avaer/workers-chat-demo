@@ -366,10 +366,12 @@ export const startGame = async ({
     // action methods
     const _pickupDrop = () => {
       // console.log('drop 1');
+      const position = localPlayerCanvas.virtualPlayer.getKey('position');
+      const direction = localPlayerCanvas.virtualPlayer.getKey('direction');
       const targetPosition = [
-        localPlayerCanvas.position[0] + localPlayerCanvas.direction[0] * frameSize,
+        position[0] + direction[0] * frameSize,
         0,
-        localPlayerCanvas.position[2] + localPlayerCanvas.direction[2] * frameSize - frameSize / 2,
+        position[2] + direction[2] * frameSize - frameSize / 2,
       ];
       const targetBox = {
         min: [
