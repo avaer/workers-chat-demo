@@ -184,14 +184,6 @@ export class AppsHtmlRenderer {
             playerApps.removeChild(playerApps.lastChild);
           }
         }
-
-        /* for (const [playerId, playerAppIndex] of playerAppIndexes) {
-          const playerEl = document.getElementById(`player-${playerId}`);
-          const playerApps = playerEl.querySelector('.player-apps');
-          while (playerApps.children.length > playerAppIndex) {
-            playerApps.removeChild(playerApps.lastChild);
-          }
-        } */
       };
 
       for (const needledEntity of worldAppEntities.values()) {
