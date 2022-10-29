@@ -1008,7 +1008,9 @@ export class DataClient extends EventTarget {
       saveKeyFn(arrayId);
       // XXX
     } else if (type === 'importMap') {
-      debugger;
+      const {crdtExport} = mo;
+      saveKeyFn(arrayIndexId);
+      // XXX
     } else {
       debugger;
       throw new Error('unrecognized message type: ' + m.type);
