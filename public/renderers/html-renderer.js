@@ -8,7 +8,7 @@ rockImg.src = '/public/images/rock.png';
 
 //
 
-export class LocalPlayerHtmlRenderer {
+/* export class LocalPlayerHtmlRenderer {
   constructor(localPlayerId, virtualPlayer) {
     this.localPlayerId = localPlayerId;
     this.virtualPlayer = virtualPlayer;
@@ -17,15 +17,15 @@ export class LocalPlayerHtmlRenderer {
     div.id = 'inventory';
     document.body.appendChild(div);
 
-    /* const playerAppsEntityAdd = e => {
-      console.log('html renderer got player apps add', e.data);
-    };
-    virtualPlayer.playerApps.addEventListener('entityadd', playerAppsEntityAdd);
+    // const playerAppsEntityAdd = e => {
+    //   console.log('html renderer got player apps add', e.data);
+    // };
+    // virtualPlayer.playerApps.addEventListener('entityadd', playerAppsEntityAdd);
 
-    const playerActionsEntityAdd = e => {
-      console.log('html renderer got player actions add', e.data);
-    };
-    virtualPlayer.playerActions.addEventListener('entityadd', playerActionsEntityAdd); */
+    // const playerActionsEntityAdd = e => {
+    //   console.log('html renderer got player actions add', e.data);
+    // };
+    // virtualPlayer.playerActions.addEventListener('entityadd', playerActionsEntityAdd);
 
     this.cleanupFn = () => {
       document.body.removeChild(div);
@@ -37,7 +37,7 @@ export class LocalPlayerHtmlRenderer {
   destroy() {
     this.cleanupFn();
   }
-}
+} */
 
 export class RemotePlayerCursorHtmlRenderer {
   constructor(remotePlayerId, localPlayerId, virtualPlayer) {
