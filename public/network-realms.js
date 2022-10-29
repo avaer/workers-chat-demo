@@ -1614,7 +1614,7 @@ export class NetworkRealms extends EventTarget {
           for (let i = 0; i < appIds.length; i++) {
             appIds[i] = makeId();
           }
-          // console.log('initialize player', position);
+
           this.localPlayer.initializePlayer({
             position,
             cursorPosition: new Float32Array(3),

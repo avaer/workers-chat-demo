@@ -46,7 +46,7 @@ export const startGame = async ({
   const playerId = makeId();
   let localPlayerCanvas = null;
   
-  console.log('got initial coord', initialCoord);
+  // console.log('got initial coord', initialCoord);
 
   // realms
   const realms = new NetworkRealms(playerId);
@@ -269,7 +269,9 @@ export const startGame = async ({
 
   const _initRenderers = () => {
     // XXX this does not need to be async
-    localPlayerCanvas = new GamePlayerCanvas(realms.localPlayer);
+    localPlayerCanvas = new GamePlayerCanvas(realms.localPlayer, {
+      initialCoord,
+    });
     (async () => {
       const spriteImg = await GamePlayerCanvas.loadFromUrl('/public/images/fire-mage.png');
       localPlayerCanvas.setSprite(spriteImg);

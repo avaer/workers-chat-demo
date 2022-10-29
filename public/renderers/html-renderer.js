@@ -292,7 +292,9 @@ export class AppsHtmlRenderer {
 //
 
 export class GamePlayerCanvas {
-  constructor(virtualPlayer) {
+  constructor(virtualPlayer, {
+    initialCoord = [0, 0],
+  } = {}) {
     this.virtualPlayer = virtualPlayer;
 
     this.spriteImg = null;
@@ -313,7 +315,11 @@ export class GamePlayerCanvas {
 
     this.cancelFn = null;
 
-    this.position = [0, 0, 0];
+    this.position = [
+      initialCoord[0],
+      0,
+      initialCoord[1],
+    ];
     this.velocity = [0, 0, 0];
     this.direction = [0, 0, 1];
 
