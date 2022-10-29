@@ -294,6 +294,7 @@ export class AppsHtmlRenderer {
 
 //
 
+const spriteUrl = '/public/images/fire-mage.png';
 export class GamePlayerCanvas {
   constructor(virtualPlayer, {
     initialCoord = [0, 0],
@@ -390,9 +391,6 @@ export class GamePlayerCanvas {
     };
     virtualPlayer.playerActions.addEventListener('needledentityremove', playerActionsEntityRemove); */
   }
-  setSprite(spriteImg) {
-    this.spriteImg = spriteImg;
-  }
   move() {
     const speed = 5;
     this.position[0] += this.velocity[0] * speed;
@@ -415,7 +413,7 @@ export class GamePlayerCanvas {
     }
   }
   draw() {
-    if (this.spriteImg) {
+    if (GamePlayerCanvas.#spriteImg) {
       let row;
       if (this.direction[0] === -1) {
         row = 1;
@@ -431,11 +429,12 @@ export class GamePlayerCanvas {
       const col = Math.floor(timestamp / frameLoopTime) % 3;
 
       this.ctx.clearRect(0, 0, frameSize, frameSize);
-      this.ctx.drawImage(this.spriteImg, col * frameSize, row * frameSize, frameSize, frameSize, 0, 0, frameSize, frameSize);
+      this.ctx.drawImage(GamePlayerCanvas.#spriteImg, col * frameSize, row * frameSize, frameSize, frameSize, 0, 0, frameSize, frameSize);
     }
   }
-  static loadFromUrl(url) {
-    return new Promise((accept, reject) => {
+  static #spriteImg = null;
+  static async waitForLoad() {
+    this.#spriteImg = await new Promise((accept, reject) => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
@@ -460,7 +459,7 @@ export class GamePlayerCanvas {
       img.onerror = err => {
         reject(err);
       };
-      img.src = url;
+      img.src = spriteUrl;
     });
   }
 }

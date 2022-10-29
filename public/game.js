@@ -262,14 +262,11 @@ export const startGame = async ({
   _initLogic();
 
   const _initRenderers = () => {
-    // XXX this does not need to be async
+    GamePlayerCanvas.waitForLoad(); // note: not actually waiting
+
     localPlayerCanvas = new GamePlayerCanvas(realms.localPlayer, {
       initialCoord,
     });
-    (async () => {
-      const spriteImg = await GamePlayerCanvas.loadFromUrl('/public/images/fire-mage.png');
-      localPlayerCanvas.setSprite(spriteImg);
-    })();
     localPlayerCanvas.element.style.cssText = `\
 outline: none;
 z-index: 2;
