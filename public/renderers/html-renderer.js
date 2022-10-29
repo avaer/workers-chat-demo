@@ -121,23 +121,18 @@ export class AppsHtmlRenderer {
   constructor(realms) {
     const _render = () => {
       const worldAppsEl = document.getElementById('world-apps');
-      const localPlayerAppsEl = document.getElementById(`player-${realms.playerId}`)
-        .querySelector('.player-apps');
+      // const localPlayerAppsEl = document.getElementById(`player-${realms.playerId}`)
+      //   .querySelector('.player-apps');
 
       let worldAppIndex = 0;
-      let localPlayerAppIndex = 0;
+      const playerAppIndexes = new Map();
       const _makeAppEl = () => {
         const appEl = rockImg.cloneNode();
         appEl.classList.add('world-app');
         return appEl;
       };
       const _pushWorldApp = needledEntity => {
-        // if (playerActions.size > 0) {
-        //   debugger;
-        // }
-
         const wearSpec = _getWearSpec(needledEntity);
-        // const wearPlayerId = '';
         if (wearSpec) {
           const {
             wearPlayerId,
@@ -147,18 +142,20 @@ export class AppsHtmlRenderer {
             throw new Error('only local player is supported');
           }
 
-          const had = !!localPlayerAppsEl.childNodes[localPlayerAppIndex];
-          const appEl = localPlayerAppsEl.childNodes[localPlayerAppIndex] || _makeAppEl();
+          let playerAppIndex = playerAppIndexes.get(wearPlayerId) ?? 0;
+          playerAppIndexes.set(wearPlayerId, playerAppIndex + 1);
 
-          // const playerEl = document.getElementById(`player-${wearPlayerId}`);
-          // const localPlayerAppsEl = playerEl.querySelector('.player-apps');
+          const playerEl = document.getElementById(`player-${wearPlayerId}`);
+          const playerApps = playerEl.querySelector('.player-apps');
+          const had = !!playerApps.childNodes[playerAppIndex];
+          const appEl = playerApps.childNodes[playerAppIndex] || _makeAppEl();
 
-          appEl.style.left = `${localPlayerAppIndex * inventoryFrameSize}px`;
+          appEl.style.left = `${playerAppIndex * inventoryFrameSize}px`;
           appEl.style.top = null;
 
-          !had && localPlayerAppsEl.appendChild(appEl);
+          !had && playerApps.appendChild(appEl);
 
-          localPlayerAppIndex++;
+          // debugger;
         } else {
           const had = !!worldAppsEl.childNodes[worldAppIndex];
           const appEl = worldAppsEl.childNodes[worldAppIndex] || _makeAppEl();
@@ -168,23 +165,33 @@ export class AppsHtmlRenderer {
           appEl.style.left = `${position[0]}px`;
           appEl.style.top = `${position[2]}px`;
           
-          // if (position[0] === 0 && position[2] === 0) {
-          //   debugger;
-          // }
-
           !had && worldAppsEl.appendChild(appEl);
 
           worldAppIndex++;
         }
-        // console.log('got style', appEl.style.cssText);
       };
       const _finalizeWorldApps = () => {
         while (worldAppsEl.children.length > worldAppIndex) {
           worldAppsEl.removeChild(worldAppsEl.lastChild);
         }
-        while (localPlayerAppsEl.children.length > localPlayerAppIndex) {
-          localPlayerAppsEl.removeChild(localPlayerAppsEl.lastChild);
+
+        const playersEl = document.getElementById('players');
+        for (const playerEl of playersEl.childNodes) {
+          const playerApps = playerEl.querySelector('.player-apps');
+          const playerId = playerEl.id.slice('player-'.length);
+          const playerAppIndex = playerAppIndexes.get(playerId) ?? 0;
+          while (playerApps.children.length > playerAppIndex) {
+            playerApps.removeChild(playerApps.lastChild);
+          }
         }
+
+        /* for (const [playerId, playerAppIndex] of playerAppIndexes) {
+          const playerEl = document.getElementById(`player-${playerId}`);
+          const playerApps = playerEl.querySelector('.player-apps');
+          while (playerApps.children.length > playerAppIndex) {
+            playerApps.removeChild(playerApps.lastChild);
+          }
+        } */
       };
 
       for (const needledEntity of worldAppEntities.values()) {
