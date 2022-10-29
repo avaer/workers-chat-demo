@@ -1368,7 +1368,6 @@ export class NetworkRealms extends EventTarget {
     });
 
     this.players = new VirtualPlayersArray('players', this, {
-      headTracker: this.headTracker,
       appsEntityTracker: this.appsEntityTracker,
       actionsEntityTracker: this.actionsEntityTracker,
     });
