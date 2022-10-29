@@ -602,9 +602,9 @@ export const startGame = async ({
           // onConnect,
         });
 
+        // XXX track headTracker on the network
+
         // move the local player
-        // XXX pass an onMigrate callback
-        // XXX only migrate if the lock is free
         localPlayerCanvas.move();
         // localPlayerCanvas.draw(); // drawing is done responsively on property update
 

@@ -177,17 +177,16 @@ class HeadTracker extends EventTarget {
           this.#headRealm = newHeadRealm;
           // this.#headRealm.ws.addEventListener('close', onclose);
 
-          if (!Array.from(this.#connectedRealms.keys())[0].parent.tx.running) {
-            debugger;
-            throw new Error('migration happening outside of a lock -- wrap in realms.tx()');
+          // only try to migrate if we are not curerntly reconfiguring the network (tx busy)
+          if (!this.#connectedRealms.keys().next().value.parent.tx.running) {
+            this.dispatchEvent(new MessageEvent('migrate', {
+              data: {
+                oldHeadRealm,
+                newHeadRealm,
+              },
+            }));
           }
-
-          this.dispatchEvent(new MessageEvent('migrate', {
-            data: {
-              oldHeadRealm,
-              newHeadRealm,
-            },
-          }));
+          // throw new Error('migration happening outside of a lock -- wrap in realms.tx()');
         }
       }
     } else {
