@@ -470,7 +470,9 @@ const _drawRectangle = (ctx, color) => {
 export class GameRealmsCanvases {
   constructor(realms) {
     // realm sections
-    this.elements = [];
+    this.element = document.createElement('div');
+    this.element.className = 'network-realms';
+    
     for (let dx = -1; dx <= 1; dx++) {
       for (let dz = -1; dz <= 1; dz++) {
         const canvas = document.createElement('canvas');
@@ -577,7 +579,7 @@ z-index: 1;
           _updateText();
         };
         
-        this.elements.push(div);
+        this.element.appendChild(div);
       }
     }
   }

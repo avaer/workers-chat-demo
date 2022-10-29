@@ -21,14 +21,14 @@ export const startGame = async () => {
   const realmCleanupFns = new Map();
   realms.addEventListener('realmconnecting', e => {
     const {realm} = e.data;
-    const el = realmsCanvases.elements.find(el => {
+    const el = Array.from(realmsCanvases.element.childNodes).find(el => {
       return el.min[0] === realm.min[0] && el.min[2] === realm.min[2];
     });
     if (el) {
       el.classList.add('connecting');
     }
   });
-  const getRealmElement = realm => realmsCanvases.elements.find(el => {
+  const getRealmElement = realm => Array.from(realmsCanvases.element.childNodes).find(el => {
     return el.min[0] === realm.min[0] && el.min[2] === realm.min[2];
   });
 
@@ -106,7 +106,7 @@ export const startGame = async () => {
   });
   realms.addEventListener('realmleave', e => {
     const {realm} = e.data;
-    const el = realmsCanvases.elements.find(el => {
+    const el = Array.from(realmsCanvases.element.childNodes).find(el => {
       return el.min[0] === realm.min[0] && el.min[2] === realm.min[2];
     });
     if (el) {
@@ -119,9 +119,7 @@ export const startGame = async () => {
   });
   // realms canvas
   const realmsCanvases = new GameRealmsCanvases(realms);
-  for (const el of realmsCanvases.elements) {
-    document.body.appendChild(el);
-  }
+  document.body.appendChild(realmsCanvases.element);
 
   // local objects
   const virtualWorld = realms.getVirtualWorld();
