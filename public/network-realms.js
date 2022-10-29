@@ -1281,16 +1281,16 @@ class NeedledVirtualEntityMap extends HeadTrackedEntity {
 
     // the head might have changed if it pointed at this entity map
     // in that case, we need to update the head as if this were an initialization
-    this.snapHeadRealm();
+    // this.snapHeadRealm();
   }
-  snapHeadRealm() {
+  /* snapHeadRealm() {
     if (this.entityMap.maps.size > 0) {
       const initialPosition = this.entityMap.getInitial(positionKey);
       if (initialPosition) {
         this.headTracker.updateHeadRealm(initialPosition);
       }
     }
-  }
+  } */
   toObject() {
     const realm = this.headTracker.getHeadRealm();
     const map = this.entityMap.getHeadMapFromRealm(realm);
