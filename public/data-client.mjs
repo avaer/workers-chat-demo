@@ -165,13 +165,6 @@ export class DCMap extends EventTarget {
       },
     });
   }
-  /* clearUpdate() {
-    return new MessageEvent('remove.' + this.arrayId, {
-      data: {
-        arrayIndexId: this.arrayIndexId,
-      },
-    });
-  } */
 
   // server
   trySetKeyEpochValue(key, epoch, val) {
@@ -222,27 +215,9 @@ export class DCMap extends EventTarget {
     };
     this.dataClient.addEventListener(removeKey, removeFn);
 
-    /* const importMapKey = 'importMap.' + this.arrayId;
-    const importMapFn = e => {
-      const {arrayIndexId} = e.data;
-      const key = this.getKey();
-      const map = this.dataClient.crdt.get(key);
-      const array = this.dataClient.crdt.get(this.arrayId);
-      console.log('dc handle import map', {array, map});
-    };
-    this.dataClient.addEventListener(importMapKey, importMapFn); */
-
-    // listener
-    // this.dataClient.arrayMapListeners.set(this.arrayIndexId, this);
-    
     this.cleanupFn = () => {
-      // console.log('map unlink', setKey);
       this.dataClient.removeEventListener(setKey, setFn);
       this.dataClient.removeEventListener(removeKey, removeFn);
-      // this.dataClient.removeEventListener(importMapKey, importMapFn);
-
-      // listener
-      // this.dataClient.arrayMapListeners.delete(this.arrayIndexId);
     };
   }
   unlisten() {
@@ -404,7 +379,6 @@ export class DCArray extends EventTarget {
       data: {},
     });
   }
-  // arrayListeners = new Map();
   listen() {
     const _addMap = (arrayIndexId, val) => {
       const map = new DCMap(this.arrayId, arrayIndexId, this.dataClient);
@@ -432,7 +406,6 @@ export class DCArray extends EventTarget {
       const {
         arrayIndexId,
       } = e.data;
-      // console.log('data client remove', {arrayId: this.arrayId, arrayIndexId});
       this.dispatchEvent(new MessageEvent('remove', {
         data: {
           arrayIndexId,
@@ -464,23 +437,10 @@ export class DCArray extends EventTarget {
     };
     this.dataClient.addEventListener(importArrayKey, importArrayFn);
 
-    // listener
-    // if (this.arrayListeners.has(this.arrayId)) {
-    //   console.log('double listen');
-    //   debugger;
-    // } else {
-    //   console.log('single listen');
-    // }
-    // this.arrayListeners.set(this.arrayId, this);
-
     this.cleanupFn = () => {
       this.dataClient.removeEventListener(addKey, addFn);
       this.dataClient.removeEventListener(removeKey, removeFn);
       this.dataClient.removeEventListener(importMapKey, importMapFn);
-      // this.dataClient.removeEventListener(importArrayKey, importArrayFn);
-
-      // listener
-      // this.arrayListeners.delete(this.arrayId);
     };
   }
   unlisten() {
@@ -1103,11 +1063,9 @@ export class DataClient extends EventTarget {
     }
   }
   clearUpdates() {
-    // console.log('clearing', Array.from(this.arrayListeners.entries()), Array.from(this.arrayMapListeners.entries()));
     const updates = [];
     for (const map of this.arrayMapListeners.values()) {
       const update = map.clearUpdate();
-      // this.emitUpdate(update);
       updates.push(update);
     }
     // currently, arrays cannot be removed
