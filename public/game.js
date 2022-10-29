@@ -488,7 +488,7 @@ z-index: 2;
         localPlayerCanvas.move();
         localPlayerCanvas.draw();
 
-        const playersEl = document.getElementById('players');
+        // const playersEl = document.getElementById('players');
         const worldAppsEl = document.getElementById('world-apps');
         const networkRealmsEl = document.getElementById('network-realms');
         const cssText = `\
