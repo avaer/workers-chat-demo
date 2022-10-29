@@ -496,7 +496,6 @@ export class GameRealmsCanvases {
         const div = document.createElement('div');
         div.className = 'network-realm';
         div.style.cssText = `\
-position: fixed;
 left: ${realmSize * x}px;
 top: ${realmSize * z}px;
 z-index: 1;

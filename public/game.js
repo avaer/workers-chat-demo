@@ -117,9 +117,12 @@ export const startGame = async () => {
       realmCleanupFns.delete(realm);
     }
   });
+
+  const gameEl = document.getElementById('game');
+  
   // realms canvas
   const realmsCanvases = new GameRealmsCanvases(realms);
-  document.body.appendChild(realmsCanvases.element);
+  gameEl.appendChild(realmsCanvases.element);
 
   // local objects
   const virtualWorld = realms.getVirtualWorld();
@@ -239,7 +242,6 @@ export const startGame = async () => {
       localPlayerCanvas.setSprite(spriteImg);
     })();
     localPlayerCanvas.element.style.cssText = `\
-position: fixed;
 outline: none;
 z-index: 2;
     `;
@@ -301,7 +303,13 @@ z-index: 2;
       }
     });
     localPlayerCanvas.element.tabIndex = -1;
-    document.body.appendChild(localPlayerCanvas.element);
+    
+    const playersEl = document.createElement('div');
+    playersEl.classList.add('players');
+    playersEl.appendChild(localPlayerCanvas.element);
+
+    gameEl.appendChild(playersEl);
+    
     localPlayerCanvas.element.focus();
     document.body.addEventListener('click', e => {
       localPlayerCanvas.element.focus();

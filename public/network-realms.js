@@ -139,10 +139,10 @@ class HeadTracker extends EventTarget {
     if (this.#connectedRealms.size === 1) {
       return this.#connectedRealms.keys().next().value;
     } else if (this.#headRealm) {
-      if (this.#headRealm.ws.readyState !== 1) {
+      /* if (this.#headRealm.ws.readyState !== 1) {
         debugger;
         throw new Error('head realm is not connected');
-      }
+      } */
       return this.#headRealm;
     } else {
       debugger;

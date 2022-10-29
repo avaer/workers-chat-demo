@@ -18,6 +18,7 @@
   box-sizing: border-box;
 }
 body {
+  margin: 0;
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -230,8 +231,28 @@ p:last-of-type {
 
 /* */
 
+.game {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* */
+
+.network-realms,
+.players
+{
+  position: absolute;
+  left: 50vw;
+  top: 50vh;
+}
+
+/* */
+
 .network-realm {
-  position: relative;
+  position: absolute;
   display: flex;
 }
 .network-realm.connecting .canvas {
@@ -320,6 +341,7 @@ p:last-of-type {
       <p>OR</p>
       <button id="go-private">Create a Private Room &raquo;</button>
     </form>
+    <div id="game" class="game"></div>
     <form id="chatroom" action="/fake-form-action">
       <div id="chatlog">
         <div id="spacer"></div>
