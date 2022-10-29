@@ -282,9 +282,13 @@ export class AppsHtmlRenderer {
       update();
     });
 
+    window.realms = realms;
     window.playerApps = playerApps;
     window.playerActions = playerActions;
     window.worldAppEntities = worldAppEntities;
+    window.sanityCheck = () => {
+      Array.from(playerActions.values()).map(playerAction => playerAction.toObject());
+    };
   }
 }
 
