@@ -1222,10 +1222,6 @@ class NeedledVirtualEntityMap extends HeadTrackedEntity {
     const update = map.setKeyValueUpdate(key, val);
     // console.log('got update', update);
     realm.emitUpdate(update);
-
-    /* if (key === positionKey) {
-      this.headTracker.updateHeadRealm(val);
-    } */
   }
   remove() {
     const realm = this.headTracker.getHeadRealm();
