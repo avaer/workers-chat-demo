@@ -471,6 +471,7 @@ export class GameRealmsCanvases {
   constructor(realms) {
     // realm sections
     this.element = document.createElement('div');
+    this.element.id = 'network-realms';
     this.element.className = 'network-realms';
     
     for (let dx = -1; dx <= 1; dx++) {

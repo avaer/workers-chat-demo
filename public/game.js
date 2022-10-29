@@ -305,6 +305,7 @@ z-index: 2;
     localPlayerCanvas.element.tabIndex = -1;
     
     const playersEl = document.createElement('div');
+    playersEl.id = 'players';
     playersEl.classList.add('players');
     playersEl.appendChild(localPlayerCanvas.element);
 
@@ -486,8 +487,18 @@ z-index: 2;
       if (localPlayerCanvas) {
         localPlayerCanvas.move();
         localPlayerCanvas.draw();
-        localPlayerCanvas.element.style.left = localPlayerCanvas.position[0] + 'px';
-        localPlayerCanvas.element.style.top = localPlayerCanvas.position[2] + 'px';
+
+        const playersEl = document.getElementById('players');
+        const worldAppsEl = document.getElementById('world-apps');
+        const networkRealmsEl = document.getElementById('network-realms');
+        const cssText = `\
+          transform: translate3d(${-localPlayerCanvas.position[0]}px, ${-localPlayerCanvas.position[2]}px, 0px);
+        `;
+        // playersEl.style.cssText = cssText;
+        worldAppsEl.style.cssText = cssText;
+        networkRealmsEl.style.cssText = cssText;
+        // localPlayerCanvas.element.style.left = localPlayerCanvas.position[0] + 'px';
+        // localPlayerCanvas.element.style.top = localPlayerCanvas.position[2] + 'px';
 
         realms.updatePosition(localPlayerCanvas.position, realmSize);
       }
