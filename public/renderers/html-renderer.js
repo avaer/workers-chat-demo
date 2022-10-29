@@ -330,70 +330,6 @@ export class GamePlayerCanvas {
     ];
     this.velocity = [0, 0, 0];
     this.direction = [0, 0, 1];
-
-    const playerApps = new Map();
-    const playerActions = new Set();
-    const _renderPlayerApps = () => {
-      return;
-      let wearIndex = 0;
-      for (const actionMap of playerActions) {
-        const actionJson = actionMap.toObject();
-        const {action} = actionJson;
-        if (action === 'wear') {
-          if (!playerAppsEl.childNodes[wearIndex]) {
-            const x = wearIndex;
-            
-            const appDiv = document.createElement('div');
-            appDiv.className = 'player-app';
-            appDiv.style.left = `${x * inventoryFrameSize}px`;
-
-            const img = rockImg.cloneNode();
-            appDiv.appendChild(img);
-            playerAppsEl.appendChild(appDiv);
-          }
-          wearIndex++;
-        }
-      }
-
-      // remove extra elements from the end of playerAppsEl childNodes
-      while (playerAppsEl.childNodes[wearIndex]) {
-        playerAppsEl.removeChild(playerAppsEl.childNodes[wearIndex]);
-      }
-    };
-
-    /* // const map = this.dataClient.getArrayMap('players', this.remotePlayerId);
-    // console.log('virtual player update listen');
-    const playerAppsEntityAdd = e => {
-      // console.log('html renderer got player apps add', e.data);
-      const {entityId, needledEntity} = e.data;
-      playerApps.set(entityId, needledEntity);
-      _renderPlayerApps();
-    };
-    virtualPlayer.playerApps.addEventListener('needledentityadd', playerAppsEntityAdd);
-    const playerAppsEntityRemove = e => {
-      // console.log('html renderer got player apps remove', e.data);
-      const {entityId} = e.data;
-      if (playerApps.has(entityId)) {
-        playerApps.delete(entityId);
-        _renderPlayerApps();
-      }
-    };
-    virtualPlayer.playerApps.addEventListener('needledentityremove', playerAppsEntityRemove);
-
-    const playerActionsEntityAdd = e => {
-      // console.log('html renderer got player actions add', e.data);
-      const {needledEntity} = e.data;
-      playerActions.add(needledEntity);
-      _renderPlayerApps();
-    };
-    virtualPlayer.playerActions.addEventListener('needledentityadd', playerActionsEntityAdd);
-    const playerActionsEntityRemove = e => {
-      // console.log('html renderer got player actions remove', e.data);
-      const {needledEntity} = e.data;
-      playerActions.delete(needledEntity);
-      _renderPlayerApps();
-    };
-    virtualPlayer.playerActions.addEventListener('needledentityremove', playerActionsEntityRemove); */
   }
   move() {
     const speed = 5;
@@ -465,6 +401,9 @@ export class GamePlayerCanvas {
       };
       img.src = spriteUrl;
     });
+  }
+  destroy() {
+    // nothing
   }
 }
 
