@@ -160,22 +160,22 @@ class HeadTracker extends EventTarget {
       throw new Error('try to update head realm for unpositioned player: ' + headPosition.join(','));
     }
 
-    const onclose = e => {
+    /* const onclose = e => {
       if (this.#headRealm.ws.readyState !== 1) {
         debugger;
       }
-    };
+    }; */
 
     if (this.isLinked()) {
       const newHeadRealm = _getHeadRealm(headPosition, Array.from(this.#connectedRealms.keys()));
       if (!this.#headRealm) {
         this.#headRealm = newHeadRealm;
-        this.#headRealm.ws.addEventListener('close', onclose);
+        // this.#headRealm.ws.addEventListener('close', onclose);
       } else {
         const oldHeadRealm = this.#headRealm;
         if (newHeadRealm.key !== oldHeadRealm.key) {
           this.#headRealm = newHeadRealm;
-          this.#headRealm.ws.addEventListener('close', onclose);
+          // this.#headRealm.ws.addEventListener('close', onclose);
 
           if (!Array.from(this.#connectedRealms.keys())[0].parent.tx.running) {
             throw new Error('migration happening outside of a lock -- wrap in realms.tx()');
