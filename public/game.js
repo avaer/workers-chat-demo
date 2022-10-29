@@ -11,13 +11,46 @@ import {NetworkRealms} from "./network-realms.js";
 
 //
 
-export const startGame = async () => {
+// throttle a function every ms, queueing
+const _throttleFn = (fn, ms) => {
+  let running = false;
+  let queued = false;
+  let timeout;
+  return (...args) => {
+    if (!running) {
+      running = true;
+      fn(...args);
+      timeout = setTimeout(() => {
+        running = false;
+        if (queued) {
+          queued = false;
+          fn(...args);
+        }
+      }, ms);
+    } else {
+      queued = true;
+    }
+  };
+};
+const _updateCoord = _throttleFn((coord) => {
+  const u = new URL(window.location.href);
+  u.searchParams.set('coord', JSON.stringify(coord));
+  history.replaceState({}, '', u);
+}, 500);
+
+//
+
+export const startGame = async ({
+  initialCoord,
+}) => {
   const playerId = makeId();
   let localPlayerCanvas = null;
   
+  console.log('got initial coord', initialCoord);
+
   // realms
   const realms = new NetworkRealms(playerId);
-  globalThis.realms = realms; // XXX for testing
+  // globalThis.realms = realms; // XXX for testing
   const realmCleanupFns = new Map();
   realms.addEventListener('realmconnecting', e => {
     const {realm} = e.data;
@@ -501,6 +534,12 @@ z-index: 2;
         // localPlayerCanvas.element.style.top = localPlayerCanvas.position[2] + 'px';
 
         realms.updatePosition(localPlayerCanvas.position, realmSize);
+
+        const coord = [
+          localPlayerCanvas.position[0],
+          localPlayerCanvas.position[2],
+        ];
+        _updateCoord(coord);
       }
     };
     _recurse();

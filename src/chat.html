@@ -1059,6 +1059,22 @@ let playerId = makeid(5);
 
 username = playerId; // nameInput.value || 'a';
 roomname = document.location.hash.slice(1) || 'public';
+const initialCoord = (() => {
+  const coordString = new URL(document.location.href).searchParams.get('coord');
+
+  try {
+    const j = JSON.parse(coordString);
+    if (Array.isArray(j) && j.length === 2 && typeof j[0] === 'number' && typeof j[1] === 'number') {
+      return j;
+    } else {
+      throw new Error('invalid coord');
+    }
+  } catch (err) {
+    return [0, 0];
+  }
+})();
+// history.replaceState({}, '', '/?coord=[0,0]#public');
+// u.searchParams.get(coord);
 
 function startNameChooser() {
   if (username.length > 0) {
@@ -1237,7 +1253,9 @@ function join() {
   (async () => {
     // connect
     console.log('connecting...');
-    realms = await startGame();
+    realms = await startGame({
+      initialCoord,
+    });
 
     realms.addEventListener('chat', e => {
       const {playerId, message} = e.data;
