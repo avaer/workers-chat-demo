@@ -664,7 +664,7 @@ class VirtualPlayer extends HeadTrackedEntity {
       this.playerActions.unlink(realm);
 
       parentArray.unlisten();
-      parentArray.removeEventListener(addKey);
+      parentArray.removeEventListener(addKey, onParentArrayAdd);
     });
   }
   unlink(realm) {
