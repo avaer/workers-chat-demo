@@ -248,7 +248,12 @@ export class AppsHtmlRenderer {
     });
     realms.localPlayer.playerActions.addEventListener('needledentityadd', e => {
       const {needledEntity} = e.data;
+      
+      needledEntity.toObject();
+      
       playerActions.set(needledEntity.entityMap.arrayIndexId, needledEntity);
+
+      sanityCheck();
 
       update();
     });
@@ -296,12 +301,8 @@ export class AppsHtmlRenderer {
 
 const spriteUrl = '/public/images/fire-mage.png';
 export class GamePlayerCanvas {
-  constructor(virtualPlayer, {
-    initialCoord = [0, 0],
-  } = {}) {
+  constructor(virtualPlayer) {
     this.virtualPlayer = virtualPlayer;
-
-    this.spriteImg = null;
 
     this.element = document.createElement('div');
     this.element.id = `player-${virtualPlayer.arrayIndexId}`;
@@ -323,34 +324,67 @@ export class GamePlayerCanvas {
 
     this.cancelFn = null;
 
+    /* // XXX these should be properties on the player object
     this.position = [
       initialCoord[0],
       0,
       initialCoord[1],
     ];
     this.velocity = [0, 0, 0];
-    this.direction = [0, 0, 1];
+    this.direction = [0, 0, 1] */;
+
+    this.velocity = [0, 0, 0];
+
+    const update = e => {
+      const {key, val} = e.data;
+      if (key === 'position') {
+        // console.log('game player canvas virutal player update position', val);
+      }
+    };
+    virtualPlayer.addEventListener('update', update);
+
+    this.destroy = () => {
+      virtualPlayer.removeEventListener('update', update);
+    };
   }
   // XXX make move event based so remote players are rendered
   move() {
+    const oldPosition = this.virtualPlayer.getKey('position');
+    const oldDirection = this.virtualPlayer.getKey('direction');
+    
+    const position = structuredClone(this.virtualPlayer.getKey('position'));
+    const direction = structuredClone(this.virtualPlayer.getKey('direction'));
+    
+    if (!position) {
+      debugger;
+    }
+
     const speed = 5;
-    this.position[0] += this.velocity[0] * speed;
-    this.position[2] += this.velocity[2] * speed;
+    position[0] += this.velocity[0] * speed;
+    position[2] += this.velocity[2] * speed;
     
     if (this.velocity[2] < 0) {
-      this.direction[0] = 0;
-      this.direction[2] = -1;
+      direction[0] = 0;
+      direction[2] = -1;
     } else if (this.velocity[0] < 0) {
-      this.direction[0] = -1;
-      this.direction[2] = 0;
+      direction[0] = -1;
+      direction[2] = 0;
     } else if (this.velocity[0] > 0) {
-      this.direction[0] = 1;
-      this.direction[2] = 0;
+      direction[0] = 1;
+      direction[2] = 0;
     } else if (this.velocity[2] > 0) {
-      this.direction[0] = 0;
-      this.direction[2] = 1;
+      direction[0] = 0;
+      direction[2] = 1;
     } else {
       // nothing
+    }
+
+    if (
+      (position[0] !== oldPosition[0] || position[2] !== oldPosition[2]) ||
+      (direction[0] !== oldDirection[0] || direction[2] !== oldDirection[2])
+    ) {
+      this.virtualPlayer.setKeyValue('position', position);
+      this.virtualPlayer.setKeyValue('direction', direction);
     }
   }
   draw() {
@@ -403,9 +437,9 @@ export class GamePlayerCanvas {
       img.src = spriteUrl;
     });
   }
-  destroy() {
+  /* destroy() {
     // nothing
-  }
+  } */
 }
 
 //

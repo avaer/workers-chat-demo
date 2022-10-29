@@ -41,8 +41,8 @@ const _updateCoord = _throttleFn((coord) => {
 //
 
 export const startGame = async ({
-  initialCoord,
-}) => {
+  initialCoord = [0, 0, 0],
+} = {}) => {
   const playerId = makeId();
   let localPlayerCanvas = null;
   
@@ -272,7 +272,7 @@ export const startGame = async ({
 
     // local player rendering
     localPlayerCanvas = new GamePlayerCanvas(realms.localPlayer, {
-      initialCoord,
+      // initialCoord,
     });
     let localPlayerFocused = false;
     localPlayerCanvas.element.addEventListener('focus', e => {
@@ -435,6 +435,7 @@ export const startGame = async ({
 
         // add new action
         const action = {
+          position: targetPosition,
           action: 'wear',
           appId: collidedVirtualMap.entityMap.arrayIndexId,
         };
@@ -527,27 +528,99 @@ export const startGame = async ({
   _initRenderers();
 
   const _startFrameLoop = () => {
+    let connected = false;
+    const onConnect = (position) => {
+      console.log('on connect');
+      if (!position) {
+        debugger;
+      }
+      const appVals = [
+        {
+          start_url: 'rock',
+          position: new Float32Array(3),
+        },
+        {
+          start_url: 'rock',
+          position: new Float32Array(3),
+        }
+      ];
+      const appIds = Array(appVals.length);
+      for (let i = 0; i < appIds.length; i++) {
+        appIds[i] = makeId();
+      }
+
+      const actionVals = [
+        {
+          // position,
+          action: 'wear',
+          appId: appIds[0],
+        },
+        {
+          // position,
+          action: 'wear',
+          appId: appIds[1],
+        },
+      ];
+
+      realms.localPlayer.initializePlayer({
+        position,
+        direction: [0, 0, 1],
+        cursorPosition: new Float32Array(3),
+        name: 'Hanna',
+      }, {
+        appVals,
+        appIds,
+        actionVals,
+      });
+
+      connected = true;
+    };
+    const _setInitialCoord = () => {
+      // console.log('set initial coord', initialCoord);
+      const initialPosition = [
+        initialCoord[0],
+        0,
+        initialCoord[1],
+      ];
+      realms.updatePosition(initialPosition, realmSize, {
+        onConnect,
+      });
+    };
+    _setInitialCoord();
+
     let frame;
     const _recurse = () => {
       frame = requestAnimationFrame(_recurse);
+      
+      if (connected) {
+        // update realms set
+        const position = realms.localPlayer.getKey('position');
+        if (!position) {
+          debugger;
+        }
+        realms.updatePosition(position, realmSize, {
+          // onConnect,
+        });
 
-      if (localPlayerCanvas) {
+        // move the local player
+        // XXX pass an onMigrate callback
+        // XXX only migrate if the lock is free
         localPlayerCanvas.move();
-        localPlayerCanvas.draw();
+        // localPlayerCanvas.draw(); // drawing is done responsively on property update
 
+        // draw the world
         const worldAppsEl = document.getElementById('world-apps');
         const networkRealmsEl = document.getElementById('network-realms');
         const cssText = `\
-          transform: translate3d(${-localPlayerCanvas.position[0]}px, ${-localPlayerCanvas.position[2]}px, 0px);
+          transform: translate3d(${-position[0]}px, ${-position[2]}px, 0px);
         `;
         worldAppsEl.style.cssText = cssText;
         networkRealmsEl.style.cssText = cssText;
 
-        realms.updatePosition(localPlayerCanvas.position, realmSize);
-
+        // latch last coord
         const coord = [
-          localPlayerCanvas.position[0],
-          localPlayerCanvas.position[2],
+          position[0],
+          position[2],
         ];
         _updateCoord(coord);
       }
