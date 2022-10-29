@@ -331,6 +331,7 @@ export class GamePlayerCanvas {
     this.velocity = [0, 0, 0];
     this.direction = [0, 0, 1];
   }
+  // XXX make move event based so remote players are rendered
   move() {
     const speed = 5;
     this.position[0] += this.velocity[0] * speed;
