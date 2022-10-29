@@ -21,19 +21,19 @@ const arrayEquals = (a, b) => {
     return true;
   }
 };
-const distanceTo = (a, b) => {
+/* const distanceTo = (a, b) => {
   const [xa, ya, za] = a;
   const [xb, yb, zb] = b;
   const dx = xa - xb;
   const dy = ya - yb;
   const dz = za - zb;
   return Math.sqrt(dx*dx + dy*dy + dz*dz);
-};
+}; */
 const boxContains = (box, point) => {
   const {min, max} = box;
-  if (typeof point?.[0] !== 'number') {
+  /* if (typeof point?.[0] !== 'number') {
     debugger;
-  }
+  } */
   const [x, y, z] = point;
   return x >= min[0] && x < max[0] &&
     y >= min[1] && y < max[1] &&

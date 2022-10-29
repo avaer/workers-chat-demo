@@ -165,43 +165,23 @@ export const startGame = async ({
     // world
     // const worldItemRenderers = [];
     // bind
-    // XXX can move this to html-renderer GameRealmsCanvases
-    // XXX track active needed entities for updates
-    // XXX or just track needled entities in a separate html renderer
 
     // local player
     const localPlayerCursorRenderer = new RemotePlayerCursorHtmlRenderer(realms.playerId, realms.playerId, realms.localPlayer);
     const appsRenderer = new AppsHtmlRenderer(realms);
 
-    // players
-    const playerCursorRenderers = [];
-    // console.log('listen to players', virtualPlayers);
-    virtualPlayers.addEventListener('join', e => {
-      // console.log('add virtual player', e.data);
-      const {player} = e.data;
-
-      /* // bind
-      player.addEventListener('entityadd', e => {
-        console.log('add virtual player app', e.data);
-      });
-      player.addEventListener('entityremove', e => {
-        console.log('remove virtual player app', e.data);
-      }); */
-
+    const _addPlayer = player => {
       // ui
       let p = document.createElement("p");
       p.classList.add('player');
-      p.innerHTML = `<img src="/public/images/audio.svg" class="audio-icon"><span class="name">${e.data.playerId}</span>`;
+      p.innerHTML = `<img src="/public/images/audio.svg" class="audio-icon"><span class="name">${player.arrayIndexId}</span>`;
       roster.appendChild(p);
 
       // render
-      const playerCursorRenderer = new RemotePlayerCursorHtmlRenderer(e.data.playerId, playerId, player);
+      const playerCursorRenderer = new RemotePlayerCursorHtmlRenderer(player.arrayIndexId, playerId, player);
       playerCursorRenderers.push(playerCursorRenderer);
-    });
-    virtualPlayers.addEventListener('leave', e => {
-      // console.log('remove virtual player', e.data);
-      const {playerId} = e.data;
-
+    };
+    const _removePlayer = playerId => {
       for (let i = 0; i < roster.children.length; i++) {
         let p = roster.children[i];
         if (p.innerText === playerId) {
@@ -218,7 +198,21 @@ export const startGame = async ({
           break;
         }
       }
+    };
+
+    // players
+    const playerCursorRenderers = [];
+    virtualPlayers.addEventListener('join', e => {
+      // console.log('add virtual player', e.data);
+      const {player} = e.data;
+      _addPlayer(player);
     });
+    virtualPlayers.addEventListener('leave', e => {
+      // console.log('remove virtual player', e.data);
+      const {playerId} = e.data;
+      _removePlayer(playerId);
+    });
+    _addPlayer(realms.localPlayer);
     
     // audio
     const _enableAudioOutput = playerId => {
