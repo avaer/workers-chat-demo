@@ -339,16 +339,19 @@ z-index: 2;
         const action = actions.find(action => action.action === 'wear' && action.appId === needledEntity.entityMap.arrayIndexId);
         return !!action;
       };
+      const _getCollision = () => {
+        return Array.from(virtualWorld.worldApps.needledVirtualEntities.values()).find(needledEntityMap => {
+          const worn = _needledEntityIsWorn(needledEntityMap);
+          if (!worn) {
+            const position = needledEntityMap.get('position');
+            return !!position && _boxContains(targetBox, position);
+          } else {
+            return false;
+          }
+        });
+      };
       
-      const collidedVirtualMap = Array.from(virtualWorld.worldApps.needledVirtualEntities.values()).find(needledEntityMap => {
-        const worn = _needledEntityIsWorn(needledEntityMap);
-        if (!worn) {
-          const position = needledEntityMap.get('position');
-          return !!position && _boxContains(targetBox, position);
-        } else {
-          return false;
-        }
-      });
+      const collidedVirtualMap = _getCollision();
       if (collidedVirtualMap) {
         // deadhand
         const sourceRealm = collidedVirtualMap.headTracker.getHeadRealm();
