@@ -282,6 +282,14 @@ export class DCArray extends EventTarget {
     listen && map.listen();
     return map;
   }
+  hasKey(key) {
+    const array = this.dataClient.crdt.get(this.arrayId);
+    if (array) {
+      return array[key] !== undefined;
+    } else {
+      return false;
+    }
+  }
   getIndex(index, opts) {
     const array = this.dataClient.crdt.get(this.arrayId);
     if (array) {
