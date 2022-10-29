@@ -441,13 +441,14 @@ z-index: 2;
 
             // add at the new location (world)
             const firstAppJson = firstApp.toObject();
-            const newPlayerApp = virtualWorld.worldApps.addEntityAt(
+            firstAppJson.position = targetPosition;
+            const newPlayerAppMap = virtualWorld.worldApps.addEntityAt(
               firstApp.entityMap.arrayIndexId,
               firstAppJson,
               targetRealm
             );
-
-            // XXX newPlayerApp needs to get the new headTracker
+            const newPlayerApp = virtualWorld.worldApps.getVirtualMap(newPlayerAppMap.arrayIndexId);
+            newPlayerApp.headTracker.setHeadRealm(targetRealm);
 
             // remove from the old location (player)
             firstApp.remove();
