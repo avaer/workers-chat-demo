@@ -348,6 +348,7 @@ export const startGame = async ({
           // initialCoord,
         });
         playersEl.appendChild(remotePlayerCanvas.element);
+        remotePlayerCanvases.set(playerId, remotePlayerCanvas);
       }
     });
     realms.players.addEventListener('leave', e => {
