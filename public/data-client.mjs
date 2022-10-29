@@ -982,7 +982,8 @@ export class DataClient extends EventTarget {
     }
   }
   getSaveKeys(m) {
-    const {type, arrayId, arrayIndexId} = this.parseMessage(m);
+    const mo = this.parseMessage(m);
+    const {type, arrayId, arrayIndexId} = mo;
 
     const saveKeys = [];
     const saveKeyFn = name => {
@@ -1002,7 +1003,14 @@ export class DataClient extends EventTarget {
       // console.warn('should find out how to save all keys...');
       // saveKeyFn('crdt');
       saveKeyFn('*');
+    } else if (type === 'importArray') {
+      const {arrayCrdtExport, mapsCrdtExports} = mo;
+      saveKeyFn(arrayId);
+      // XXX
+    } else if (type === 'importMap') {
+      debugger;
     } else {
+      debugger;
       throw new Error('unrecognized message type: ' + m.type);
     }
 
