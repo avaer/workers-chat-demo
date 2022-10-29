@@ -827,47 +827,12 @@ class VirtualEntityArray extends VirtualPlayersArray {
     this.needledVirtualEntities = new Map(); // entity -> needled entity
 
     this.entityTracker.addEventListener('entityadd', e => {
-      // if (/playerActions/.test(arrayId)) {
-      //   debugger;
-      // }
-
-      // if (/worldApps/.test(arrayId)) {
-      //   console.log('world apps entity add', arrayId);
-      //   debugger;
-      // }
-      
-      // console.log('virtual entity add', e.data);
       const {entityId, entity} = e.data;
       const needledEntity = new NeedledVirtualEntityMap(entity, this.headTracker);
-      
-      /* const linkedRealms = new Set();
-      const onlink = e => {
-        const {realm} = e.data;
-        needledEntity.headTracker.linkRealm(realm);
-        linkedRealms.add(realm);
-      };
-      needledEntity.addEventListener('link', onlink);
 
-      const onunlink = e => {
-        const {realm} = e.data;
-        needledEntity.headTracker.unlinkRealm(realm);
-        linkedRealms.delete(realm);
-      };
-      needledEntity.addEventListener('unlink', onunlink);
+      // needledEntity.toObject();
 
       needledEntity.cleanupFn = () => {
-        for (const realm of linkedRealms) {
-          needledEntity.headTracker.unlinkRealm(realm);
-        }
-
-        needledEntity.removeEventListener('link', onlink);
-        needledEntity.removeEventListener('unlink', onunlink);
-      }; */
-      needledEntity.cleanupFn = () => {
-        // if (/worldApps/.test(arrayId)) {
-        //   debugger;
-        // }
-        // console.log('destroy');
         needledEntity.destroy();
         this.dispatchEvent(new MessageEvent('needledentityremove', {
           data: {
