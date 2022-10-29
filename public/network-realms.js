@@ -1520,7 +1520,7 @@ export class NetworkRealms extends EventTarget {
     throw new Error('not implemented');
   }
   sendChatMessage(message) {
-    const headRealm = _getHeadRealm(this.localPlayer.headPosition, this.connectedRealms);
+    const headRealm = this.localPlayer.headTracker.getHeadRealm();
     headRealm.sendChatMessage(message);
   }
   async updatePosition(position, realmSize) {
