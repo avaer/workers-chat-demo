@@ -240,13 +240,17 @@ export class DCArray extends EventTarget {
     this.arrayId = arrayId;
     this.dataClient = dataClient;
 
-    this.r = Math.random();
-    this.stack = new Error().stack;
+    // this.r = Math.random();
+    // this.stack = new Error().stack;
     this.cleanupFn = null;
   }
   getKeys() {
-    const array = this.dataClient.crdt.get(this.arrayId);
-    if (array) {
+    const arrayWrap = this.dataClient.crdt.get(this.arrayId);
+    if (arrayWrap) {
+      const array = arrayWrap[1];
+      if (!array) {
+        debugger;
+      }
       return Object.keys(array);
     } else {
       return [];
@@ -258,16 +262,18 @@ export class DCArray extends EventTarget {
     return map;
   }
   hasKey(key) {
-    const array = this.dataClient.crdt.get(this.arrayId);
-    if (array) {
+    const arrayWrap = this.dataClient.crdt.get(this.arrayId);
+    if (arrayWrap) {
+      const array = arrayWrap[1];
       return array[key] !== undefined;
     } else {
       return false;
     }
   }
   getIndex(index, opts) {
-    const array = this.dataClient.crdt.get(this.arrayId);
-    if (array) {
+    const arrayWrap = this.dataClient.crdt.get(this.arrayId);
+    if (arrayWrap) {
+      const array = arrayWrap[1];
       let i = 0;
       for (const k in array) {
         if (i === index) {
@@ -281,14 +287,14 @@ export class DCArray extends EventTarget {
     }
   }
   getSize() {
-    const array = this.dataClient.crdt.get(this.arrayId);
-    return array ? Object.keys(array).length : 0;
+    const arrayWrap = this.dataClient.crdt.get(this.arrayId);
+    return arrayWrap ? Object.keys(arrayWrap[1]).length : 0;
   }
   toArray() {
-    const array = this.dataClient.crdt.get(this.arrayId);
-    if (array) {
+    const arrayWrap = this.dataClient.crdt.get(this.arrayId);
+    if (arrayWrap) {
       const arrayMaps = [];
-      for (const arrayIndexId in array) {
+      for (const arrayIndexId in arrayWrap[1]) {
         const key = _key(this.arrayId, arrayIndexId);
         const crdtVal = this.dataClient.crdt.get(key);
         const val = convertCrdtValToVal(crdtVal);
@@ -302,54 +308,6 @@ export class DCArray extends EventTarget {
       return [];
     }
   }
-  importMapUpdate(map) {
-    const rawObject = map.getRawObject();
-    const crdtExport = structuredClone(rawObject);
-
-    // map
-    const key = _key(this.arrayId, map.arrayIndexId);
-    this.dataClient.crdt.set(key, crdtExport);
-
-    // array
-    let array = this.dataClient.crdt.get(this.arrayId);
-    if (!array) {
-      array = {};
-      this.dataClient.crdt.set(this.arrayId, array);
-    }
-    array[map.arrayIndexId] = true;
-
-    // console.log('import map db write', array);
-
-    return new MessageEvent('importMap.' + this.arrayId, {
-      data: {
-        arrayIndexId: map.arrayIndexId,
-        crdtExport,
-      },
-    });
-  }
-  importArrayUpdate(array) {
-    const arrayVal = array.dataClient.crdt.get(array.arrayId);
-    const arrayCrdtExport = structuredClone(arrayVal);
-    this.dataClient.crdt.set(array.arrayId, arrayCrdtExport);
-
-    const mapCrdtExports = {};
-    for (const arrayIndexId in arrayVal) {
-      const map = array.getMap(arrayIndexId, {
-        listen: false,
-      });
-      const mapVal = map.getRawObject();
-      const mapCrdtExport = structuredClone(mapVal);
-      const key = _key(array.arrayId, arrayIndexId);
-      this.dataClient.crdt.set(key, mapCrdtExport);
-      mapCrdtExports[arrayIndexId] = mapCrdtExport;
-    }
-    return new MessageEvent('importArray.' + this.arrayId, {
-      data: {
-        arrayCrdtExport,
-        mapCrdtExports,
-      },
-    });
-  }
   add(val, opts) {
     return this.dataClient.createArrayMapElement(this.arrayId, val, opts);
   }
@@ -358,26 +316,6 @@ export class DCArray extends EventTarget {
   }
   removeAt(arrayIndexId) {
     return this.dataClient.removeArrayMapElement(this.arrayId, arrayIndexId);
-  }
-  removeArrayUpdate() {
-    let array = this.dataClient.crdt.get(this.arrayId);
-    if (!array) {
-      throw new Error('remove nonexistent array!');
-    }
-    const mapKeys = Object.keys(array);
-    
-    // delete the array
-    this.dataClient.crdt.delete(this.arrayId);
-
-    // delete the maps, too
-    for (const arrayIndexId of mapKeys) {
-      const key = _key(this.arrayId, arrayIndexId);
-      this.dataClient.crdt.delete(key);
-    }
-
-    return new MessageEvent('removeArray.' + this.arrayId, {
-      data: {},
-    });
   }
   listen() {
     const _addMap = (arrayIndexId, val) => {
@@ -413,29 +351,6 @@ export class DCArray extends EventTarget {
       }));
     };
     this.dataClient.addEventListener(removeKey, removeFn);
-
-    const importMapKey = 'importMap.' + this.arrayId;
-    const importMapFn = e => {
-      const {arrayIndexId, crdtExport} = e.data;
-      const val = convertCrdtValToVal(crdtExport);
-      _addMap(arrayIndexId, val);
-    };
-    this.dataClient.addEventListener(importMapKey, importMapFn);
-
-    const importArrayKey = 'importArray.' + this.arrayId;
-    const importArrayFn = e => {
-      const {
-        arrayCrdtExport,
-        mapsCrdtExports,
-      } = e.data;
-
-      for (const arrayIndexId in mapsCrdtExports) {
-        const map = mapsCrdtExports[arrayIndexId];
-        const val = convertCrdtValToVal(map);
-        _addMap(arrayIndexId, val);
-      }
-    };
-    this.dataClient.addEventListener(importArrayKey, importArrayFn);
 
     this.cleanupFn = () => {
       this.dataClient.removeEventListener(addKey, addFn);
@@ -475,28 +390,6 @@ export class DataClient extends EventTarget {
           ],
         });
       }
-      case 'importMap': {
-        const {arrayId, arrayIndexId, crdtExport} = parsedMessage;
-        return zbencode({
-          method: UPDATE_METHODS.IMPORT_MAP,
-          args: [
-            arrayId,
-            arrayIndexId,
-            crdtExport,
-          ],
-        });
-      }
-      case 'importArray': {
-        const {arrayId, arrayCrdtExport, mapCrdtExports} = parsedMessage;
-        return zbencode({
-          method: UPDATE_METHODS.IMPORT_ARRAY,
-          args: [
-            arrayId,
-            arrayCrdtExport,
-            mapCrdtExports,
-          ],
-        });
-      }
       case 'sync': {
         return zbencode({
           method: UPDATE_METHODS.SYNC,
@@ -516,13 +409,14 @@ export class DataClient extends EventTarget {
         });
       }
       case 'add': {
-        const {arrayIndexId, val} = m.data;
+        const {arrayIndexId, val, epoch} = m.data;
         return zbencode({
           method: UPDATE_METHODS.ADD,
           args: [
             arrayId,
             arrayIndexId,
             val,
+            epoch,
           ],
         });
       }
@@ -533,14 +427,6 @@ export class DataClient extends EventTarget {
           args: [
             arrayId,
             arrayIndexId,
-          ],
-        });
-      }
-      case 'removeArray': {
-        return zbencode({
-          method: UPDATE_METHODS.REMOVE_ARRAY,
-          args: [
-            arrayId,
           ],
         });
       }
@@ -559,7 +445,6 @@ export class DataClient extends EventTarget {
       }
       case 'deadhand': {
         // console.log('serialize dead hand');
-        // debugger;
         const {keys, deadHand} = m.data;
         return zbencode({
           method: UPDATE_METHODS.DEAD_HAND,
@@ -644,9 +529,7 @@ export class DataClient extends EventTarget {
     switch (method) {
       case UPDATE_METHODS.IMPORT: {
         const [crdtExport] = args;
-        // console.log('importing export', crdtExport, zbdecode(crdtExport));
         this.crdt = convertObjectToMap(zbdecode(crdtExport));
-        // console.log('crdt imported', this.crdt);
         update = new MessageEvent('import', {
           data: {
             crdtExport,
@@ -654,52 +537,8 @@ export class DataClient extends EventTarget {
         });
         break;
       }
-      case UPDATE_METHODS.IMPORT_MAP: {
-        const [arrayId, arrayIndexId, crdtExport] = args;
-
-        // ensure the array exists
-        let array = this.crdt.get(arrayId);
-        if (!array) {
-          array = {};
-          this.crdt.set(arrayId, array);
-        }
-
-        // set the map
-        const key = _key(arrayId, arrayIndexId);
-        this.crdt.set(key, crdtExport);
-
-        update = new MessageEvent('importMap.' + arrayId, {
-          data: {
-            arrayId,
-            arrayIndexId,
-            crdtExport,
-          },
-        });
-        break;
-      }
-      case UPDATE_METHODS.IMPORT_ARRAY: {
-        const [arrayId, arrayCrdtExport, mapsCrdtExports] = args;
-
-        // set array
-        this.crdt.set(arrayId, arrayCrdtExport);
-        
-        // set array maps
-        for (const arrayIndexId in mapsCrdtExports) {
-          const key = _key(arrayId, arrayIndexId);
-          this.crdt.set(key, mapsCrdtExports[arrayIndexId]);
-        }
-        
-        update = new MessageEvent('importArray.' + arrayId, {
-          data: {
-            arrayCrdtExport,
-            mapsCrdtExports,
-          },
-        });
-        break;
-      }
       case UPDATE_METHODS.SET: {
         const [arrayId, arrayIndexId, key, epoch, val] = args;
-        // console.log('apply update', {arrayId, arrayIndexId, key, epoch, val});
         const arrayMap = new DCMap(arrayId, arrayIndexId, this);
         let oldObject;
         if (force) {
@@ -732,17 +571,21 @@ export class DataClient extends EventTarget {
         break;
       }
       case UPDATE_METHODS.ADD: {
-        const [arrayId, arrayIndexId, val] = args;
+        const [arrayId, arrayIndexId, val, epoch] = args;
         const crdtVal = convertValToCrdtVal(val);
         
         const key = _key(arrayId, arrayIndexId);
         this.crdt.set(key, crdtVal);
         
-        let array = this.crdt.get(arrayId);
-        if (!array) {
-          array = {};
-          this.crdt.set(arrayId, array);
+        let arrayWrap = this.crdt.get(arrayId);
+        if (!arrayWrap) {
+          arrayWrap = [
+            epoch,
+            crdtVal,
+          ];
+          this.crdt.set(arrayId, arrayWrap);
         }
+        const array = arrayWrap[1];
         array[arrayIndexId] = true;
 
         update = new MessageEvent('add.' + arrayId, {
@@ -757,36 +600,21 @@ export class DataClient extends EventTarget {
       }
       case UPDATE_METHODS.REMOVE: {
         const [arrayId, arrayIndexId] = args;
-        let array = this.crdt.get(arrayId);
-        if (!array) {
+        let arrayWrap = this.crdt.get(arrayId);
+        if (!arrayWrap) {
           throw new Error('remove from nonexistent array: ' + arrayId);
         }
+        const array = arrayWrap[1];
         delete array[arrayIndexId];
+        if (Object.keys(array).length === 0) {
+          this.crdt.delete(arrayId);
+        }
 
         update = new MessageEvent('remove.' + arrayId, {
           data: {
             // arrayId,
             arrayIndexId,
           },
-        });
-        break;
-      }
-      case UPDATE_METHODS.REMOVE_ARRAY: {
-        const [arrayId] = args;
-        let array = this.crdt.get(arrayId);
-        if (!array) {
-          throw new Error('remove from nonexistent array: ' + arrayId);
-        }
-        const mapKeys = Object.keys(array);
-        delete array[arrayId];
-
-        // remove the maps, too
-        for (const mapKey of mapKeys) {
-          this.crdt.delete(mapKey);
-        }
-
-        update = new MessageEvent('removeArray.' + arrayId, {
-          data: {},
         });
         break;
       }
@@ -837,8 +665,6 @@ export class DataClient extends EventTarget {
         break;
       }
     }
-    // this.storage = zbdecode(new Uint8Array(arrayBuffer));
-    // const rollbackUint8Array = new Uint8Array(0);
     return {
       rollback,
       update,
@@ -882,68 +708,37 @@ export class DataClient extends EventTarget {
             arrayIndexId,
           };
         } else {
-          const match = m.type.match(/^removeArray\.(.+?)$/);
-          if (match) {
-            const arrayId = match[1];
+          if (m.type === 'rollback') {
+            const {arrayId, arrayIndexId, key, oldEpoch, oldVal} = m.data;
             return {
-              type: 'removeArray',
+              type: 'rollback',
               arrayId,
+              arrayIndexId,
+              key,
+              oldEpoch,
+              oldVal,
+            };
+          } else if (m.type === 'import') {
+            return {
+              type: 'import',
+              crdtExport: m.data.crdtExport,
+            };
+          } else if (m.type === 'deadhand') {
+            const {keys, deadHand} = m.data;
+            return {
+              type: 'deadhand',
+              keys,
+              deadHand,
+            };
+          } else if (m.type === 'livehand') {
+            const {keys, liveHand} = m.data;
+            return {
+              type: 'livehand',
+              keys,
+              liveHand,
             };
           } else {
-            const match = m.type.match(/^importMap\.(.+?)$/);
-            if (match) {
-              const arrayId = match[1];
-              return {
-                type: 'importMap',
-                arrayId,
-                arrayIndexId: m.data.arrayIndexId,
-                crdtExport: m.data.crdtExport,
-              };
-            } else {
-              const match = m.type.match(/^importArray\.(.+?)$/);
-              if (match) {
-                const arrayId = match[1];
-                return {
-                  type: 'importArray',
-                  arrayId,
-                  arrayCrdtExport: m.data.arrayCrdtExport,
-                  mapsCrdtExports: m.data.mapsCrdtExports,
-                };
-              } else {
-                if (m.type === 'rollback') {
-                  const {arrayId, arrayIndexId, key, oldEpoch, oldVal} = m.data;
-                  return {
-                    type: 'rollback',
-                    arrayId,
-                    arrayIndexId,
-                    key,
-                    oldEpoch,
-                    oldVal,
-                  };
-                } else if (m.type === 'import') {
-                  return {
-                    type: 'import',
-                    crdtExport: m.data.crdtExport,
-                  };
-                } else if (m.type === 'deadhand') {
-                  const {keys, deadHand} = m.data;
-                  return {
-                    type: 'deadhand',
-                    keys,
-                    deadHand,
-                  };
-                } else if (m.type === 'livehand') {
-                  const {keys, liveHand} = m.data;
-                  return {
-                    type: 'livehand',
-                    keys,
-                    liveHand,
-                  };
-                } else {
-                  throw new Error('unrecognized message type: ' + m.type);
-                }
-              }
-            }
+            throw new Error('unrecognized message type: ' + m.type);
           }
         }
       }
@@ -963,22 +758,12 @@ export class DataClient extends EventTarget {
     } else if (type === 'add' || type === 'remove') {
       saveKeyFn(arrayIndexId);
       saveKeyFn(arrayId);
-    } else if (type === 'removeArray') {
-      saveKeyFn(arrayId);
     } else if (type === 'rollback') {
       saveKeyFn(arrayIndexId);
     } else if (type === 'import') {
       // console.warn('should find out how to save all keys...');
       // saveKeyFn('crdt');
       saveKeyFn('*');
-    } else if (type === 'importArray') {
-      const {arrayCrdtExport, mapsCrdtExports} = mo;
-      saveKeyFn(arrayId);
-      // XXX
-    } else if (type === 'importMap') {
-      const {crdtExport} = mo;
-      saveKeyFn(arrayIndexId);
-      // XXX
     } else {
       debugger;
       throw new Error('unrecognized message type: ' + m.type);
@@ -1006,7 +791,7 @@ export class DataClient extends EventTarget {
     const arrayIndexId = makeId();
     return this.addArrayMapElement(arrayId, arrayIndexId, val, opts);
   }
-  addArrayMapElement(arrayId, arrayIndexId, val = {}, {
+  addArrayMapElementEpoch(arrayId, arrayIndexId, val, epoch, {
     listen = true,
   } = {}) {
     const crdtVal = convertValToCrdtVal(val);
@@ -1014,11 +799,15 @@ export class DataClient extends EventTarget {
     const key = _key(arrayId, arrayIndexId);
     this.crdt.set(key, crdtVal);
     
-    let array = this.crdt.get(arrayId);
-    if (!array) {
-      array = {};
-      this.crdt.set(arrayId, array);
+    let arrayWrap = this.crdt.get(arrayId);
+    if (!arrayWrap) {
+      arrayWrap = [
+        epoch,
+        val,
+      ];
+      this.crdt.set(arrayId, arrayWrap);
     }
+    const array = arrayWrap[1];
     array[arrayIndexId] = true;
 
     const map = new DCMap(arrayId, arrayIndexId, this);
@@ -1033,12 +822,15 @@ export class DataClient extends EventTarget {
     });
     return {map, update};
   }
+  addArrayMapElement(arrayId, arrayIndexId, val, opts) {
+    return this.addArrayMapElementEpoch(arrayId, arrayIndexId, val, 0, opts);
+  }
   removeArrayMapElement(arrayId, arrayIndexId) {
-    let array = this.crdt.get(arrayId);
-    if (!array) {
-      array = {};
-      this.crdt.set(arrayId, array);
+    let arrayWrap = this.crdt.get(arrayId);
+    if (!arrayWrap) {
+      throw new Error('removing nonexistant array element');
     }
+    const array = arrayWrap[1];
     if (array[arrayIndexId]) {
       const key = _key(arrayId, arrayIndexId);
       if (this.crdt.has(key)) {
@@ -1076,7 +868,7 @@ export class DataClient extends EventTarget {
     // }
     return updates;
   }
-  readBinding(arrayNames) {
+  /* readBinding(arrayNames) {
     let arrays = {};
     let arrayMaps = {};
     if (this.crdt) {
@@ -1102,7 +894,7 @@ export class DataClient extends EventTarget {
     } else {
       throw new Error('crdt was not initialized; it has not gotten its first message');
     }
-  }
+  } */
 }
 
 //
@@ -1231,8 +1023,8 @@ export class NetworkedDataClient extends EventTarget {
     };
     this.ws.addEventListener('message', mainMessage);
   }
-  disconnect() {
-  }
+  // disconnect() {
+  // }
   send(msg) {
     this.ws.send(msg);
   }

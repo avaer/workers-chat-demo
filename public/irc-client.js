@@ -51,6 +51,7 @@ export class NetworkedIrcClient extends EventTarget {
     const _waitForInitialImport = async () => {
       await new Promise((resolve, reject) => {
         const initialMessage = e => {
+          console.log('got message', e.data);
           if (e.data instanceof ArrayBuffer && e.data.byteLength > 0) {
             const updateBuffer = e.data;
             const uint8Array = new Uint8Array(updateBuffer);
@@ -59,7 +60,7 @@ export class NetworkedIrcClient extends EventTarget {
             const {method, args} = updateObject;
             if (method === UPDATE_METHODS.NETWORK_INIT) {
               // const [playerIds] = args;
-              // console.log('irc init', {playerIds});
+              console.log('irc init', {args});
 
               this.handleUpdateObject(updateObject);
     

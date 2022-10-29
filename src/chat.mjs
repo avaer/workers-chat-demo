@@ -255,10 +255,11 @@ async function handleApiRequest(path, request, env) {
 const readCrdtFromStorage = async (storage, arrayNames) => {
   const crdt = new Map();
   for (const arrayId of arrayNames) {
-    const array = await storage.get(arrayId) ?? new Set();
-    crdt.set(arrayId, array);
+    const arrayWrap = await storage.get(arrayId) ?? [0, {}];
+    crdt.set(arrayId, arrayWrap);
 
-    for (const arrayIndexId of array) {
+    const array = arrayWrap[1];
+    for (const arrayIndexId in array) {
       const val = await storage.get(arrayIndexId) ?? {};
       crdt.set(arrayIndexId, val);
     }

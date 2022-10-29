@@ -157,7 +157,8 @@ class HeadTracker extends EventTarget {
   }
   updateHeadRealm(headPosition) {
     if (!headPosition || isNaN(headPosition[0]) || isNaN(headPosition[1]) || isNaN(headPosition[2])) {
-      throw new Error('try to update head realm for unpositioned player: ' + headPosition.join(','));
+      debugger;
+      throw new Error('try to update head realm for unpositioned player: ' + headPosition);
     }
 
     /* const onclose = e => {
@@ -173,12 +174,11 @@ class HeadTracker extends EventTarget {
         // this.#headRealm.ws.addEventListener('close', onclose);
       } else {
         const oldHeadRealm = this.#headRealm;
-        if (newHeadRealm.key !== oldHeadRealm.key) {
-          this.#headRealm = newHeadRealm;
-          // this.#headRealm.ws.addEventListener('close', onclose);
-
+        if (newHeadRealm.key !== oldHeadRealm.key) {          
           // only try to migrate if we are not curerntly reconfiguring the network (tx busy)
           if (!this.#connectedRealms.keys().next().value.parent.tx.running) {
+            this.#headRealm = newHeadRealm;
+            
             this.dispatchEvent(new MessageEvent('migrate', {
               data: {
                 oldHeadRealm,
@@ -441,31 +441,6 @@ class EntityTracker extends EventTarget {
     };
     dcArray.dataClient.addEventListener(removeKey, onremove);
     
-    const removeArrayKey = 'removeArray.' + dcArray.arrayId;
-    const onremovearray = e => {
-      // if (/worldApps/.test(arrayId)) {
-        // debugger;
-      // }
-      // console.log('got remove array', this, e.data);
-      const linkedArrayIds = Array.from(localVirtualMaps.keys());
-      _unbindAll(linkedArrayIds);
-      localVirtualMaps.clear();
-    };
-    dcArray.dataClient.addEventListener(removeArrayKey, onremovearray);
-
-    const importArrayKey = 'importArray.' + dcArray.arrayId;
-    const onimportarray = e => {
-      // if (/worldApps/.test(arrayId)) {
-      //   debugger;
-      // }
-      // XXX it better be our array
-      const {arrayCrdtExport, mapCrdtExports} = e.data;
-      // debugger;
-      const linkedArrayIds = Object.keys(arrayCrdtExport);
-      _bindAll(linkedArrayIds);
-    };
-    dcArray.dataClient.addEventListener(importArrayKey, onimportarray);
-
     // initial listen for existing elements
     const arrayIndexIds = dcArray.getKeys();
     /* if (arrayIndexIds.length > 0) {
@@ -489,8 +464,6 @@ class EntityTracker extends EventTarget {
       dcArray.dataClient.removeEventListener('import', onimport);
       dcArray.dataClient.removeEventListener(addKey, onadd);
       dcArray.dataClient.removeEventListener(removeKey, onremove);
-      dcArray.dataClient.removeEventListener(removeArrayKey, onremovearray);
-      dcArray.dataClient.removeEventListener(importArrayKey, onimportarray);
 
       for (const arrayIndexId of localVirtualMaps.keys()) {
         // console.log('unlink', [realm, dcArray.arrayId, arrayIndexId]);
@@ -1328,10 +1301,20 @@ export class NetworkRealm extends EventTarget {
     const ws1 = createWs('realm:' + this.key, this.parent.playerId);
     ws1.binaryType = 'arraybuffer';
     this.ws = ws1;
+    this.ws.onerror = err => {
+      console.warn(err.stack);
+      debugger;
+    };
     await Promise.all([
-      this.networkedDataClient.connect(ws1),
-      this.networkedIrcClient.connect(ws1),
-      this.networkedAudioClient.connect(ws1),
+      this.networkedDataClient.connect(ws1).then(() => {
+        // console.log('done 1');
+      }),
+      this.networkedIrcClient.connect(ws1).then(() => {
+        // console.log('done 1');
+      }),
+      this.networkedAudioClient.connect(ws1).then(() => {
+        // console.log('done 1');
+      }),
     ]);
     this.connected = true;
   }
@@ -1525,7 +1508,7 @@ export class NetworkRealms extends EventTarget {
 
       await this.tx(async () => {
         const oldNumConnectedRealms = this.connectedRealms.size;
-
+        
         const candidateRealms = [];
         for (let dz = -1; dz <= 1; dz++) {
           for (let dx = -1; dx <= 1; dx++) {
@@ -1565,30 +1548,33 @@ export class NetworkRealms extends EventTarget {
               // this.world.link(realm);
               // this.irc.link(realm);
               
-              // try {
+              try {
                 await realm.connect();
-              // } catch(err) {
-                // this.players.unlink(realm);
-                // this.localPlayer.unlink(realm);
-                // this.world.unlink(realm);
-                // this.irc.unlink(realm);
-                // throw err;
-              // }
 
-              this.players.link(realm);
-              this.localPlayer.link(realm);
-              this.world.link(realm);
-              this.irc.link(realm);
+                this.players.link(realm);
+                this.localPlayer.link(realm);
+                this.world.link(realm);
+                this.irc.link(realm);
 
-              this.connectedRealms.add(realm);
+                this.connectedRealms.add(realm);
 
-              // emit event
-              realm.dispatchEvent(new Event('connect'));
-              this.dispatchEvent(new MessageEvent('realmjoin', {
-                data: {
-                  realm,
-                },
-              }));
+                // emit event
+                realm.dispatchEvent(new Event('connect'));
+                this.dispatchEvent(new MessageEvent('realmjoin', {
+                  data: {
+                    realm,
+                  },
+                }));
+              } catch (err) {
+                console.warn(err.stack);
+                throw err;
+                /* realm.dispatchEvent(new Event('connecterror'));
+                this.dispatchEvent(new MessageEvent('realmconnecterror', {
+                  data: {
+                    realm,
+                  },
+                })); */
+              }
             })();
             connectPromises.push(connectPromise);
           }
