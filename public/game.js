@@ -363,7 +363,7 @@ z-index: 2;
         sourceRealm.emitUpdate(deadHandUpdate);
         
         // track
-        collidedVirtualMap.setHeadTracker(realms.localPlayer.headTracker);
+        // collidedVirtualMap.setHeadTracker(realms.localPlayer.playerApps.headTracker);
 
         // add app to the new location (player)
         const collidedAppJson = collidedVirtualMap.toObject();
@@ -415,7 +415,12 @@ z-index: 2;
             const firstAction = realms.localPlayer.playerActions.getVirtualMapAt(wearActionIndex);
             const firstApp = realms.localPlayer.playerApps.getVirtualMapAt(wearAppIndex);
 
-            firstApp.set('position', targetPosition);
+            // const newHeadTracker = new HeadTracker('drop');
+            // newHeadTracker.setHeadRealm(firstApp.headTracker.getHeadRealm());
+            // newHeadTracker.setConnectedRealms(firstApp.headTracker.getConnectedRealms());
+            // firstApp.setHeadTracker(newHeadTracker);
+
+            // firstApp.set('position', targetPosition);
 
             // set dead hands
             // old location: player
