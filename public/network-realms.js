@@ -968,7 +968,9 @@ class VirtualEntityArray extends VirtualPlayersArray {
     return null;
   } */
   getVirtualMap(arrayIndexId) {
-    return this.entityTracker.virtualMaps.get(arrayIndexId);
+    const entityMap = this.entityTracker.virtualMaps.get(arrayIndexId);
+    const needledEntity = this.needledVirtualEntities.get(entityMap);
+    return needledEntity;
   }
   getVirtualMapAt(index) {
     return Array.from(this.needledVirtualEntities.values())[index];
