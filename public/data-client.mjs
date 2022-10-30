@@ -457,18 +457,13 @@ export class DCArray extends EventTarget {
   }
   // arrayListeners = new Map();
   listen() {
-    const _addMap = (arrayIndexId, val, epoch) => {
-      if (epoch === undefined) {
-        // debugger;
-        epoch = 0;
-      }
+    const _addMap = (arrayIndexId, val) => {
       const map = new DCMap(this.arrayId, arrayIndexId, this.dataClient);
       this.dispatchEvent(new MessageEvent('add', {
         data: {
           arrayIndexId,
           map,
           val,
-          epoch,
         },
       }));
     };
@@ -851,6 +846,7 @@ export class DataClient extends EventTarget {
             // arrayId,
             arrayIndexId,
             val,
+            epoch,
           },
         });
         // console.log('add event', update);
@@ -1139,6 +1135,7 @@ export class DataClient extends EventTarget {
         // arrayId,
         arrayIndexId,
         val,
+        epoch,
       },
     });
     return {map, update};

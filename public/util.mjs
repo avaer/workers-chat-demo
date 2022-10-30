@@ -131,13 +131,14 @@ function serializeMessage(m) {
       });
     }
     case 'add': {
-      const {arrayIndexId, val} = m.data;
+      const {arrayIndexId, val, epoch} = m.data;
       return zbencode({
         method: UPDATE_METHODS.ADD,
         args: [
           arrayId,
           arrayIndexId,
           val,
+          epoch,
         ],
       });
     }
