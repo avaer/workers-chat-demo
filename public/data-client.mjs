@@ -875,11 +875,17 @@ export class DataClient extends EventTarget {
       }
       case UPDATE_METHODS.REMOVE: {
         const [arrayId, arrayIndexId] = args;
+        
+        // remove from array
         let array = this.crdt.get(arrayId);
         if (!array) {
           throw new Error('remove from nonexistent array: ' + arrayId);
         }
         delete array[arrayIndexId];
+
+        // remove from array map
+        const key = _key(arrayId, arrayIndexId);
+        this.crdt.delete(key);
 
         update = new MessageEvent('remove.' + arrayId, {
           data: {
