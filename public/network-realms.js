@@ -158,6 +158,8 @@ class HeadTracker extends EventTarget {
           dcMaps = dcMaps.sort((a, b) => {
             return b.getEpoch() - a.getEpoch();
           });
+          console.log('got top epoch', dcMaps[0].getEpoch());
+          debugger;
           dcMap = dcMaps[0];
         }
         return dcMap.dataClient.userData.realm;
@@ -224,6 +226,8 @@ class HeadTracker extends EventTarget {
             }));
           // }
           // throw new Error('migration happening outside of a lock -- wrap in realms.tx()');
+        } else {
+          console.log('keys same');
         }
       }
     } else {
@@ -319,6 +323,7 @@ class EntityTracker extends EventTarget {
         this.virtualMaps.set(map.arrayIndexId, virtualMap);
 
         virtualMap.addEventListener('garbagecollect', e => {
+          console.log('gc', e.data);
           this.virtualMaps.delete(map.arrayIndexId);
 
           this.dispatchEvent(new MessageEvent('entityremove', {
@@ -392,6 +397,7 @@ class EntityTracker extends EventTarget {
     
     const localVirtualMaps = new Map();
     const _bind = map => {
+      globalThis.linkStacks = this.linkStacks;
       const virtualMap = this.linkMap(realm, map);
       localVirtualMaps.set(map.arrayIndexId, virtualMap);
     };
@@ -439,7 +445,7 @@ class EntityTracker extends EventTarget {
       const map = dcArray.getMap(arrayIndexId, {
         listen: false,
       });
-      console.log('got', map, new Error().stack);
+      // console.log('got', map, new Error().stack);
       _bind(map);
     };
     dcArray.dataClient.addEventListener(addKey, onadd);
@@ -542,6 +548,8 @@ class VirtualPlayer extends HeadTrackedEntity {
     const headRealm = this.headTracker.getHeadRealmForCreate(o.position);
     // console.log('initialize player', o, headRealm);
 
+    console.log('initialize app', headRealm.key, o.position.join(','));
+
     const _initializeApps = () => {
       for (let i = 0; i < appVals.length; i++) {
         const appVal = appVals[i];
@@ -549,7 +557,7 @@ class VirtualPlayer extends HeadTrackedEntity {
         const deadHandUpdate = headRealm.dataClient.deadHandArrayMap(this.playerApps.arrayId, appId, this.realms.playerId);
         headRealm.emitUpdate(deadHandUpdate);
 
-        // console.log('initialize player add player app 1', appVal, appId);
+        // console.log('initialize app 1', headRealm.key, appId, appVal);
         const map = this.playerApps.addEntityAt(appId, appVal, headRealm);
         // console.log('initialize player add player app 2', appVal, appId, map);
       }
@@ -1051,6 +1059,7 @@ class HeadlessVirtualEntityMap extends EventTarget {
       new Error().stack,
     ]);
     this.links.add(key);
+    console.log('link', key, this.links.size);
     this.linkStacks.set(key, new Error().stack);
 
     // listen
@@ -1081,6 +1090,17 @@ class HeadlessVirtualEntityMap extends EventTarget {
 
     this.cleanupFns.set(key, () => {
       map.removeEventListener('update', update);
+
+      if (!this.links.has(key)) {
+        debugger;
+      }
+      this.links.delete(key);
+      console.log('unlink', key, this.links.size);
+  
+      if (!this.maps.has(key)) {
+        debugger;
+      }
+      this.maps.delete(key);
 
       this.dispatchEvent(new MessageEvent('unlink', {
         data: {
@@ -1327,7 +1347,8 @@ export class NetworkRealms extends EventTarget {
     this.localPlayer.headTracker.addEventListener('migrate', function(e) { // note: binding local this -> this.localPlayer
       const {oldHeadRealm, newHeadRealm} = e.data;
 
-      console.log('migrate', oldHeadRealm.key, '->', newHeadRealm.key);
+      console.log('migrate 1', oldHeadRealm.key, '->', newHeadRealm.key);
+try {
 
       // old objects
       const oldPlayersArray = oldHeadRealm.dataClient.getArray(this.arrayId, {
@@ -1342,6 +1363,9 @@ export class NetworkRealms extends EventTarget {
       const oldPlayerMap = oldPlayersArray.getMap(this.arrayIndexId, {
         listen: false,
       });
+
+      // XXX debug
+      const oldPlayerObject = oldPlayerMap.toObject();
 
       // new objects
       const newPlayersArray = newHeadRealm.dataClient.getArray(this.arrayId, {
@@ -1410,18 +1434,26 @@ export class NetworkRealms extends EventTarget {
 
       // delete old
       // delete apps
-      // XXX send out full remove events instead of remove array
-      // XXX otherwise, the proper unlinks won't happen
-      const playerAppsDeleteMessage = oldPlayerAppsArray.removeArrayUpdate();
-      oldHeadRealm.emitUpdate(playerAppsDeleteMessage);
+      for (const arrayIndexId of oldPlayerAppsArray.getKeys()) {
+        const update = oldPlayerAppsArray.removeAt(arrayIndexId);
+        oldHeadRealm.emitUpdate(update);
+      }
       // delete actions
-      const playerActionsDeleteMessage = oldPlayerActionsArray.removeArrayUpdate();
-      oldHeadRealm.emitUpdate(playerActionsDeleteMessage);
+      for (const arrayIndexId of oldPlayerActionsArray.getKeys()) {
+        const update = oldPlayerActionsArray.removeAt(arrayIndexId);
+        oldHeadRealm.emitUpdate(update);
+      }
       // delete player
       const oldPlayerRemoveUpdate = oldPlayerMap.removeUpdate();
       oldHeadRealm.emitUpdate(oldPlayerRemoveUpdate);
 
       // _emitLiveHands(oldHeadRealm);
+
+      console.log('migrate 2');
+} catch (err) {
+  console.warn(err.stack);
+  throw err;
+}
     }.bind(this.localPlayer));
     
     this.irc = new VirtualIrc(this);
@@ -1554,12 +1586,12 @@ export class NetworkRealms extends EventTarget {
         // if this is the first network configuration, initialize our local player
         if (oldNumConnectedRealms === 0 && connectPromises.length > 0) {
           onConnect && onConnect(position);
-        } else {
+        } // else {
           // migrate localPlayer if needed
           // console.log('pre-migrate 1', position);
           this.localPlayer.headTracker.updateHeadRealm(position);
           // console.log('post-migrate 1');
-        }
+        // }
 
         // check if we need to disconnect from any realms
         const oldRealms = [];

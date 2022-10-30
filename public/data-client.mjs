@@ -64,7 +64,13 @@ export class DCMap extends EventTarget {
   }
   getRawObject() {
     const key = this.key();
+    if (!key) {
+      debugger;
+    }
     const crdtWrap = this.dataClient.crdt.get(key);
+    if (!crdtWrap) {
+      debugger;
+    }
     const rawObject = crdtWrap[1];
     return rawObject;
   }
@@ -187,7 +193,7 @@ export class DCMap extends EventTarget {
     // map
     const map = this;
     const {arrayIndexId} = map;
-    const key = _key(this.arrayId, arrayIndexId);
+    // const key = _key(this.arrayId, arrayIndexId);
     // this.dataClient.crdt.set(key, crdtExport);
 
     // array
@@ -212,6 +218,9 @@ export class DCMap extends EventTarget {
     // mapCrdtExports[arrayIndexId] = mapCrdtExport;
     const epoch = map.getEpoch() + 1;
 
+    if (typeof epoch !== 'number') {
+      debugger;
+    }
     return new MessageEvent('add.' + this.arrayId, {
       data: {
         arrayIndexId,
@@ -414,6 +423,9 @@ export class DCArray extends EventTarget {
       // mapCrdtExports[arrayIndexId] = mapCrdtExport;
       const epoch = map.getEpoch() + 1;
 
+      if (typeof epoch !== 'number') {
+        debugger;
+      }
       const m = new MessageEvent('add.' + this.arrayId, {
         data: {
           arrayIndexId,
@@ -608,6 +620,9 @@ export class DataClient extends EventTarget {
       }
       case 'add': {
         const {arrayIndexId, val, epoch} = m.data;
+        if (typeof epoch !== 'number') {
+          debugger;
+        }
         return zbencode({
           method: UPDATE_METHODS.ADD,
           args: [
@@ -825,6 +840,9 @@ export class DataClient extends EventTarget {
       }
       case UPDATE_METHODS.ADD: {
         const [arrayId, arrayIndexId, val, epoch] = args;
+        if (typeof epoch !== 'number') {
+          debugger;
+        }
         const crdtVal = convertValToCrdtVal(val);
         
         const key = _key(arrayId, arrayIndexId);
@@ -832,6 +850,9 @@ export class DataClient extends EventTarget {
           epoch,
           crdtVal,
         ];
+        if (this.crdt.has(key)) {
+          debugger;
+        }
         this.crdt.set(key, crdtWrap);
         
         let array = this.crdt.get(arrayId);
@@ -962,6 +983,9 @@ export class DataClient extends EventTarget {
       if (match) {
         const arrayId = match[1];
         const {arrayIndexId, val, epoch} = m.data;
+        if (typeof epoch !== 'number') {
+          debugger;
+        }
         return {
           type: 'add',
           arrayId,
