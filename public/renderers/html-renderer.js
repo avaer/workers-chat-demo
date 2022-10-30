@@ -339,54 +339,47 @@ export class GamePlayerCanvas {
   // XXX make move event based so remote players are rendered
   move() {
     const oldPosition = this.virtualPlayer.getKey('position');
-    if (typeof oldPosition[1] !== 'number') {
-      debugger;
-    }
     const oldDirection = this.virtualPlayer.getKey('direction');
-    if (typeof oldDirection[1] !== 'number') {
-      debugger;
-    }
-    
-    // console.log('old direction', JSON.stringify(oldDirection));
-    
-    const position = structuredClone(oldPosition);
-    const direction = structuredClone(oldDirection);
-    
-    // console.log('cloned direction', JSON.stringify(direction));
     
     const speed = 5;
-    position[0] += this.velocity[0] * speed;
-    position[2] += this.velocity[2] * speed;
-    
-    if (this.velocity[2] < 0) {
-      direction[0] = 0;
-      direction[2] = -1;
-    } else if (this.velocity[0] < 0) {
-      direction[0] = -1;
-      direction[2] = 0;
-    } else if (this.velocity[0] > 0) {
-      direction[0] = 1;
-      direction[2] = 0;
-    } else if (this.velocity[2] > 0) {
-      direction[0] = 0;
-      direction[2] = 1;
-    } else {
-      // nothing
-    }
 
-    if (
-      (position[0] !== oldPosition[0] || position[2] !== oldPosition[2]) ||
-      (direction[0] !== oldDirection[0] || direction[2] !== oldDirection[2])
-    ) {
-      this.virtualPlayer.setKeyValue('position', position);
-      this.virtualPlayer.setKeyValue('direction', direction);
-      /* {
-        const oldDirection = this.virtualPlayer.getKey('direction');
-        if (Array.isArray(oldDirection[1])) {
-          debugger;
-        }
-      } */
-    }
+    const _updatePosition = () => {
+      const position = structuredClone(oldPosition);
+      if (this.velocity[0] !== 0 || this.velocity[2] !== 0) {
+        position[0] += this.velocity[0] * speed;
+        position[2] += this.velocity[2] * speed;
+        
+        this.virtualPlayer.setKeyValue('position', position);
+      }
+    };
+    _updatePosition();
+    const _updateDirection = () => {
+      const direction = structuredClone(oldDirection);
+      let directionChanged = false;
+      if (this.velocity[2] < 0) {
+        direction[0] = 0;
+        direction[2] = -1;
+        directionChanged = true;
+      } else if (this.velocity[0] < 0) {
+        direction[0] = -1;
+        direction[2] = 0;
+        directionChanged = true;
+      } else if (this.velocity[0] > 0) {
+        direction[0] = 1;
+        direction[2] = 0;
+        directionChanged = true;
+      } else if (this.velocity[2] > 0) {
+        direction[0] = 0;
+        direction[2] = 1;
+        directionChanged = true;
+      } else {
+        // nothing
+      }
+      if (directionChanged) {
+        this.virtualPlayer.setKeyValue('direction', direction);
+      }
+    };
+    _updateDirection();
   }
   draw() {
     if (GamePlayerCanvas.#spriteImg) {
