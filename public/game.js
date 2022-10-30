@@ -578,7 +578,7 @@ export const startGame = async ({
       connected = true;
     };
     const _setInitialCoord = () => {
-      console.log('set initial coord', initialCoord);
+      // console.log('set initial coord', initialCoord);
       const initialPosition = [
         initialCoord[0],
         0,
@@ -595,20 +595,14 @@ export const startGame = async ({
       frame = requestAnimationFrame(_recurse);
       
       if (connected) {
+        // move the local player
+        localPlayerCanvas.move();
+        
         // update realms set
         const position = realms.localPlayer.getKey('position');
-        if (!position) {
-          debugger;
-        }
         realms.updatePosition(position, realmSize, {
           // onConnect,
         });
-
-        // XXX track headTracker on the network
-
-        // move the local player
-        localPlayerCanvas.move();
-        // localPlayerCanvas.draw(); // drawing is done responsively on property update
 
         // draw the world
         const worldAppsEl = document.getElementById('world-apps');
