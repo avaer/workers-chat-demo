@@ -296,14 +296,14 @@ export const startGame = async ({
       localPlayerFocused = false;
     });
     window.addEventListener('keydown', e => {
-      // if it's Ctrl-R
-      if (e.keyCode === 82 && e.ctrlKey) {
+      // if it's Ctrl, ignore
+      if (e.ctrlKey) {
         // nothing
       } else {
         e.preventDefault();
         e.stopPropagation();
         
-        if (!e.repeat) {
+        // if (!e.repeat) {
           if (localPlayerFocused) {
             // WASD
             switch (e.code) {
@@ -329,37 +329,45 @@ export const startGame = async ({
               }
             }
           }
-        }
+        // }
       }
     });
     window.addEventListener('keyup', e => {
-      // if it's Ctrl-R
-      if (e.keyCode === 82 && e.ctrlKey) {
+      // if it's Ctrl, ignore
+      if (e.ctrlKey) {
         // nothing
       } else {
         e.preventDefault();
         e.stopPropagation();
 
-        if (!e.repeat) {
+        // if (!e.repeat) {
           switch (e.code) {
             case 'KeyW': {
-              localPlayerCanvas.velocity[2] = 0;
+              if (localPlayerCanvas.velocity[2] === -1) {
+                localPlayerCanvas.velocity[2] = 0;
+              }
               break;
             }
             case 'KeyA': {
-              localPlayerCanvas.velocity[0] = 0;
+              if (localPlayerCanvas.velocity[0] === -1) {
+                localPlayerCanvas.velocity[0] = 0;
+              }
               break;
             }
             case 'KeyS': {
-              localPlayerCanvas.velocity[2] = 0;
+              if (localPlayerCanvas.velocity[2] === 1) {
+                localPlayerCanvas.velocity[2] = 0;
+              }
               break;
             }
             case 'KeyD': {
-              localPlayerCanvas.velocity[0] = 0;
+              if (localPlayerCanvas.velocity[0] === 1) {
+                localPlayerCanvas.velocity[0] = 0;
+              }
               break;
             }
           }
-        }
+        // }
       }
     });
     localPlayerCanvas.element.focus();
@@ -640,7 +648,9 @@ export const startGame = async ({
         }
 
         // move the local player
+        // console.log('premoveposition', realms.localPlayer.getKey('position'));
         localPlayerCanvas.move();
+        // console.log('postmoveposition', realms.localPlayer.getKey('position'));
         
         // update realms set
         const position = realms.localPlayer.getKey('position');

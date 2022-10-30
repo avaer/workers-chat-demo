@@ -318,6 +318,9 @@ export class GamePlayerCanvas {
       if (['position', 'direction'].includes(key)) {
         this.draw();
       }
+      if (key === 'position') {
+        // console.log('position update event', key, val, new Error().stack);
+      }
     };
     virtualPlayer.addEventListener('update', update);
 
@@ -341,8 +344,12 @@ export class GamePlayerCanvas {
         position[0] += this.velocity[0] * speed;
         position[2] += this.velocity[2] * speed;
         
-        // console.log('player update position to', position.join(','));
         this.virtualPlayer.setKeyValue('position', position);
+
+        /* console.log('move position', [
+          oldPosition.join(','),
+          position.join(','),
+        ]); */
       }
     };
     _updatePosition();
