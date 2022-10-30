@@ -161,6 +161,17 @@ export const startGame = async ({
   const virtualWorld = realms.getVirtualWorld();
   const virtualPlayers = realms.getVirtualPlayers();
 
+  const mouseState = {
+    buttons: 0,
+    x: 0,
+    y: 0,
+  };
+  let lastMouseState = {
+    buttons: 0,
+    x: 0,
+    y: 0,
+  };
+
   const _initLogic = () => {
     // world
     // const worldItemRenderers = [];
@@ -252,7 +263,8 @@ export const startGame = async ({
     realms.addEventListener('networkreconfigure', e => {
       const _bindControls = () => {
         const mousemove = e => {
-          realms.localPlayer.setKeyValue('cursorPosition', Float32Array.from([e.clientX, e.clientY, 0]));
+          mouseState.x = e.clientX;
+          mouseState.y = e.clientY;
         };
         window.addEventListener('mousemove', mousemove);
       };
@@ -595,6 +607,18 @@ export const startGame = async ({
       frame = requestAnimationFrame(_recurse);
       
       if (connected) {
+        // move the cursor
+        if (mouseState.x !== lastMouseState.x || mouseState.y !== lastMouseState.y) {
+          realms.localPlayer.setKeyValue('cursorPosition', Float32Array.from([
+            lastMouseState.x,
+            lastMouseState.y,
+            0
+          ]));
+          
+          lastMouseState.x = mouseState.x;
+          lastMouseState.y = mouseState.y;
+        }
+
         // move the local player
         localPlayerCanvas.move();
         
