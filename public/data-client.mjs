@@ -371,26 +371,14 @@ export class DCArray extends EventTarget {
   }
   importArrayUpdates() {
     const arrayVal = this.dataClient.crdt.get(this.arrayId);
-    // const arrayCrdtExport = structuredClone(arrayVal);
-    // this.dataClient.crdt.set(array.arrayId, arrayCrdtExport);
-
-    // new MessageEvent('importArray.' + this.arrayId, {
-    //   data: {
-    //     arrayCrdtExport,
-    //     mapCrdtExports,
-    //   },
-    // });
 
     const messages = [];
     for (const arrayIndexId in arrayVal) {
       const map = this.getMap(arrayIndexId, {
         listen: false,
       });
-      const mapVal = map.getRawObject();
-      const val = structuredClone(mapVal);
-      // const key = _key(array.arrayId, arrayIndexId);
-      // this.dataClient.crdt.set(key, mapCrdtExport);
-      // mapCrdtExports[arrayIndexId] = mapCrdtExport;
+      const crdtVal = map.getRawObject();
+      const val = convertCrdtValToVal(crdtVal);
       const epoch = map.getEpoch() + 1;
 
       if (typeof epoch !== 'number') {
