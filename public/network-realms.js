@@ -306,7 +306,7 @@ class EntityTracker extends EventTarget {
         this.virtualMaps.set(map.arrayIndexId, virtualMap);
 
         virtualMap.addEventListener('garbagecollect', e => {
-          console.log('gc', e.data);
+          // console.log('gc', e.data);
           this.virtualMaps.delete(map.arrayIndexId);
 
           this.dispatchEvent(new MessageEvent('entityremove', {
@@ -1422,7 +1422,7 @@ export class NetworkRealms extends EventTarget {
           listen: false,
         });
         const newEpoch = newPlayer.getMapEpoch();
-        console.log('post migrate epoch', [oldEpoch, newEpoch], playerImportMessage);
+        // console.log('post migrate epoch', [oldEpoch, newEpoch], playerImportMessage);
         if (oldEpoch >= newEpoch) {
           debugger;
           throw new Error('migrate failed 3');

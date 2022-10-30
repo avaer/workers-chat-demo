@@ -194,7 +194,7 @@ export class DCMap extends EventTarget {
     const val = convertCrdtValToVal(crdtVal);
     const epoch = map.getMapEpoch() + 1;
 
-    console.log('export epoch', epoch);
+    // console.log('export epoch', epoch);
     return new MessageEvent('add.' + this.arrayId, {
       data: {
         arrayIndexId,
@@ -811,10 +811,9 @@ export class DataClient extends EventTarget {
         }
         this.crdt.set(key, crdtWrap);
         if (arrayId === 'players') {
-          console.log('add epoch 1', key, epoch);
-          // debugger;
+          // console.log('add epoch 1', key, epoch);
           const map = new DCMap(arrayId, arrayIndexId, this);
-          console.log('add epoch 2', key, epoch, [key, map.key(), key === map.key()], map.dataClient.crdt.get(key), map.getMapEpoch());
+          // console.log('add epoch 2', key, epoch, [key, map.key(), key === map.key()], map.dataClient.crdt.get(key), map.getMapEpoch());
         }
         
         let array = this.crdt.get(arrayId);
