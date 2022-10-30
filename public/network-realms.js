@@ -184,9 +184,6 @@ class HeadTracker extends EventTarget {
     const headRealm = _getHeadRealm(position, this.#connectedRealms.keys());
     return headRealm;
   }
-  hasHeadRealm() {
-    return this.#connectedRealms.size > 0;
-  }
   /* getReadable() {
     return new ReadableHeadTracker(this);
   } */
@@ -231,25 +228,6 @@ class HeadTracker extends EventTarget {
   }
   isLinked() {
     return this.#connectedRealms.size > 0;
-  }
-  setHeadRealm(realm) {
-    debugger;
-    // this.#headRealm = realm;
-
-    // const onclose = e => {
-    //   if (this.#headRealm.ws.readyState !== 1) {
-    //     debugger;
-    //   }
-    // };
-    // this.#headRealm.ws.addEventListener('close', onclose);
-    /* const self = this;
-    this.#headRealm.ws.close = (close => function() {
-      // console.log('got realm', self, realm);
-      if (self.#headRealm === realm) {
-        self.#headRealm = null;
-      }
-      return close.apply(this, arguments);
-    })(this.#headRealm.ws.close); */
   }
   linkRealm(realm) {
     /* if (this.#connectedRealms.has(realm)) {
@@ -597,10 +575,11 @@ class VirtualPlayer extends HeadTrackedEntity {
       const playersArray = headRealm.dataClient.getArray(this.arrayId, {
         listen: false,
       });
+      const epoch = 0;
       const {
         // map,
         update,
-      } = playersArray.addAt(this.arrayIndexId, o, {
+      } = playersArray.addAt(this.arrayIndexId, o, epoch, {
         listen: false,
       });
       headRealm.emitUpdate(update);
@@ -935,10 +914,11 @@ class VirtualEntityArray extends VirtualPlayersArray {
     realm.emitUpdate(deadHandUpdate);
     
     const array = new DCArray(this.arrayId, realm.dataClient);
+    const epoch = 0;
     const {
       map,
       update,
-    } = array.addAt(arrayIndexId, val);
+    } = array.addAt(arrayIndexId, val, epoch);
     realm.emitUpdate(update);
 
     const liveHandUpdate = realm.dataClient.liveHandArrayMap(this.arrayId, arrayIndexId, this.parent.playerId);
@@ -1649,7 +1629,7 @@ export class NetworkRealms extends EventTarget {
       });
     }
 
-    if (this.localPlayer.headTracker.hasHeadRealm()) {
+    if (this.localPlayer.headTracker.isLinked()) {
       this.localPlayer.setKeyValue(positionKey, position);
     }
   }

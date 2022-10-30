@@ -259,7 +259,10 @@ const readCrdtFromStorage = async (storage, arrayNames) => {
     crdt.set(arrayId, array);
 
     for (const arrayIndexId in array) {
-      const val = await storage.get(arrayIndexId) ?? {};
+      const val = await storage.get(arrayIndexId) ?? [
+        0,
+        {},
+      ];
       crdt.set(arrayIndexId, val);
     }
   }
