@@ -131,7 +131,7 @@ class HeadTracker extends EventTarget {
       if (!arrayId || !arrayIndexId) {
         debugger;
       }
-      const dcMaps = [];
+      let dcMaps = [];
       for (const realm of this.#connectedRealms.keys()) {
         const {dataClient} = realm;
         const dcArray = dataClient.getArray(arrayId, {
@@ -148,18 +148,16 @@ class HeadTracker extends EventTarget {
         }
       }
 
-      // XXX for now we will use whichever one has any array map data...
-      // XXX the correct thing to do would be to select with the highest epoch
       if (dcMaps.length > 0) {
         let dcMap;
         if (dcMaps.length === 1) {
           dcMap = dcMaps[0];
         } else {
           dcMaps = dcMaps.sort((a, b) => {
-            return b.getEpoch() - a.getEpoch();
+            return b.getMapEpoch() - a.getMapEpoch();
           });
-          console.log('got top epoch', dcMaps[0].getEpoch());
-          debugger;
+          // console.log('got top epoch', dcMaps[0].getMapEpoch());
+          // debugger;
           dcMap = dcMaps[0];
         }
         return dcMap.dataClient.userData.realm;
@@ -168,21 +166,6 @@ class HeadTracker extends EventTarget {
         // XXX if the caller is trying to create this data, they should call getHeadRealmForCreate() instead
         debugger;
         throw new Error('cannot get head realm: entity does not exist in data');
-
-        /* // if none of the arrays have this map, we are probably creating the map
-        // therefore, compute the target realm which we would need to create the map in
-        const {position} = this.headTrackedEntity;
-        if (!position) {
-          debugger;
-        }
-        const headRealm = _getHeadRealm(position, this.#connectedRealms.keys());
-        if (headRealm) {
-          return headRealm;
-        } else {
-          // XXX if none have any array map data, something is really wrong...
-          debugger;
-          throw new Error('head tracker has no head! need to call updateHeadRealm()');
-        } */
       }
     }
   }
@@ -647,8 +630,16 @@ class VirtualPlayer extends HeadTrackedEntity {
     const valueMap = dataClient.getArrayMap(this.arrayId, this.arrayIndexId, {
       listen: false,
     });
-    globalThis.valueMap = valueMap;
+    // globalThis.valueMap = valueMap;
     return valueMap.getKey(key);
+  }
+  getEpoch() {
+    const headRealm = this.headTracker.getHeadRealm();
+    const {dataClient} = headRealm;
+    const valueMap = dataClient.getArrayMap(this.arrayId, this.arrayIndexId, {
+      listen: false,
+    });
+    return valueMap.getEpoch();
   }
   setKeyValue(key, val) {
     const headRealm = this.headTracker.getHeadRealm();
@@ -1361,12 +1352,9 @@ export class NetworkRealms extends EventTarget {
       const oldPlayerActionsArray = oldHeadRealm.dataClient.getArray('playerActions:' + this.realms.playerId, {
         listen: false,
       });
-      const oldPlayerMap = oldPlayersArray.getMap(this.arrayIndexId, {
+      const oldPlayerMap = oldPlayersArray.getMap(this.realms.playerId, {
         listen: false,
       });
-
-      // XXX debug
-      const oldPlayerObject = oldPlayerMap.toObject();
 
       // new objects
       const newPlayersArray = newHeadRealm.dataClient.getArray(this.arrayId, {
@@ -1378,10 +1366,6 @@ export class NetworkRealms extends EventTarget {
       const newPlayerActionsArray = newHeadRealm.dataClient.getArray('playerActions:' + this.realms.playerId, {
         listen: false,
       });
-
-      // const playerId = this.realms.playerId;
-      // console.log('move realm ', playerId, oldHeadRealm.key, ' -> ', newHeadRealm.key);
-
       // set dead hands
       const deadHandKeys = [
         this.arrayId + '.' + this.arrayIndexId, // player
@@ -1432,6 +1416,21 @@ export class NetworkRealms extends EventTarget {
       // import player
       const playerImportMessage = oldPlayerMap.importMapUpdate();
       _applyMessageToRealm(newHeadRealm, playerImportMessage);
+      {
+        const oldPlayer = oldPlayersArray.getMap(this.realms.playerId, {
+          listen: false,
+        });
+        const oldEpoch = oldPlayer.getEpoch();
+        const newPlayer = newPlayersArray.getMap(this.realms.playerId, {
+          listen: false,
+        });
+        const newEpoch = newPlayer.getEpoch();
+        console.log('post migrate epoch', [oldEpoch, newEpoch], playerImportMessage);
+        if (oldEpoch >= newEpoch) {
+          debugger;
+          throw new Error('migrate failed 3');
+        }
+      }
 
       // delete old
       // delete apps

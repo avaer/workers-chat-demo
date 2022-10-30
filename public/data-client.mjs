@@ -78,7 +78,7 @@ export class DCMap extends EventTarget {
     ];
     this.dataClient.crdt.set(key, crdtWrap);
   }
-  getEpoch() {
+  getMapEpoch() {
     const key = this.key();
     const crdtWrap = this.dataClient.crdt.get(key);
     const epoch = crdtWrap[0];
@@ -112,7 +112,7 @@ export class DCMap extends EventTarget {
       return undefined;
     }
   }
-  getEpoch(key) {
+  getKeyEpoch(key) {
     const object = this.getRawObject();
     if (object) {
       const valSpec = object[key];
@@ -143,7 +143,7 @@ export class DCMap extends EventTarget {
   }
 
   setKeyValueUpdate(key, val) {
-    const oldEpoch = this.getEpoch(key);
+    const oldEpoch = this.getKeyEpoch(key);
     const newEpoch = oldEpoch + 1;
     this.setKeyEpochValue(key, newEpoch, val);
 
@@ -192,11 +192,9 @@ export class DCMap extends EventTarget {
     // migration conflicts are detected at the map level, not the key level 
     const crdtVal = map.getRawObject();
     const val = convertCrdtValToVal(crdtVal);
-    const epoch = map.getEpoch() + 1;
+    const epoch = map.getMapEpoch() + 1;
 
-    if (typeof epoch !== 'number') {
-      debugger;
-    }
+    console.log('export epoch', epoch);
     return new MessageEvent('add.' + this.arrayId, {
       data: {
         arrayIndexId,
@@ -379,7 +377,7 @@ export class DCArray extends EventTarget {
       });
       const crdtVal = map.getRawObject();
       const val = convertCrdtValToVal(crdtVal);
-      const epoch = map.getEpoch() + 1;
+      const epoch = map.getMapEpoch() + 1;
 
       if (typeof epoch !== 'number') {
         debugger;
@@ -812,6 +810,12 @@ export class DataClient extends EventTarget {
           debugger;
         }
         this.crdt.set(key, crdtWrap);
+        if (arrayId === 'players') {
+          console.log('add epoch 1', key, epoch);
+          // debugger;
+          const map = new DCMap(arrayId, arrayIndexId, this);
+          console.log('add epoch 2', key, epoch, [key, map.key(), key === map.key()], map.dataClient.crdt.get(key), map.getMapEpoch());
+        }
         
         let array = this.crdt.get(arrayId);
         if (!array) {
