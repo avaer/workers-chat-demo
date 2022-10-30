@@ -1059,7 +1059,7 @@ class HeadlessVirtualEntityMap extends EventTarget {
       new Error().stack,
     ]);
     this.links.add(key);
-    console.log('link', key, this.links.size);
+    // console.log('link', key, this.links.size);
     this.linkStacks.set(key, new Error().stack);
 
     // listen
@@ -1095,7 +1095,7 @@ class HeadlessVirtualEntityMap extends EventTarget {
         debugger;
       }
       this.links.delete(key);
-      console.log('unlink', key, this.links.size);
+      // console.log('unlink', key, this.links.size);
   
       if (!this.maps.has(key)) {
         debugger;
@@ -1347,8 +1347,8 @@ export class NetworkRealms extends EventTarget {
     this.localPlayer.headTracker.addEventListener('migrate', function(e) { // note: binding local this -> this.localPlayer
       const {oldHeadRealm, newHeadRealm} = e.data;
 
-      console.log('migrate 1', oldHeadRealm.key, '->', newHeadRealm.key);
-try {
+      console.log('migrate', oldHeadRealm.key, '->', newHeadRealm.key);
+// try {
 
       // old objects
       const oldPlayersArray = oldHeadRealm.dataClient.getArray(this.arrayId, {
@@ -1449,11 +1449,11 @@ try {
 
       // _emitLiveHands(oldHeadRealm);
 
-      console.log('migrate 2');
-} catch (err) {
-  console.warn(err.stack);
-  throw err;
-}
+//       console.log('migrate 2');
+// } catch (err) {
+//   console.warn(err.stack);
+//   throw err;
+// }
     }.bind(this.localPlayer));
     
     this.irc = new VirtualIrc(this);
