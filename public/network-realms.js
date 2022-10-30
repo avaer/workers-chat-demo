@@ -1420,11 +1420,11 @@ export class NetworkRealms extends EventTarget {
         const oldPlayer = oldPlayersArray.getMap(this.realms.playerId, {
           listen: false,
         });
-        const oldEpoch = oldPlayer.getEpoch();
+        const oldEpoch = oldPlayer.getMapEpoch();
         const newPlayer = newPlayersArray.getMap(this.realms.playerId, {
           listen: false,
         });
-        const newEpoch = newPlayer.getEpoch();
+        const newEpoch = newPlayer.getMapEpoch();
         console.log('post migrate epoch', [oldEpoch, newEpoch], playerImportMessage);
         if (oldEpoch >= newEpoch) {
           debugger;
