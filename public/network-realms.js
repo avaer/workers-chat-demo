@@ -848,9 +848,6 @@ class VirtualEntityArray extends VirtualPlayersArray {
     this.entityTracker.addEventListener('entityremove', e => {
       const {entityId, entity} = e.data;
 
-      console.log('entity remove', e.data);
-      debugger;
-
       const needledEntity = this.needledVirtualEntities.get(entity);
       needledEntity.cleanupFn();
       this.needledVirtualEntities.delete(entity);
