@@ -504,8 +504,8 @@ export const startGame = async ({
               firstAppJson,
               targetRealm
             );
-            const newPlayerApp = virtualWorld.worldApps.getVirtualMap(newPlayerAppMap.arrayIndexId);
-            newPlayerApp.headTracker.setHeadRealm(targetRealm);
+            // const newPlayerApp = virtualWorld.worldApps.getVirtualMap(newPlayerAppMap.arrayIndexId);
+            // newPlayerApp.headTracker.setHeadRealm(targetRealm);
 
             // remove from the old location (player)
             firstApp.remove();
