@@ -332,7 +332,11 @@ export class GamePlayerCanvas {
     const speed = 5;
 
     const _updatePosition = () => {
-      const position = structuredClone(oldPosition);
+      const position = [
+        oldPosition[0],
+        oldPosition[1],
+        oldPosition[2],
+      ];
       if (this.velocity[0] !== 0 || this.velocity[2] !== 0) {
         position[0] += this.velocity[0] * speed;
         position[2] += this.velocity[2] * speed;
@@ -343,7 +347,11 @@ export class GamePlayerCanvas {
     };
     _updatePosition();
     const _updateDirection = () => {
-      const direction = structuredClone(oldDirection);
+      const direction = [
+        oldDirection[0],
+        oldDirection[1],
+        oldDirection[2],
+      ];
       let directionChanged = false;
       if (this.velocity[2] < 0) {
         direction[0] = 0;

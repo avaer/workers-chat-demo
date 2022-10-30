@@ -286,7 +286,7 @@ export const startGame = async ({
     localPlayerCanvas = new GamePlayerCanvas(realms.localPlayer, {
       // initialCoord,
     });
-    let localPlayerFocused = false;
+    let localPlayerFocused = true;
     localPlayerCanvas.element.addEventListener('focus', e => {
       // console.log('character focus 1');
       localPlayerFocused = true;
@@ -296,49 +296,69 @@ export const startGame = async ({
       localPlayerFocused = false;
     });
     window.addEventListener('keydown', e => {
-      if (localPlayerFocused) {
-        // WASD
-        switch (e.code) {
-          case 'KeyW': {
-            localPlayerCanvas.velocity[2] = -1;
-            break;
-          }
-          case 'KeyA': {
-            localPlayerCanvas.velocity[0] = -1;
-            break;
-          }
-          case 'KeyS': {
-            localPlayerCanvas.velocity[2] = 1;
-            break;
-          }
-          case 'KeyD': {
-            localPlayerCanvas.velocity[0] = 1;
-            break;
-          }
-          case 'KeyE': {
-            _pickupDrop();
-            break;
+      // if it's Ctrl-R
+      if (e.keyCode === 82 && e.ctrlKey) {
+        // nothing
+      } else {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!e.repeat) {
+          if (localPlayerFocused) {
+            // WASD
+            switch (e.code) {
+              case 'KeyW': {
+                localPlayerCanvas.velocity[2] = -1;
+                break;
+              }
+              case 'KeyA': {
+                localPlayerCanvas.velocity[0] = -1;
+                break;
+              }
+              case 'KeyS': {
+                localPlayerCanvas.velocity[2] = 1;
+                break;
+              }
+              case 'KeyD': {
+                localPlayerCanvas.velocity[0] = 1;
+                break;
+              }
+              case 'KeyE': {
+                _pickupDrop();
+                break;
+              }
+            }
           }
         }
       }
     });
     window.addEventListener('keyup', e => {
-      switch (e.code) {
-        case 'KeyW': {
-          localPlayerCanvas.velocity[2] = 0;
-          break;
-        }
-        case 'KeyA': {
-          localPlayerCanvas.velocity[0] = 0;
-          break;
-        }
-        case 'KeyS': {
-          localPlayerCanvas.velocity[2] = 0;
-          break;
-        }
-        case 'KeyD': {
-          localPlayerCanvas.velocity[0] = 0;
-          break;
+      // if it's Ctrl-R
+      if (e.keyCode === 82 && e.ctrlKey) {
+        // nothing
+      } else {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!e.repeat) {
+          switch (e.code) {
+            case 'KeyW': {
+              localPlayerCanvas.velocity[2] = 0;
+              break;
+            }
+            case 'KeyA': {
+              localPlayerCanvas.velocity[0] = 0;
+              break;
+            }
+            case 'KeyS': {
+              localPlayerCanvas.velocity[2] = 0;
+              break;
+            }
+            case 'KeyD': {
+              localPlayerCanvas.velocity[0] = 0;
+              break;
+            }
+          }
         }
       }
     });
@@ -631,11 +651,9 @@ export const startGame = async ({
         // draw the world
         const worldAppsEl = document.getElementById('world-apps');
         const networkRealmsEl = document.getElementById('network-realms');
-        const cssText = `\
-          transform: translate3d(${-position[0]}px, ${-position[2]}px, 0px);
-        `;
-        worldAppsEl.style.cssText = cssText;
-        networkRealmsEl.style.cssText = cssText;
+        const cssTransformText = `translate3d(${-position[0]}px, ${-position[2]}px, 0px)`;
+        worldAppsEl.style.transform = cssTransformText;
+        networkRealmsEl.style.transform = cssTransformText;
 
         // latch last coord
         const coord = [
