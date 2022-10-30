@@ -347,15 +347,21 @@ export class GamePlayerCanvas {
   // XXX make move event based so remote players are rendered
   move() {
     const oldPosition = this.virtualPlayer.getKey('position');
+    if (typeof oldPosition[1] !== 'number') {
+      debugger;
+    }
     const oldDirection = this.virtualPlayer.getKey('direction');
+    if (typeof oldDirection[1] !== 'number') {
+      debugger;
+    }
     
-    const position = structuredClone(this.virtualPlayer.getKey('position'));
-    const direction = structuredClone(this.virtualPlayer.getKey('direction'));
+    // console.log('old direction', JSON.stringify(oldDirection));
     
-    // if (!position) {
-    //   debugger;
-    // }
-
+    const position = structuredClone(oldPosition);
+    const direction = structuredClone(oldDirection);
+    
+    // console.log('cloned direction', JSON.stringify(direction));
+    
     const speed = 5;
     position[0] += this.velocity[0] * speed;
     position[2] += this.velocity[2] * speed;
@@ -382,6 +388,12 @@ export class GamePlayerCanvas {
     ) {
       this.virtualPlayer.setKeyValue('position', position);
       this.virtualPlayer.setKeyValue('direction', direction);
+      /* {
+        const oldDirection = this.virtualPlayer.getKey('direction');
+        if (Array.isArray(oldDirection[1])) {
+          debugger;
+        }
+      } */
     }
   }
   draw() {

@@ -49,10 +49,6 @@ export class DCMap extends EventTarget {
   constructor(arrayId, arrayIndexId, dataClient) {
     super();
 
-    // if (arrayId === undefined || arrayIndexId === undefined) {
-    //   debugger;
-    // }
-
     this.arrayId = arrayId;
     this.arrayIndexId = arrayIndexId;
     this.dataClient = dataClient;
@@ -187,35 +183,15 @@ export class DCMap extends EventTarget {
     });
   }
   importMapUpdate() {
-    // const rawObject = map.getRawObject();
-    // const crdtExport = structuredClone(rawObject);
-
-    // map
     const map = this;
     const {arrayIndexId} = map;
-    // const key = _key(this.arrayId, arrayIndexId);
-    // this.dataClient.crdt.set(key, crdtExport);
 
-    // array
-    // let array = this.dataClient.crdt.get(this.arrayId);
-    // if (!array) {
-    //   array = {};
-    //   this.dataClient.crdt.set(this.arrayId, array);
-    // }
-    // array[map.arrayIndexId] = true;
-
-    // console.log('import map db write', array);
-
-
-    
-    // const map = this.getMap(arrayIndexId, {
-    //   listen: false,
-    // });
-    const mapVal = map.getRawObject();
-    const val = structuredClone(mapVal);
-    // const key = _key(array.arrayId, arrayIndexId);
-    // this.dataClient.crdt.set(key, mapCrdtExport);
-    // mapCrdtExports[arrayIndexId] = mapCrdtExport;
+    // convert the curernt value to JSON
+    // notice that this loses per-key epoch information
+    // however, during a migration, the map's overall epoch is increased
+    // migration conflicts are detected at the map level, not the key level 
+    const crdtVal = map.getRawObject();
+    const val = convertCrdtValToVal(crdtVal);
     const epoch = map.getEpoch() + 1;
 
     if (typeof epoch !== 'number') {
@@ -229,12 +205,6 @@ export class DCMap extends EventTarget {
         epoch,
       },
     });
-    /* return new MessageEvent('add.' + this.arrayId, {
-      data: {
-        arrayIndexId: map.arrayIndexId,
-        crdtExport,
-      },
-    }); */
   }
 
   // server
