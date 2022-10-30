@@ -564,12 +564,14 @@ export const startGame = async ({
         },
       ];
 
-      realms.localPlayer.initializePlayer({
+      const o = {
         position,
         direction: [0, 0, 1],
         cursorPosition: new Float32Array(3),
         name: 'Hanna',
-      }, {
+      };
+      console.log('initialize player', o);
+      realms.localPlayer.initializePlayer(o, {
         appVals,
         appIds,
         actionVals,
@@ -578,7 +580,7 @@ export const startGame = async ({
       connected = true;
     };
     const _setInitialCoord = () => {
-      // console.log('set initial coord', initialCoord);
+      console.log('set initial coord', initialCoord);
       const initialPosition = [
         initialCoord[0],
         0,

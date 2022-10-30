@@ -249,11 +249,7 @@ export class AppsHtmlRenderer {
     realms.localPlayer.playerActions.addEventListener('needledentityadd', e => {
       const {needledEntity} = e.data;
       
-      needledEntity.toObject();
-      
       playerActions.set(needledEntity.entityMap.arrayIndexId, needledEntity);
-
-      sanityCheck();
 
       update();
     });
