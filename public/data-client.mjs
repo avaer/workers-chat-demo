@@ -76,6 +76,12 @@ export class DCMap extends EventTarget {
     ];
     this.dataClient.crdt.set(key, crdtWrap);
   }
+  getEpoch() {
+    const key = this.key();
+    const crdtWrap = this.dataClient.crdt.get(key);
+    const epoch = crdtWrap[0];
+    return epoch;
+  }
   toObject() {
     const object = this.getRawObject();
     if (object) {

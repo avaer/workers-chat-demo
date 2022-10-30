@@ -156,7 +156,16 @@ class HeadTracker extends EventTarget {
       // XXX for now we will use whichever one has any array map data...
       // XXX the correct thing to do would be to select with the highest epoch
       if (dcMaps.length > 0) {
-        return dcMaps[0].dataClient.userData.realm;
+        let dcMap;
+        if (dcMaps.length === 1) {
+          dcMap = dcMaps[0];
+        } else {
+          dcMaps = dcMaps.sort((a, b) => {
+            return b.getEpoch() - a.getEpoch();
+          });
+          dcMap = dcMaps[0];
+        }
+        return dcMap.dataClient.userData.realm;
       } else {
         // XXX if we got here, that means that this entity does not exist in the data.
         // XXX if the caller is trying to create this data, they should call getHeadRealmForCreate() instead
@@ -837,7 +846,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
     this.entityTracker.addEventListener('entityadd', e => {
       const {entityId, entity} = e.data;
       sanityCheck();
-      const needledEntity = new NeedledVirtualEntityMap(entity);
+      const needledEntity = new NeedledVirtualEntityMap(arrayId, entity);
 
       // needledEntity.toObject();
 
@@ -1183,9 +1192,10 @@ class HeadlessVirtualEntityMap extends EventTarget {
 }
 
 class NeedledVirtualEntityMap extends HeadTrackedEntity {
-  constructor(entityMap) {
+  constructor(arrayId, entityMap) {
     super();
 
+    this.arrayId = arrayId;
     this.entityMap = entityMap; // headless entity map
 
     const onlink = e => {
@@ -1210,12 +1220,12 @@ class NeedledVirtualEntityMap extends HeadTrackedEntity {
       this.headTracker.linkRealm(realm);
     }
   }
-  get arrayId() {
-    return this.entityMap.arrayId;
+  /* get arrayId() {
+    return this.arrayId;
   }
   set arrayId(arrayId) {
     throw new Error('cannot set arrayId');
-  }
+  } */
   get arrayIndexId() {
     return this.entityMap.arrayIndexId;
   }
