@@ -310,23 +310,12 @@ export class GamePlayerCanvas {
     playerAppsEl.className = 'player-apps';
     this.element.appendChild(playerAppsEl);
 
+    this.velocity = [0, 0, 0];
     this.cancelFn = null;
-
-    /* // XXX these should be properties on the player object
-    this.position = [
-      initialCoord[0],
-      0,
-      initialCoord[1],
-    ];
-    this.velocity = [0, 0, 0];
-    this.direction = [0, 0, 1] */;
-
-    this.velocity = [0, 0, 0];
 
     const update = e => {
       const {key, val} = e.data;
       if (['position', 'direction'].includes(key)) {
-        // console.log('game player canvas virutal player update position', val);
         this.draw();
       }
     };
@@ -336,7 +325,6 @@ export class GamePlayerCanvas {
       virtualPlayer.removeEventListener('update', update);
     };
   }
-  // XXX make move event based so remote players are rendered
   move() {
     const oldPosition = this.virtualPlayer.getKey('position');
     const oldDirection = this.virtualPlayer.getKey('direction');
@@ -349,6 +337,7 @@ export class GamePlayerCanvas {
         position[0] += this.velocity[0] * speed;
         position[2] += this.velocity[2] * speed;
         
+        // console.log('player update position to', position.join(','));
         this.virtualPlayer.setKeyValue('position', position);
       }
     };
