@@ -1,7 +1,13 @@
 import {DataClient, NetworkedDataClient, DCMap, DCArray, convertCrdtValToVal} from './data-client.mjs';
 import {NetworkedIrcClient} from './irc-client.js';
 import {NetworkedAudioClient} from './audio-client.js';
-import {createWs, makePromise, makeId} from './util.mjs';
+import {
+  createWs,
+  makePromise,
+  makeId,
+  parseUpdateObject,
+  serializeMessage,
+} from './util.mjs';
 
 //
 
@@ -102,19 +108,8 @@ class HeadTrackedEntity extends EventTarget {
 
     this.headTracker = headTracker || new HeadTracker(this);
   }
-  setHeadTracker(headTracker) {
+  /* setHeadTracker(headTracker) {
     this.headTracker = headTracker;
-  }
-  /* isLinked() {
-    debugger;
-    return this.headTracker.isLinked();
-  }
-  updateHeadRealm(headPosition) {
-   debugger;
-  }
-  setHeadRealm(realm) {
-    debugger;
-    this.headTracker.setHeadRealm(realm);
   } */
 }
 
@@ -546,7 +541,7 @@ class VirtualPlayer extends HeadTrackedEntity {
     actionValIds = [],
   } = {}) {
     const headRealm = this.headTracker.getHeadRealmForCreate(o.position);
-    // console.log('initialize player', o);
+    // console.log('initialize player', o, headRealm);
 
     const _initializeApps = () => {
       for (let i = 0; i < appVals.length; i++) {
@@ -599,15 +594,15 @@ class VirtualPlayer extends HeadTrackedEntity {
     const {dataClient} = realm;
     const map = dataClient.getArrayMap(this.arrayId, this.arrayIndexId); // note: this map might not exist in the crdt yet
     const update = e => {
-      const {key, val} = e.data;
+      // const {key, val} = e.data;
       
       this.dispatchEvent(new MessageEvent('update', {
         data: e.data,
       }));
 
-      if (key === positionKey) {
-        this.headTracker.updateHeadRealm(val);
-      }
+      // if (key === positionKey) {
+      //   this.headTracker.updateHeadRealm(val);
+      // }
     };
     map.addEventListener('update', update);
     
@@ -844,8 +839,10 @@ class VirtualEntityArray extends VirtualPlayersArray {
     this.needledVirtualEntities = new Map(); // entity -> needled entity
 
     this.entityTracker.addEventListener('entityadd', e => {
+      console.log('entity add', e.data);
+      
       const {entityId, entity} = e.data;
-      sanityCheck();
+      // sanityCheck();
       const needledEntity = new NeedledVirtualEntityMap(arrayId, entity);
 
       // needledEntity.toObject();
@@ -874,6 +871,9 @@ class VirtualEntityArray extends VirtualPlayersArray {
     });
     this.entityTracker.addEventListener('entityremove', e => {
       const {entityId, entity} = e.data;
+
+      console.log('entity remove', e.data);
+      debugger;
 
       const needledEntity = this.needledVirtualEntities.get(entity);
       needledEntity.cleanupFn();
@@ -1435,7 +1435,7 @@ export class NetworkRealms extends EventTarget {
         listen: false,
       });
 
-      const playerId = this.realms.playerId;
+      // const playerId = this.realms.playerId;
       // console.log('move realm ', playerId, oldHeadRealm.key, ' -> ', newHeadRealm.key);
 
       // set dead hands
@@ -1457,14 +1457,37 @@ export class NetworkRealms extends EventTarget {
 
       // add new
       // import apps
-      const playerAppsImportMessage = newPlayerAppsArray.importArrayUpdate(oldPlayerAppsArray);
-      newHeadRealm.emitUpdate(playerAppsImportMessage);
+      const _applyMessageToRealm = (realm, message) => {
+        console.log('apply message to realm', message);
+        const uint8Array = serializeMessage(message);
+        const updateObject = parseUpdateObject(uint8Array);
+        const {
+          rollback,
+          update,
+        } = realm.dataClient.applyUpdateObject(updateObject, {
+          force: true, // since coming from the server
+        });
+        if (rollback) {
+          throw new Error('migrate failed 1');
+        }
+        if (update) {
+          realm.emitUpdate(update);
+        } else {
+          throw new Error('migrate failed 2');
+        }
+      };
+      const playerAppsImportMessages = oldPlayerAppsArray.importArrayUpdates();
+      for (const m of playerAppsImportMessages) {
+        _applyMessageToRealm(newHeadRealm, m);
+      }
       // import actions
-      const playerActionsImportMessage = newPlayerActionsArray.importArrayUpdate(oldPlayerActionsArray);
-      newHeadRealm.emitUpdate(playerActionsImportMessage);
+      const playerActionsImportMessages = oldPlayerActionsArray.importArrayUpdates();
+      for (const m of playerActionsImportMessages) {
+        _applyMessageToRealm(newHeadRealm, m);
+      }
       // import player
-      const playerImportMessage = newPlayersArray.importMapUpdate(oldPlayerMap);
-      newHeadRealm.emitUpdate(playerImportMessage);
+      const playerImportMessage = oldPlayerMap.importMapUpdate();
+      _applyMessageToRealm(newHeadRealm, playerImportMessage);
 
       // delete old
       // delete apps
@@ -1610,6 +1633,8 @@ export class NetworkRealms extends EventTarget {
         // if this is the first network configuration, initialize our local player
         if (oldNumConnectedRealms === 0 && connectPromises.length > 0) {
           onConnect && onConnect(position);
+        } else {
+          // XXX migrate localPlayer if needed
         }
 
         // check if we need to disconnect from any realms

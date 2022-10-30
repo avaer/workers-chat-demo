@@ -180,6 +180,53 @@ export class DCMap extends EventTarget {
       },
     });
   }
+  importMapUpdate() {
+    // const rawObject = map.getRawObject();
+    // const crdtExport = structuredClone(rawObject);
+
+    // map
+    const map = this;
+    const {arrayIndexId} = map;
+    const key = _key(this.arrayId, arrayIndexId);
+    // this.dataClient.crdt.set(key, crdtExport);
+
+    // array
+    // let array = this.dataClient.crdt.get(this.arrayId);
+    // if (!array) {
+    //   array = {};
+    //   this.dataClient.crdt.set(this.arrayId, array);
+    // }
+    // array[map.arrayIndexId] = true;
+
+    // console.log('import map db write', array);
+
+
+    
+    // const map = this.getMap(arrayIndexId, {
+    //   listen: false,
+    // });
+    const mapVal = map.getRawObject();
+    const val = structuredClone(mapVal);
+    // const key = _key(array.arrayId, arrayIndexId);
+    // this.dataClient.crdt.set(key, mapCrdtExport);
+    // mapCrdtExports[arrayIndexId] = mapCrdtExport;
+    const epoch = map.getEpoch() + 1;
+
+    return new MessageEvent('add.' + this.arrayId, {
+      data: {
+        arrayIndexId,
+        map,
+        val,
+        epoch,
+      },
+    });
+    /* return new MessageEvent('add.' + this.arrayId, {
+      data: {
+        arrayIndexId: map.arrayIndexId,
+        crdtExport,
+      },
+    }); */
+  }
 
   // server
   trySetKeyEpochValue(key, epoch, val) {
@@ -292,13 +339,16 @@ export class DCArray extends EventTarget {
   hasKey(key) {
     const array = this.dataClient.crdt.get(this.arrayId);
     if (array) {
+      // console.log('has key 1', {key, arrayId: this.arrayId, array});
       if (array[key] !== undefined) {
         // debugger;
         return true;
       } else {
+        // console.log('has key 2', {key, arrayId: this.arrayId, array});
         return false;
       }
     } else {
+      // console.log('has key 3', {key, arrayId: this.arrayId, array});
       return false;
     }
   }
@@ -340,53 +390,41 @@ export class DCArray extends EventTarget {
       return [];
     }
   }
-  importMapUpdate(map) {
-    const rawObject = map.getRawObject();
-    const crdtExport = structuredClone(rawObject);
+  importArrayUpdates() {
+    const arrayVal = this.dataClient.crdt.get(this.arrayId);
+    // const arrayCrdtExport = structuredClone(arrayVal);
+    // this.dataClient.crdt.set(array.arrayId, arrayCrdtExport);
 
-    // map
-    const key = _key(this.arrayId, map.arrayIndexId);
-    this.dataClient.crdt.set(key, crdtExport);
+    // new MessageEvent('importArray.' + this.arrayId, {
+    //   data: {
+    //     arrayCrdtExport,
+    //     mapCrdtExports,
+    //   },
+    // });
 
-    // array
-    let array = this.dataClient.crdt.get(this.arrayId);
-    if (!array) {
-      array = {};
-      this.dataClient.crdt.set(this.arrayId, array);
-    }
-    array[map.arrayIndexId] = true;
-
-    // console.log('import map db write', array);
-
-    return new MessageEvent('importMap.' + this.arrayId, {
-      data: {
-        arrayIndexId: map.arrayIndexId,
-        crdtExport,
-      },
-    });
-  }
-  importArrayUpdate(array) {
-    const arrayVal = array.dataClient.crdt.get(array.arrayId);
-    const arrayCrdtExport = structuredClone(arrayVal);
-    this.dataClient.crdt.set(array.arrayId, arrayCrdtExport);
-
-    const mapCrdtExports = {};
+    const messages = [];
     for (const arrayIndexId in arrayVal) {
-      const map = array.getMap(arrayIndexId, {
+      const map = this.getMap(arrayIndexId, {
         listen: false,
       });
       const mapVal = map.getRawObject();
-      const mapCrdtExport = structuredClone(mapVal);
-      const key = _key(array.arrayId, arrayIndexId);
-      this.dataClient.crdt.set(key, mapCrdtExport);
-      mapCrdtExports[arrayIndexId] = mapCrdtExport;
+      const val = structuredClone(mapVal);
+      // const key = _key(array.arrayId, arrayIndexId);
+      // this.dataClient.crdt.set(key, mapCrdtExport);
+      // mapCrdtExports[arrayIndexId] = mapCrdtExport;
+      const epoch = map.getEpoch() + 1;
+
+      const m = new MessageEvent('add.' + this.arrayId, {
+        data: {
+          arrayIndexId,
+          map,
+          val,
+          epoch,
+        },
+      });
+      messages.push(m);
     }
-    return new MessageEvent('importArray.' + this.arrayId, {
-      data: {
-        arrayCrdtExport,
-        mapCrdtExports,
-      },
-    });
+    return messages;
   }
   add(val, epoch, opts) {
     return this.dataClient.createArrayMapElement(this.arrayId, val, epoch, opts);

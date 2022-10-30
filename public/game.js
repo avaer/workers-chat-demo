@@ -570,7 +570,7 @@ export const startGame = async ({
         cursorPosition: new Float32Array(3),
         name: 'Hanna',
       };
-      console.log('initialize player', o);
+      // console.log('initialize player', o);
       realms.localPlayer.initializePlayer(o, {
         appVals,
         appIds,
