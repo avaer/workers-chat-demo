@@ -553,19 +553,17 @@ export const startGame = async ({
 
       const actionVals = [
         {
-          // position,
           action: 'wear',
           appId: appIds[0],
         },
         {
-          // position,
           action: 'wear',
           appId: appIds[1],
         },
       ];
 
       const o = {
-        position,
+        position: position.slice(),
         direction: [0, 0, 1],
         cursorPosition: new Float32Array(3),
         name: 'Hanna',
