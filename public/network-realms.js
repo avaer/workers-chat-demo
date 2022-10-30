@@ -1413,7 +1413,7 @@ export class NetworkRealms extends EventTarget {
       // import player
       const playerImportMessage = oldPlayerMap.importMapUpdate();
       _applyMessageToRealm(newHeadRealm, playerImportMessage);
-      {
+      /* {
         const oldPlayer = oldPlayersArray.getMap(this.realms.playerId, {
           listen: false,
         });
@@ -1427,7 +1427,7 @@ export class NetworkRealms extends EventTarget {
           debugger;
           throw new Error('migrate failed 3');
         }
-      }
+      } */
 
       // delete old
       // delete apps
