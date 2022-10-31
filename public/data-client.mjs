@@ -1170,7 +1170,9 @@ export class NetworkedDataClient extends EventTarget {
           const {
             rollback,
             update,
-          } = this.dataClient.applyUpdateObject(updateObject, {force: true}); // force since coming from the server
+          } = this.dataClient.applyUpdateObject(updateObject, {
+            force: true, // force since coming from the server
+          });
           if (rollback) {
             console.warn('rollback', rollback);
             throw new Error('unexpected rollback');
