@@ -459,47 +459,9 @@ export class DCArray extends EventTarget {
       }));
     };
     this.dataClient.addEventListener(removeKey, removeFn);
-
-    const importMapKey = 'importMap.' + this.arrayId;
-    const importMapFn = e => {
-      const {arrayIndexId, crdtExport} = e.data;
-      const val = convertCrdtValToVal(crdtExport);
-      _addMap(arrayIndexId, val);
-    };
-    this.dataClient.addEventListener(importMapKey, importMapFn);
-
-    const importArrayKey = 'importArray.' + this.arrayId;
-    const importArrayFn = e => {
-      const {
-        arrayCrdtExport,
-        mapsCrdtExports,
-      } = e.data;
-
-      for (const arrayIndexId in mapsCrdtExports) {
-        const map = mapsCrdtExports[arrayIndexId];
-        const val = convertCrdtValToVal(map);
-        _addMap(arrayIndexId, val);
-      }
-    };
-    this.dataClient.addEventListener(importArrayKey, importArrayFn);
-
-    // listener
-    // if (this.arrayListeners.has(this.arrayId)) {
-    //   console.log('double listen');
-    //   debugger;
-    // } else {
-    //   console.log('single listen');
-    // }
-    // this.arrayListeners.set(this.arrayId, this);
-
     this.cleanupFn = () => {
       this.dataClient.removeEventListener(addKey, addFn);
       this.dataClient.removeEventListener(removeKey, removeFn);
-      this.dataClient.removeEventListener(importMapKey, importMapFn);
-      // this.dataClient.removeEventListener(importArrayKey, importArrayFn);
-
-      // listener
-      // this.arrayListeners.delete(this.arrayId);
     };
   }
   unlisten() {
@@ -531,28 +493,6 @@ export class DataClient extends EventTarget {
           method: UPDATE_METHODS.IMPORT,
           args: [
             crdtExport,
-          ],
-        });
-      }
-      case 'importMap': {
-        const {arrayId, arrayIndexId, crdtExport} = parsedMessage;
-        return zbencode({
-          method: UPDATE_METHODS.IMPORT_MAP,
-          args: [
-            arrayId,
-            arrayIndexId,
-            crdtExport,
-          ],
-        });
-      }
-      case 'importArray': {
-        const {arrayId, arrayCrdtExport, mapCrdtExports} = parsedMessage;
-        return zbencode({
-          method: UPDATE_METHODS.IMPORT_ARRAY,
-          args: [
-            arrayId,
-            arrayCrdtExport,
-            mapCrdtExports,
           ],
         });
       }
@@ -713,49 +653,6 @@ export class DataClient extends EventTarget {
         update = new MessageEvent('import', {
           data: {
             crdtExport,
-          },
-        });
-        break;
-      }
-      case UPDATE_METHODS.IMPORT_MAP: {
-        const [arrayId, arrayIndexId, crdtExport] = args;
-
-        // ensure the array exists
-        let array = this.crdt.get(arrayId);
-        if (!array) {
-          array = {};
-          this.crdt.set(arrayId, array);
-        }
-
-        // set the map
-        const key = _key(arrayId, arrayIndexId);
-        this.crdt.set(key, crdtExport);
-
-        update = new MessageEvent('importMap.' + arrayId, {
-          data: {
-            arrayId,
-            arrayIndexId,
-            crdtExport,
-          },
-        });
-        break;
-      }
-      case UPDATE_METHODS.IMPORT_ARRAY: {
-        const [arrayId, arrayCrdtExport, mapsCrdtExports] = args;
-
-        // set array
-        this.crdt.set(arrayId, arrayCrdtExport);
-        
-        // set array maps
-        for (const arrayIndexId in mapsCrdtExports) {
-          const key = _key(arrayId, arrayIndexId);
-          this.crdt.set(key, mapsCrdtExports[arrayIndexId]);
-        }
-        
-        update = new MessageEvent('importArray.' + arrayId, {
-          data: {
-            arrayCrdtExport,
-            mapsCrdtExports,
           },
         });
         break;
@@ -971,68 +868,37 @@ export class DataClient extends EventTarget {
             arrayIndexId,
           };
         } else {
-          const match = m.type.match(/^removeArray\.(.+?)$/);
-          if (match) {
-            const arrayId = match[1];
+          if (m.type === 'rollback') {
+            const {arrayId, arrayIndexId, key, oldEpoch, oldVal} = m.data;
             return {
-              type: 'removeArray',
+              type: 'rollback',
               arrayId,
+              arrayIndexId,
+              key,
+              oldEpoch,
+              oldVal,
+            };
+          } else if (m.type === 'import') {
+            return {
+              type: 'import',
+              crdtExport: m.data.crdtExport,
+            };
+          } else if (m.type === 'deadhand') {
+            const {keys, deadHand} = m.data;
+            return {
+              type: 'deadhand',
+              keys,
+              deadHand,
+            };
+          } else if (m.type === 'livehand') {
+            const {keys, liveHand} = m.data;
+            return {
+              type: 'livehand',
+              keys,
+              liveHand,
             };
           } else {
-            const match = m.type.match(/^importMap\.(.+?)$/);
-            if (match) {
-              const arrayId = match[1];
-              return {
-                type: 'importMap',
-                arrayId,
-                arrayIndexId: m.data.arrayIndexId,
-                crdtExport: m.data.crdtExport,
-              };
-            } else {
-              const match = m.type.match(/^importArray\.(.+?)$/);
-              if (match) {
-                const arrayId = match[1];
-                return {
-                  type: 'importArray',
-                  arrayId,
-                  arrayCrdtExport: m.data.arrayCrdtExport,
-                  mapsCrdtExports: m.data.mapsCrdtExports,
-                };
-              } else {
-                if (m.type === 'rollback') {
-                  const {arrayId, arrayIndexId, key, oldEpoch, oldVal} = m.data;
-                  return {
-                    type: 'rollback',
-                    arrayId,
-                    arrayIndexId,
-                    key,
-                    oldEpoch,
-                    oldVal,
-                  };
-                } else if (m.type === 'import') {
-                  return {
-                    type: 'import',
-                    crdtExport: m.data.crdtExport,
-                  };
-                } else if (m.type === 'deadhand') {
-                  const {keys, deadHand} = m.data;
-                  return {
-                    type: 'deadhand',
-                    keys,
-                    deadHand,
-                  };
-                } else if (m.type === 'livehand') {
-                  const {keys, liveHand} = m.data;
-                  return {
-                    type: 'livehand',
-                    keys,
-                    liveHand,
-                  };
-                } else {
-                  throw new Error('unrecognized message type: ' + m.type);
-                }
-              }
-            }
+            throw new Error('unrecognized message type: ' + m.type);
           }
         }
       }
@@ -1060,14 +926,6 @@ export class DataClient extends EventTarget {
       // console.warn('should find out how to save all keys...');
       // saveKeyFn('crdt');
       saveKeyFn('*');
-    } else if (type === 'importArray') {
-      const {arrayCrdtExport, mapsCrdtExports} = mo;
-      saveKeyFn(arrayId);
-      // XXX
-    } else if (type === 'importMap') {
-      const {crdtExport} = mo;
-      saveKeyFn(arrayIndexId);
-      // XXX
     } else {
       debugger;
       throw new Error('unrecognized message type: ' + m.type);
