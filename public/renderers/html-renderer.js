@@ -187,24 +187,35 @@ export class AppsHtmlRenderer {
       _render();
     };
     const _getWearSpec = virtualEntity => {
-      const actions = Array.from(playerActions.values()).map(playerAction => playerAction.toObject());
-      // console.log('got actions', actions);
-      const wearAction = actions.find(action => action.action === 'wear' && action.appId === virtualEntity.entityMap.arrayIndexId);
-      // console.log('got wear action', actions, wearAction, virtualEntity);
-      /* if (actions.length > 0 && !wearAction) {
-        debugger;
-      } */
-      // console.log('got action', wearAction);
-      if (wearAction) {
-        // console.log('got wear action', wearAction, virtualEntity.entityMap.arrayIndexId);
-        const wearPlayerId = realms.playerId;
-        // if (!playerApps.get) {
-        //   debugger;
-        // }
-        const wearNeedledEntity = playerApps.get(wearAction.appId);
-        if (!wearNeedledEntity) {
+      const playerActionIdsMap = new Map();
+      const allPlayerActions = Array.from(playerActions.values()).concat(
+        Array.from(remotePlayerActions.values())
+          .flatMap(set => Array.from(set))
+      );
+      /* const allPlayerActions = realms.localPlayer.playerActions.getValues()
+        .concat(
+          realms.players.getValues()
+            .flatMap(player => player.playerActions.getValues())
+        ); */
+      allPlayerActions.forEach(playerAction => {
+        const match = playerAction.arrayId.match(/^([^:]+?):([^:]+?)$/);
+        if (match) {
+          const playerId = match[2];
+          playerActionIdsMap.set(playerAction.entityMap.arrayIndexId, playerId);
+        } else {
           debugger;
         }
+      });
+
+      const actionIds = allPlayerActions.map(a => a.arrayIndexId);
+      const actions = Array.from(allPlayerActions.values()).map(playerAction => playerAction.toObject());
+      const wearActionIndex = actions.findIndex(action => action.action === 'wear' && action.appId === virtualEntity.entityMap.arrayIndexId);
+      const wearAction = actions[wearActionIndex];
+      const wearActionId = actionIds[wearActionIndex]; // XXX wrong
+
+      if (wearAction) {
+        const wearPlayerId = playerActionIdsMap.get(wearActionId);
+        const wearNeedledEntity = playerApps.get(wearAction.appId);
         return {
           wearPlayerId,
           wearNeedledEntity,
@@ -214,6 +225,7 @@ export class AppsHtmlRenderer {
       }
     };
 
+    // local players
     const playerApps = new Map();
     const playerActions = new Map();
     realms.localPlayer.playerApps.addEventListener('needledentityadd', e => {
@@ -222,37 +234,80 @@ export class AppsHtmlRenderer {
       playerApps.set(needledEntity.entityMap.arrayIndexId, needledEntity);
 
       needledEntity.addEventListener('update', update);
-
-      // update();
     });
     realms.localPlayer.playerApps.addEventListener('needledentityremove', e => {
       // console.log('remove app', e.data);
       const {needledEntity} = e.data;
-      if (!playerApps.has(needledEntity.entityMap.arrayIndexId)) {
-        debugger;
-      }
 
       needledEntity.removeEventListener('update', update);
 
       playerApps.delete(needledEntity.entityMap.arrayIndexId);
-      
-      // update();
     });
     realms.localPlayer.playerActions.addEventListener('needledentityadd', e => {
       const {needledEntity} = e.data;
-      
       playerActions.set(needledEntity.entityMap.arrayIndexId, needledEntity);
 
       update();
     });
     realms.localPlayer.playerActions.addEventListener('needledentityremove', e => {
       const {needledEntity} = e.data;
-      // debugger;
       playerActions.delete(needledEntity.entityMap.arrayIndexId);
 
       update();
     });
-    
+
+    // remote players
+    const remotePlayerActions = new Map();
+    const remotePlayersCleanupFns = new Map();
+    realms.players.addEventListener('join', e => {
+      // console.log('remote player join', e.data);
+      const {playerId, player} = e.data;
+
+      const localRemotePlayerActions = new Set();
+      remotePlayerActions.set(playerId, localRemotePlayerActions);
+      const onappadd = e => {
+        const {entityId, needledEntity} = e.data;
+        localRemotePlayerActions.add(needledEntity);
+
+        update();
+      };
+      player.playerActions.addEventListener('needledentityadd', onappadd);
+      const onappremove = e => {
+        const {entityId, needledEntity} = e.data;
+        // if (!needledEntity) {
+        //   debugger;
+        // }
+        localRemotePlayerActions.delete(needledEntity);
+
+        update();
+      };
+      player.playerActions.addEventListener('needledentityremove', onappremove);
+
+      // intialize starting actions
+      for (const playerActionId of player.playerActions.getKeys()) {
+        const needledEntity = player.playerActions.getVirtualMap(playerActionId);
+        localRemotePlayerActions.add(needledEntity);
+      }
+
+      remotePlayersCleanupFns.set(playerId, () => {
+        player.playerApps.removeEventListener('needledentityadd', onappadd);
+        player.playerApps.removeEventListener('needledentityremove', onappremove);
+
+        remotePlayerActions.delete(playerId);
+      });
+
+      update();
+    });
+    realms.players.addEventListener('leave', e => {
+      // console.log('remote player leave', e.data);
+      const {playerId} = e.data;
+      remotePlayersCleanupFns.get(playerId)();
+      remotePlayersCleanupFns.delete(playerId);
+
+      update();
+    });
+
+    // world apps
     const worldAppEntities = new Map();
     const virtualWorld = realms.getVirtualWorld();
     virtualWorld.worldApps.addEventListener('needledentityadd', e => {
@@ -260,7 +315,7 @@ export class AppsHtmlRenderer {
 
       worldAppEntities.set(needledEntity.entityMap.arrayIndexId, needledEntity);
     
-      needledEntity.addEventListener('update', update);
+      // needledEntity.addEventListener('update', update);
 
       update();
     });
@@ -270,7 +325,7 @@ export class AppsHtmlRenderer {
 
       worldAppEntities.delete(needledEntity.entityMap.arrayIndexId);
 
-      needledEntity.removeEventListener('update', update);
+      // needledEntity.removeEventListener('update', update);
 
       update();
     });
