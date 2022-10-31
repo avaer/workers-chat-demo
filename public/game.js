@@ -491,11 +491,21 @@ export const startGame = async ({
     const localPlayerCursorRenderer = new RemotePlayerCursorHtmlRenderer(realms.playerId, realms.playerId, realms.localPlayer);
     const appsRenderer = new AppsHtmlRenderer(realms);
 
+    const imageNode = new Image();
+    imageNode.src = '/public/images/audio.svg';
+    imageNode.classList.add('audio-icon');
     const _addPlayer = player => {
       // ui
       let p = document.createElement("p");
       p.classList.add('player');
-      p.innerHTML = `<img src="/public/images/audio.svg" class="audio-icon"><span class="name">${player.arrayIndexId}</span>`;
+      
+      p.appendChild(imageNode.cloneNode());
+
+      const span = document.createElement('span');
+      span.classList.add('name');
+      span.innerText = player.arrayIndexId;
+      p.appendChild(span);
+
       p.playerId = playerId;
       roster.appendChild(p);
 
