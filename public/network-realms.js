@@ -668,11 +668,14 @@ class VirtualPlayersArray extends EventTarget {
     if (!virtualPlayer) {
       virtualPlayer = new VirtualPlayer(this.arrayId, playerId, this.parent, 'remote', {
         appsEntityTracker: this.opts?.appsEntityTracker,
-        actionsEntityTracker: this.opts?.actionsEntityTracker,
+        // actionsEntityTracker: this.opts?.actionsEntityTracker,
       });
       this.virtualPlayers.set(playerId, virtualPlayer);
     }
     return virtualPlayer;
+  }
+  getValues() {
+    return Array.from(this.virtualPlayers.values());
   }
   link(realm) {
     const {dataClient, networkedDataClient, networkedAudioClient} = realm;
@@ -894,6 +897,9 @@ class VirtualEntityArray extends VirtualPlayersArray {
     return Array.from(this.needledVirtualEntities.keys()).map(entityMap => {
       return entityMap.arrayIndexId;
     });
+  }
+  getValues() {
+    return Array.from(this.needledVirtualEntities.values());
   }
   toArray() {
     return Array.from(this.needledVirtualEntities.values()).map(needledEntity => {
