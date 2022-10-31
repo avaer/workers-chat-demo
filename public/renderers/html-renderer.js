@@ -550,10 +550,10 @@ export class GameRealmsCanvases {
 
         const div = document.createElement('div');
         div.className = 'network-realm';
+        div.style.transform = `translate3d(${x * realmSize}px, ${z * realmSize}px, 0)`;
         div.style.cssText = `\
 left: ${realmSize * x}px;
 top: ${realmSize * z}px;
-z-index: 1;
         `;
         div.appendChild(canvas);
         div.appendChild(text);
@@ -564,6 +564,7 @@ z-index: 1;
         };
         div.setText = text => {
           text2.innerText = text;
+          // console.log('update text', div.min.join(','));
         };
         let needsTextUpdate = '';
         div.updateText = dataClient => {
