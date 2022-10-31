@@ -1180,12 +1180,12 @@ export class NetworkedDataClient extends EventTarget {
 
           this.dataClient.emitUpdate(update);
 
-          const saveKeys = this.dataClient.getSaveKeys(update);
+          /* const saveKeys = this.dataClient.getSaveKeys(update);
           this.dispatchEvent(new MessageEvent('save', {
             data: {
               saveKeys,
             },
-          }));
+          })); */
         }
       }
     };
