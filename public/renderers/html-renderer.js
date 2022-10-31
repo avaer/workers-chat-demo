@@ -183,7 +183,7 @@ export class AppsHtmlRenderer {
       }
       _finalizeWorldApps();
     };
-    const update = e => {
+    const update = () => {
       _render();
     };
     const _getWearSpec = virtualEntity => {
