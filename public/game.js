@@ -506,7 +506,7 @@ export const startGame = async ({
       span.innerText = player.arrayIndexId;
       p.appendChild(span);
 
-      p.playerId = playerId;
+      p.playerId = player.arrayIndexId;
       roster.appendChild(p);
 
       // render
@@ -551,7 +551,7 @@ export const startGame = async ({
       for (let i = 0; i < roster.children.length; i++) {
         let p = roster.children[i];
         const textNode = p.children[1];
-        if (textNode.innerText === playerId) {
+        if (textNode.playerId === playerId) {
           // console.log('swap on');
           p.classList.add('speaking');
           break;
@@ -562,7 +562,7 @@ export const startGame = async ({
       for (let i = 0; i < roster.children.length; i++) {
         let p = roster.children[i];
         const textNode = p.children[1];
-        if (textNode.innerText === playerId) {
+        if (textNode.playerId === playerId) {
           // console.log('swap off');
           p.classList.remove('speaking');
           break;
