@@ -289,8 +289,11 @@ export class AppsHtmlRenderer {
 
 const spriteUrl = '/public/images/fire-mage.png';
 export class GamePlayerCanvas {
-  constructor(virtualPlayer) {
+  constructor(virtualPlayer, {
+    local = true,
+  } = {}) {
     this.virtualPlayer = virtualPlayer;
+    this.local = local;
 
     this.element = document.createElement('div');
     this.element.id = `player-${virtualPlayer.arrayIndexId}`;
@@ -345,11 +348,6 @@ export class GamePlayerCanvas {
         position[2] += this.velocity[2] * speed;
         
         this.virtualPlayer.setKeyValue('position', position);
-
-        /* console.log('move position', [
-          oldPosition.join(','),
-          position.join(','),
-        ]); */
       }
     };
     _updatePosition();
@@ -405,6 +403,16 @@ export class GamePlayerCanvas {
 
       this.ctx.clearRect(0, 0, frameSize, frameSize);
       this.ctx.drawImage(GamePlayerCanvas.#spriteImg, col * frameSize, row * frameSize, frameSize, frameSize, 0, 0, frameSize, frameSize);
+    
+      if (!this.local) {
+        const remotePlayerPosition = this.virtualPlayer.getKey('position');
+        // const localPlayerPosition = realms.localPlayer.getKey('position');
+
+        this.element.style.cssText = `\
+          top: ${remotePlayerPosition[2]}px;
+          left: ${remotePlayerPosition[0]}px;
+        `;
+      }
     }
   }
   static #spriteImg = null;

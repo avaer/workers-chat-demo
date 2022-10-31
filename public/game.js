@@ -45,6 +45,7 @@ export const startGame = async ({
 } = {}) => {
   const playerId = makeId();
   let localPlayerCanvas = null;
+  let remotePlayerCanvases = new Map();
   
   // console.log('got initial coord', initialCoord);
 
@@ -290,7 +291,7 @@ export const startGame = async ({
 
     // local player rendering
     localPlayerCanvas = new GamePlayerCanvas(realms.localPlayer, {
-      // initialCoord,
+      local: true,
     });
     let localPlayerFocused = true;
     localPlayerCanvas.element.addEventListener('focus', e => {
@@ -391,7 +392,6 @@ export const startGame = async ({
     playersEl.appendChild(localPlayerCanvas.element);
 
     // remote players rendering
-    const remotePlayerCanvases = new Map();
     realms.players.addEventListener('join', e => {
       const {playerId, player} = e.data;
       console.log('join', e.data);
@@ -399,7 +399,7 @@ export const startGame = async ({
       if (playerId !== realms.playerId) {
         const remotePlayer = player;
         const remotePlayerCanvas = new GamePlayerCanvas(remotePlayer, {
-          // initialCoord,
+          local: false,
         });
         playersEl.appendChild(remotePlayerCanvas.element);
         remotePlayerCanvases.set(playerId, remotePlayerCanvas);
@@ -411,7 +411,7 @@ export const startGame = async ({
 
       if (playerId !== realms.playerId) {
         const remotePlayerCanvas = remotePlayerCanvases.get(playerId);
-        remotePlayerCanvas.element.parent.removeChild(remotePlayerCanvas.element);
+        remotePlayerCanvas.element.parentNode.removeChild(remotePlayerCanvas.element);
         remotePlayerCanvas.destroy();
         remotePlayerCanvases.delete(playerId);
       }
@@ -693,7 +693,13 @@ export const startGame = async ({
         localPlayerCanvas.move();
 
         // render the frame
-        localPlayerCanvas.draw();
+        const _renderPlayers = () => {
+          localPlayerCanvas.draw();
+          for (const remotePlayerCanvas of remotePlayerCanvases.values()) {
+            remotePlayerCanvas.draw();
+          }
+        };
+        _renderPlayers();
 
         // update realms set
         const position = realms.localPlayer.getKey('position');
@@ -702,11 +708,16 @@ export const startGame = async ({
         });
 
         // draw the world
+        const gameEl = document.getElementById(`game`);
+        const localPlayerEl = document.getElementById(`player-${realms.playerId}`);
         const worldAppsEl = document.getElementById('world-apps');
         const networkRealmsEl = document.getElementById('network-realms');
         const cssTransformText = `translate3d(${-position[0]}px, ${-position[2]}px, 0px)`;
-        worldAppsEl.style.transform = cssTransformText;
-        networkRealmsEl.style.transform = cssTransformText;
+        gameEl.style.transform = cssTransformText;
+        const cssTransformText2 = `translate3d(${position[0]}px, ${position[2]}px, 0px)`;
+        localPlayerEl.style.transform = cssTransformText2;
+        // worldAppsEl.style.transform = cssTransformText;
+        // networkRealmsEl.style.transform = cssTransformText;
 
         // latch last coord
         const coord = [
