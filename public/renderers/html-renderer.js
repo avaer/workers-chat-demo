@@ -113,8 +113,6 @@ export class AppsHtmlRenderer {
   constructor(realms) {
     const _render = () => {
       const worldAppsEl = document.getElementById('world-apps');
-      // const localPlayerAppsEl = document.getElementById(`player-${realms.playerId}`)
-      //   .querySelector('.player-apps');
 
       let worldAppIndex = 0;
       const playerAppIndexes = new Map();
@@ -126,13 +124,15 @@ export class AppsHtmlRenderer {
       const _pushWorldApp = needledEntity => {
         const wearSpec = _getWearSpec(needledEntity);
         if (wearSpec) {
+          // console.log('got wear spec', wearSpec);
           const {
             wearPlayerId,
             wearNeedledEntity,
           } = wearSpec;
-          if (wearPlayerId !== realms.playerId) {
-            throw new Error('only local player is supported');
-          }
+          // if (wearPlayerId !== realms.playerId) {
+          //   debugger;
+          //   throw new Error('only local player is supported');
+          // }
 
           let playerAppIndex = playerAppIndexes.get(wearPlayerId) ?? 0;
           playerAppIndexes.set(wearPlayerId, playerAppIndex + 1);
@@ -145,10 +145,14 @@ export class AppsHtmlRenderer {
           appEl.style.left = `${playerAppIndex * inventoryFrameSize}px`;
           appEl.style.top = null;
 
+          // console.log('append child', wearPlayerId, needledEntity.arrayIndexId);
+
           !had && playerApps.appendChild(appEl);
 
           // debugger;
         } else {
+          // console.log('world app');
+
           const had = !!worldAppsEl.childNodes[worldAppIndex];
           const appEl = worldAppsEl.childNodes[worldAppIndex] || _makeAppEl();
           

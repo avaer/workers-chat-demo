@@ -271,16 +271,9 @@ class HeadTracker extends EventTarget {
 
 //
 
-// let etCount = 0;
 class EntityTracker extends EventTarget {
   constructor() {
     super();
-
-    // console.log('make entity tracker', new Error().stack);
-    // if (etCount > 0) {
-    //   debugger;
-    // }
-    // etCount++;
 
     this.virtualMaps = new Map();
     this.linkedRealms = new Map();
