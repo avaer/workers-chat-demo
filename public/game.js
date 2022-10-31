@@ -496,6 +496,7 @@ export const startGame = async ({
       let p = document.createElement("p");
       p.classList.add('player');
       p.innerHTML = `<img src="/public/images/audio.svg" class="audio-icon"><span class="name">${player.arrayIndexId}</span>`;
+      p.playerId = playerId;
       roster.appendChild(p);
 
       // render
@@ -505,7 +506,7 @@ export const startGame = async ({
     const _removePlayer = playerId => {
       for (let i = 0; i < roster.children.length; i++) {
         let p = roster.children[i];
-        if (p.innerText === playerId) {
+        if (p.playerId === playerId) {
           roster.removeChild(p);
           break;
         }
