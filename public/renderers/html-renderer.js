@@ -550,11 +550,9 @@ export class GameRealmsCanvases {
 
         const div = document.createElement('div');
         div.className = 'network-realm';
-        div.style.transform = `translate3d(${x * realmSize}px, ${z * realmSize}px, 0)`;
-        div.style.cssText = `\
-left: ${realmSize * x}px;
-top: ${realmSize * z}px;
-        `;
+        // div.style.transform = `translate3d(${x * realmSize}px, ${z * realmSize}px, 0)`;
+        div.style.left = `${x * realmSize}px`;
+        div.style.top = `${z * realmSize}px`;
         div.appendChild(canvas);
         div.appendChild(text);
         div.min = [x * realmSize, 0, z * realmSize];
