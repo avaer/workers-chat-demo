@@ -690,10 +690,11 @@ export const startGame = async ({
         _updateVelocity();
 
         // move the local player
-        // console.log('premoveposition', realms.localPlayer.getKey('position'));
         localPlayerCanvas.move();
-        // console.log('postmoveposition', realms.localPlayer.getKey('position'));
-        
+
+        // render the frame
+        localPlayerCanvas.draw();
+
         // update realms set
         const position = realms.localPlayer.getKey('position');
         realms.updatePosition(position, realmSize, {
