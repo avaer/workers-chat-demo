@@ -128,9 +128,9 @@ class HeadTracker extends EventTarget {
       return this.#connectedRealms.keys().next().value;
     } else {
       const {arrayId, arrayIndexId} = this.headTrackedEntity;
-      if (!arrayId || !arrayIndexId) {
+      /* if (!arrayId || !arrayIndexId) {
         debugger;
-      }
+      } */
       let dcMaps = [];
       for (const realm of this.#connectedRealms.keys()) {
         const {dataClient} = realm;
