@@ -89,7 +89,7 @@ export class DCMap extends EventTarget {
     if (object) {
       const result = {};
       for (const key in object) {
-        const [epoch, val] = structuredClone(object[key]);
+        const [epoch, val] = object[key];
         result[key] = val;
       }
       return result;
