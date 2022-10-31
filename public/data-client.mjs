@@ -707,11 +707,11 @@ export class DataClient extends EventTarget {
           debugger;
         }
         this.crdt.set(key, crdtWrap);
-        if (arrayId === 'players') {
-          // console.log('add epoch 1', key, epoch);
-          const map = new DCMap(arrayId, arrayIndexId, this);
-          // console.log('add epoch 2', key, epoch, [key, map.key(), key === map.key()], map.dataClient.crdt.get(key), map.getMapEpoch());
-        }
+        // if (arrayId === 'players') {
+        //   // console.log('add epoch 1', key, epoch);
+        //   const map = new DCMap(arrayId, arrayIndexId, this);
+        //   // console.log('add epoch 2', key, epoch, [key, map.key(), key === map.key()], map.dataClient.crdt.get(key), map.getMapEpoch());
+        // }
         
         let array = this.crdt.get(arrayId);
         if (!array) {
