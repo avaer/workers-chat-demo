@@ -142,8 +142,9 @@ export class AppsHtmlRenderer {
           const had = !!playerApps.childNodes[playerAppIndex];
           const appEl = playerApps.childNodes[playerAppIndex] || _makeAppEl();
 
-          appEl.style.left = `${playerAppIndex * inventoryFrameSize}px`;
-          appEl.style.top = null;
+          // appEl.style.left = `${playerAppIndex * inventoryFrameSize}px`;
+          // appEl.style.top = null;
+          appEl.style.transform = `translate3d(${playerAppIndex * inventoryFrameSize}px, 0, 0)`;
 
           // console.log('append child', wearPlayerId, needledEntity.arrayIndexId);
 
@@ -158,8 +159,9 @@ export class AppsHtmlRenderer {
           
           const app = needledEntity.toObject();
           const position = app.position ?? [0, 0, 0];
-          appEl.style.left = `${position[0]}px`;
-          appEl.style.top = `${position[2]}px`;
+          // appEl.style.left = `${position[0]}px`;
+          // appEl.style.top = `${position[2]}px`;
+          appEl.style.transform = `translate3d(${position[0]}px, ${position[2]}px, 0)`;
           
           !had && worldAppsEl.appendChild(appEl);
 
