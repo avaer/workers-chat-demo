@@ -1117,7 +1117,11 @@ export class NetworkedDataClient extends EventTarget {
     const _waitForInitialImport = async () => {
       await new Promise((resolve, reject) => {
         const initialMessage = e => {
-          if (e.data instanceof ArrayBuffer && e.data.byteLength > 0) {
+          if (e.data.constructor === ArrayBuffer) {
+            if (e.data.byteLength === 0) {
+              debugger;
+            }
+            
             const updateBuffer = e.data;
             const uint8Array = new Uint8Array(updateBuffer);
             const updateObject = parseUpdateObject(uint8Array);
@@ -1160,7 +1164,11 @@ export class NetworkedDataClient extends EventTarget {
     await _waitForInitialImport();
 
     const mainMessage = e => {
-      if (e.data instanceof ArrayBuffer && e.data.byteLength > 0) {
+      if (e.data.constructor === ArrayBuffer) {
+        if (e.data.byteLength === 0) {
+          debugger;
+        }
+
         const updateBuffer = e.data;
         const uint8Array = new Uint8Array(updateBuffer);
         const updateObject = parseUpdateObject(uint8Array);
