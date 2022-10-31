@@ -161,6 +161,12 @@ export const startGame = async ({
   const virtualWorld = realms.getVirtualWorld();
   const virtualPlayers = realms.getVirtualPlayers();
 
+  const keyState = {
+    W: false,
+    A: false,
+    S: false,
+    D: false,
+  };
   const mouseState = {
     buttons: 0,
     x: 0,
@@ -308,19 +314,23 @@ export const startGame = async ({
             // WASD
             switch (e.code) {
               case 'KeyW': {
-                localPlayerCanvas.velocity[2] = -1;
+                keyState.W = true;
+                // localPlayerCanvas.velocity[2] = -1;
                 break;
               }
               case 'KeyA': {
-                localPlayerCanvas.velocity[0] = -1;
+                keyState.A = true;
+                // localPlayerCanvas.velocity[0] = -1;
                 break;
               }
               case 'KeyS': {
-                localPlayerCanvas.velocity[2] = 1;
+                keyState.S = true;
+                // localPlayerCanvas.velocity[2] = 1;
                 break;
               }
               case 'KeyD': {
-                localPlayerCanvas.velocity[0] = 1;
+                keyState.D = true;
+                // localPlayerCanvas.velocity[0] = 1;
                 break;
               }
               case 'KeyE': {
@@ -343,27 +353,31 @@ export const startGame = async ({
         // if (!e.repeat) {
           switch (e.code) {
             case 'KeyW': {
-              if (localPlayerCanvas.velocity[2] === -1) {
-                localPlayerCanvas.velocity[2] = 0;
-              }
+              keyState.W = false;
+              // if (localPlayerCanvas.velocity[2] === -1) {
+              //   localPlayerCanvas.velocity[2] = 0;
+              // }
               break;
             }
             case 'KeyA': {
-              if (localPlayerCanvas.velocity[0] === -1) {
-                localPlayerCanvas.velocity[0] = 0;
-              }
+              keyState.A = false;
+              // if (localPlayerCanvas.velocity[0] === -1) {
+              //   localPlayerCanvas.velocity[0] = 0;
+              // }
               break;
             }
             case 'KeyS': {
-              if (localPlayerCanvas.velocity[2] === 1) {
-                localPlayerCanvas.velocity[2] = 0;
-              }
+              keyState.S = false;
+              // if (localPlayerCanvas.velocity[2] === 1) {
+              //   localPlayerCanvas.velocity[2] = 0;
+              // }
               break;
             }
             case 'KeyD': {
-              if (localPlayerCanvas.velocity[0] === 1) {
-                localPlayerCanvas.velocity[0] = 0;
-              }
+              keyState.D = false;
+              // if (localPlayerCanvas.velocity[0] === 1) {
+              //   localPlayerCanvas.velocity[0] = 0;
+              // }
               break;
             }
           }
@@ -646,6 +660,34 @@ export const startGame = async ({
           lastMouseState.x = mouseState.x;
           lastMouseState.y = mouseState.y;
         }
+
+        const _normalize = p => {
+          const l = Math.sqrt(p[0]*p[0] + p[1]*p[1] + p[2]*p[2]);
+          if (l > 0) {
+            p[0] /= l;
+            p[1] /= l;
+            p[2] /= l;
+          }
+        };
+        const _updateVelocity = () => {
+          localPlayerCanvas.velocity[0] = 0;
+          localPlayerCanvas.velocity[1] = 0;
+          localPlayerCanvas.velocity[2] = 0;
+          if (keyState.W) {
+            localPlayerCanvas.velocity[2] -= 1;
+          }
+          if (keyState.S) {
+            localPlayerCanvas.velocity[2] += 1;
+          }
+          if (keyState.A) {
+            localPlayerCanvas.velocity[0] -= 1;
+          }
+          if (keyState.D) {
+            localPlayerCanvas.velocity[0] += 1;
+          }
+          _normalize(localPlayerCanvas.velocity);
+        };
+        _updateVelocity();
 
         // move the local player
         // console.log('premoveposition', realms.localPlayer.getKey('position'));
