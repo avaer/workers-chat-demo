@@ -1616,9 +1616,5 @@ export class NetworkRealms extends EventTarget {
         this.dispatchEvent(new MessageEvent('networkreconfigure'));
       });
     }
-
-    if (this.localPlayer.headTracker.isLinked()) {
-      this.localPlayer.setKeyValue(positionKey, position);
-    }
   }
 }
