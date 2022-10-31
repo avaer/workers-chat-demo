@@ -447,22 +447,30 @@ export class ChatRoom {
           const removeMapUpdateBuffer = dataClient.serializeMessage(removeMapUpdate);
           proxyMessageToPeers(removeMapUpdateBuffer);
 
-          const array = dataClient.getArray(arrayId, {
+          /* const array = dataClient.getArray(arrayId, {
             listen: false,
           });
-          const removeArrayUpdate = array.removeArrayUpdate(arrayIndexId);
-          const removeArrayUpdateBuffer = dataClient.serializeMessage(removeArrayUpdate);
-          // console.log('iter 1');
-          proxyMessageToPeers(removeArrayUpdateBuffer);
-          // console.log('iter 2');
+          for (const arrayIndexId of array.getKeys()) {
+            const map = array.getMap(arrayIndexId, {
+              listen: false,
+            });
+            const removeMessage = map.removeUpdate();
+            const removeArrayUpdateBuffer = dataClient.serializeMessage(removeMessage);
+            proxyMessageToPeers(removeArrayUpdateBuffer);
+          } */
         } else { // array mode
           // console.log('dead hand array', arrayId);
           const array = dataClient.getArray(arrayId, {
             listen: false,
           });
-          const removeUpdate = array.removeArrayUpdate();
-          const removeUpdateBuffer = dataClient.serializeMessage(removeUpdate);
-          proxyMessageToPeers(removeUpdateBuffer);
+          for (const arrayIndexId of array.getKeys()) {
+            const map = array.getMap(arrayIndexId, {
+              listen: false,
+            });
+            const removeMessage = map.removeUpdate();
+            const removeArrayUpdateBuffer = dataClient.serializeMessage(removeMessage);
+            proxyMessageToPeers(removeArrayUpdateBuffer);
+          } 
         }
         // console.log('iter end');
       }
