@@ -403,7 +403,7 @@ export class DCArray extends EventTarget {
   removeAt(arrayIndexId) {
     return this.dataClient.removeArrayMapElement(this.arrayId, arrayIndexId);
   }
-  removeArrayUpdate() {
+  /* removeArrayUpdate() {
     let array = this.dataClient.crdt.get(this.arrayId);
     if (!array) {
       throw new Error('remove nonexistent array!');
@@ -422,7 +422,7 @@ export class DCArray extends EventTarget {
     return new MessageEvent('removeArray.' + this.arrayId, {
       data: {},
     });
-  }
+  } */
   // arrayListeners = new Map();
   listen() {
     const _addMap = (arrayIndexId, val) => {
