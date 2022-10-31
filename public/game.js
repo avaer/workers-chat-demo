@@ -630,7 +630,7 @@ export const startGame = async ({
       const o = {
         position: position.slice(),
         direction: [0, 0, 1],
-        cursorPosition: new Float32Array(3),
+        cursorPosition: [0, 0, 0],
         name: 'Hanna',
       };
       // console.log('initialize player', o);
@@ -662,11 +662,11 @@ export const startGame = async ({
       if (connected) {
         // move the cursor
         if (mouseState.x !== lastMouseState.x || mouseState.y !== lastMouseState.y) {
-          realms.localPlayer.setKeyValue('cursorPosition', Float32Array.from([
+          realms.localPlayer.setKeyValue('cursorPosition', [
             lastMouseState.x,
             lastMouseState.y,
             0
-          ]));
+          ]);
           
           lastMouseState.x = mouseState.x;
           lastMouseState.y = mouseState.y;
