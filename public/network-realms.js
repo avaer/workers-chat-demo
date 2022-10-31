@@ -518,7 +518,8 @@ class VirtualPlayer extends HeadTrackedEntity {
     });
     this.playerActions = new VirtualEntityArray('playerActions:' + this.arrayIndexId, this.realms, {
       // headTracker: readableHeadTracker,
-      entityTracker: opts?.actionsEntityTracker,
+      // entityTracker: opts?.actionsEntityTracker,
+      entityTracker: new EntityTracker(),
     });
     this.cleanupMapFns = new Map();
   }
@@ -1326,10 +1327,10 @@ export class NetworkRealms extends EventTarget {
 
     this.lastPosition = [NaN, NaN, NaN];
     this.appsEntityTracker = new EntityTracker();
-    this.actionsEntityTracker = new EntityTracker();
+    // this.actionsEntityTracker = new EntityTracker();
     this.localPlayer = new VirtualPlayer('players', this.playerId, this, 'local', {
       appsEntityTracker: this.appsEntityTracker,
-      actionsEntityTracker: this.actionsEntityTracker,
+      // actionsEntityTracker: this.actionsEntityTracker,
     });
     this.world = new VirtualWorld('worldApps', this, {
       entityTracker: this.appsEntityTracker,
@@ -1337,7 +1338,7 @@ export class NetworkRealms extends EventTarget {
 
     this.players = new VirtualPlayersArray('players', this, {
       appsEntityTracker: this.appsEntityTracker,
-      actionsEntityTracker: this.actionsEntityTracker,
+      // actionsEntityTracker: this.actionsEntityTracker,
     });
     this.localPlayer.headTracker.addEventListener('migrate', function(e) { // note: binding local this -> this.localPlayer
       const {oldHeadRealm, newHeadRealm} = e.data;
