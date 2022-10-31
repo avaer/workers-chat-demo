@@ -467,10 +467,11 @@ export class GamePlayerCanvas {
         const remotePlayerPosition = this.virtualPlayer.getKey('position');
         // const localPlayerPosition = realms.localPlayer.getKey('position');
 
-        this.element.style.cssText = `\
-          top: ${remotePlayerPosition[2]}px;
-          left: ${remotePlayerPosition[0]}px;
-        `;
+        // this.element.style.cssText = `\
+        //   top: ${remotePlayerPosition[2]}px;
+        //   left: ${remotePlayerPosition[0]}px;
+        // `;
+        this.element.style.transform = `translate3d(${remotePlayerPosition[0]}px, ${remotePlayerPosition[2]}px, 0)`;
       }
     }
   }
