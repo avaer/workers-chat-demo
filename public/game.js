@@ -179,107 +179,6 @@ export const startGame = async ({
     y: 0,
   };
 
-  const _initLogic = () => {
-    // world
-    // const worldItemRenderers = [];
-    // bind
-
-    // local player
-    const localPlayerCursorRenderer = new RemotePlayerCursorHtmlRenderer(realms.playerId, realms.playerId, realms.localPlayer);
-    const appsRenderer = new AppsHtmlRenderer(realms);
-
-    const _addPlayer = player => {
-      // ui
-      let p = document.createElement("p");
-      p.classList.add('player');
-      p.innerHTML = `<img src="/public/images/audio.svg" class="audio-icon"><span class="name">${player.arrayIndexId}</span>`;
-      roster.appendChild(p);
-
-      // render
-      const playerCursorRenderer = new RemotePlayerCursorHtmlRenderer(player.arrayIndexId, playerId, player);
-      playerCursorRenderers.push(playerCursorRenderer);
-    };
-    const _removePlayer = playerId => {
-      for (let i = 0; i < roster.children.length; i++) {
-        let p = roster.children[i];
-        if (p.innerText === playerId) {
-          roster.removeChild(p);
-          break;
-        }
-      }
-
-      for (let i = 0; i < playerCursorRenderers.length; i++) {
-        const playerCursorRenderer = playerCursorRenderers[i];
-        if (playerCursorRenderer.remotePlayerId === playerId) {
-          playerCursorRenderers.splice(i, 1);
-          playerCursorRenderer.destroy();
-          break;
-        }
-      }
-    };
-
-    // players
-    const playerCursorRenderers = [];
-    virtualPlayers.addEventListener('join', e => {
-      // console.log('add virtual player', e.data);
-      const {player} = e.data;
-      _addPlayer(player);
-    });
-    virtualPlayers.addEventListener('leave', e => {
-      // console.log('remove virtual player', e.data);
-      const {playerId} = e.data;
-      _removePlayer(playerId);
-    });
-    _addPlayer(realms.localPlayer);
-    
-    // audio
-    const _enableAudioOutput = playerId => {
-      for (let i = 0; i < roster.children.length; i++) {
-        let p = roster.children[i];
-        const textNode = p.children[1];
-        if (textNode.innerText === playerId) {
-          // console.log('swap on');
-          p.classList.add('speaking');
-          break;
-        }
-      }
-    };
-    const _disableAudioOutput = playerId => {
-      for (let i = 0; i < roster.children.length; i++) {
-        let p = roster.children[i];
-        const textNode = p.children[1];
-        if (textNode.innerText === playerId) {
-          // console.log('swap off');
-          p.classList.remove('speaking');
-          break;
-        }
-      }
-    };
-    realms.addEventListener('audiostreamstart', e => {
-      const {playerId} = e.data;
-      // console.log('stream start', playerId);
-      _enableAudioOutput(playerId);
-    });
-    realms.addEventListener('audiostreamend', e => {
-      const {playerId} = e.data;
-      // console.log('stream end', playerId);
-      _disableAudioOutput(playerId);
-    });
-
-    // wait for the network to be ready befor binding controls
-    realms.addEventListener('networkreconfigure', e => {
-      const _bindControls = () => {
-        const mousemove = e => {
-          mouseState.x = e.clientX;
-          mouseState.y = e.clientY;
-        };
-        window.addEventListener('mousemove', mousemove);
-      };
-      _bindControls();
-    }, {once: true});
-  };
-  _initLogic();
-
   const _initRenderers = () => {
     GamePlayerCanvas.waitForLoad(); // note: not actually waiting
 
@@ -582,6 +481,107 @@ export const startGame = async ({
     };
   };
   _initRenderers();
+
+  const _initLogic = () => {
+    // world
+    // const worldItemRenderers = [];
+    // bind
+
+    // local player
+    const localPlayerCursorRenderer = new RemotePlayerCursorHtmlRenderer(realms.playerId, realms.playerId, realms.localPlayer);
+    const appsRenderer = new AppsHtmlRenderer(realms);
+
+    const _addPlayer = player => {
+      // ui
+      let p = document.createElement("p");
+      p.classList.add('player');
+      p.innerHTML = `<img src="/public/images/audio.svg" class="audio-icon"><span class="name">${player.arrayIndexId}</span>`;
+      roster.appendChild(p);
+
+      // render
+      const playerCursorRenderer = new RemotePlayerCursorHtmlRenderer(player.arrayIndexId, playerId, player);
+      playerCursorRenderers.push(playerCursorRenderer);
+    };
+    const _removePlayer = playerId => {
+      for (let i = 0; i < roster.children.length; i++) {
+        let p = roster.children[i];
+        if (p.innerText === playerId) {
+          roster.removeChild(p);
+          break;
+        }
+      }
+
+      for (let i = 0; i < playerCursorRenderers.length; i++) {
+        const playerCursorRenderer = playerCursorRenderers[i];
+        if (playerCursorRenderer.remotePlayerId === playerId) {
+          playerCursorRenderers.splice(i, 1);
+          playerCursorRenderer.destroy();
+          break;
+        }
+      }
+    };
+
+    // players
+    const playerCursorRenderers = [];
+    virtualPlayers.addEventListener('join', e => {
+      // console.log('add virtual player', e.data);
+      const {player} = e.data;
+      _addPlayer(player);
+    });
+    virtualPlayers.addEventListener('leave', e => {
+      // console.log('remove virtual player', e.data);
+      const {playerId} = e.data;
+      _removePlayer(playerId);
+    });
+    _addPlayer(realms.localPlayer);
+    
+    // audio
+    const _enableAudioOutput = playerId => {
+      for (let i = 0; i < roster.children.length; i++) {
+        let p = roster.children[i];
+        const textNode = p.children[1];
+        if (textNode.innerText === playerId) {
+          // console.log('swap on');
+          p.classList.add('speaking');
+          break;
+        }
+      }
+    };
+    const _disableAudioOutput = playerId => {
+      for (let i = 0; i < roster.children.length; i++) {
+        let p = roster.children[i];
+        const textNode = p.children[1];
+        if (textNode.innerText === playerId) {
+          // console.log('swap off');
+          p.classList.remove('speaking');
+          break;
+        }
+      }
+    };
+    realms.addEventListener('audiostreamstart', e => {
+      const {playerId} = e.data;
+      // console.log('stream start', playerId);
+      _enableAudioOutput(playerId);
+    });
+    realms.addEventListener('audiostreamend', e => {
+      const {playerId} = e.data;
+      // console.log('stream end', playerId);
+      _disableAudioOutput(playerId);
+    });
+
+    // wait for the network to be ready befor binding controls
+    realms.addEventListener('networkreconfigure', e => {
+      const _bindControls = () => {
+        const mousemove = e => {
+          mouseState.x = e.clientX;
+          mouseState.y = e.clientY;
+        };
+        window.addEventListener('mousemove', mousemove);
+      };
+      _bindControls();
+    }, {once: true});
+  };
+  _initLogic();
 
   const _startFrameLoop = () => {
     let connected = false;
