@@ -701,6 +701,11 @@ export const startGame = async ({
         };
         _renderPlayers();
 
+        const _renderRealms = () => {
+          realmsCanvases.update();
+        };
+        _renderRealms();
+
         // update realms set
         const position = realms.localPlayer.getKey('position');
         realms.updatePosition(position, realmSize, {

@@ -564,6 +564,7 @@ z-index: 1;
         div.setText = text => {
           text2.innerText = text;
         };
+        let needsTextUpdate = '';
         div.updateText = dataClient => {
           const playersArray = dataClient.getArray('players', {
             listen: false,
@@ -627,13 +628,24 @@ z-index: 1;
               playersString,
               worldAppsString,
             ].join('\n');
-            div.setText(s);
+            needsTextUpdate = s;
           };
           _updateText();
+        };
+        div.update = () => {
+          if (needsTextUpdate) {
+            div.setText(needsTextUpdate);
+            needsTextUpdate = '';
+          }
         };
         
         this.element.appendChild(div);
       }
+    }
+  }
+  update() {
+    for (const div of this.element.childNodes) {
+      div.update();
     }
   }
 }
