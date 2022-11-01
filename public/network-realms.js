@@ -343,14 +343,10 @@ class VirtualPlayer extends HeadTrackedEntity {
 
     this.headTracker = new HeadTracker(this);
 
-    // const readableHeadTracker = this.headTracker.getReadable();
     this.playerApps = new VirtualEntityArray('playerApps:' + this.arrayIndexId, this.realms, {
-      // headTracker: readableHeadTracker,
       entityTracker: opts?.appsEntityTracker,
     });
     this.playerActions = new VirtualEntityArray('playerActions:' + this.arrayIndexId, this.realms, {
-      // headTracker: readableHeadTracker,
-      // entityTracker: opts?.actionsEntityTracker,
       entityTracker: new EntityTracker(),
     });
     this.cleanupMapFns = new Map();
@@ -362,9 +358,8 @@ class VirtualPlayer extends HeadTrackedEntity {
     actionValIds = [],
   } = {}) {
     const headRealm = this.headTracker.getHeadRealmForCreate(o.position);
-    // console.log('initialize player', o, headRealm);
-
-    console.log('initialize app', headRealm.key, o.position.join(','));
+    
+    // console.log('initialize app', headRealm.key, o.position.join(','));
 
     const _initializeApps = () => {
       for (let i = 0; i < appVals.length; i++) {
