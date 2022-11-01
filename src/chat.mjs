@@ -450,7 +450,7 @@ export class ChatRoom {
           listen: false,
         });
         if (arrayIndexId !== null) { // map mode
-          console.log('dead hand map', arrayId, arrayIndexId);
+          // console.log('dead hand map', arrayId, arrayIndexId);
           // const map = dataClient.getArrayMap(arrayId, arrayIndexId, {
           //   listen: false,
           // });
@@ -475,7 +475,7 @@ export class ChatRoom {
             } */
           }
         } else { // array mode
-          console.log('dead hand array', arrayId);
+          // console.log('dead hand array', arrayId);
           
           for (const arrayIndexId of array.getKeys()) {
             const map = array.getMap(arrayIndexId, {
@@ -649,6 +649,7 @@ export class ChatRoom {
           handleBinaryMessage(arrayBuffer);
         } else {
           // I guess we'll use JSON.
+          throw new Error('got non-binary message');
           const data = JSON.parse(msg.data);
           const {method} = data;
           if (method) {
