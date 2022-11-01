@@ -308,6 +308,18 @@ export class DCArray extends EventTarget {
       return [];
     }
   }
+  getMaps() {
+    const array = this.dataClient.crdt.get(this.arrayId);
+    if (array) {
+      return Object.keys(array).map(arrayIndexId => {
+        return this.getMap(arrayIndexId, {
+          listen: false,
+        });
+      });
+    } else {
+      return [];
+    }
+  }
   getMap(arrayIndexId, {listen = true} = {}) {
     const map = new DCMap(this.arrayId, arrayIndexId, this.dataClient);
     listen && map.listen();
@@ -828,7 +840,7 @@ export class DataClient extends EventTarget {
       }
       case UPDATE_METHODS.SYN: {
         const [synId] = args;
-        // console.log('got syn', this, {
+        // console.log('got syn', {
         //   synId,
         // });
         update = new MessageEvent('syn', {
@@ -840,7 +852,7 @@ export class DataClient extends EventTarget {
       }
       case UPDATE_METHODS.SYN_ACK: {
         const [synId] = args;
-        // console.log('got synAck', this, {
+        // console.log('got synAck', {
         //   synId,
         // });
         update = new MessageEvent('synAck', {

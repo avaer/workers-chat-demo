@@ -1333,11 +1333,10 @@ export class NetworkRealm extends EventTarget {
       const playersArray = dataClient.getArray('players', {
         listen: false,
       });
-      let numPlayers = playersArray.getSize();
-      // console.log('sync', numPlayers);
-      if (numPlayers > 1) {
-        numPlayers--; // do not count ourselves
-
+      const playersArrayMaps = playersArray.getMaps();
+      let numPlayers = playersArrayMaps.filter(player => player.arrayIndexId !== this.parent.playerId).length;
+      // console.log('sync', numPlayers, playersArray.getKeys(), playersArrayMaps, this.parent.playerId);
+      if (numPlayers > 0) {
         const synId = makeId();
         const synMessage = this.dataClient.getSynMessage(synId);
         this.networkedDataClient.emitUpdate(synMessage);
