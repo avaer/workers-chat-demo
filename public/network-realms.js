@@ -11,10 +11,6 @@ import {
 
 //
 
-const positionKey = 'position';
-
-//
-
 const arrayEquals = (a, b) => {
   if (a.length !== b.length) {
     return false;
@@ -27,19 +23,8 @@ const arrayEquals = (a, b) => {
     return true;
   }
 };
-/* const distanceTo = (a, b) => {
-  const [xa, ya, za] = a;
-  const [xb, yb, zb] = b;
-  const dx = xa - xb;
-  const dy = ya - yb;
-  const dz = za - zb;
-  return Math.sqrt(dx*dx + dy*dy + dz*dz);
-}; */
 const boxContains = (box, point) => {
   const {min, max} = box;
-  /* if (typeof point?.[0] !== 'number') {
-    debugger;
-  } */
   const [x, y, z] = point;
   return x >= min[0] && x < max[0] &&
     y >= min[1] && y < max[1] &&
@@ -90,9 +75,7 @@ const _getHeadRealm = (position, realms) => {
           realm.min[2] + realm.size,
         ],
       };
-      // console.log('check box', box.min, box.max, position);
       if (boxContains(box, position)) {
-        // console.log('got head', realm.min);
         return realm;
       }
     }
@@ -108,9 +91,6 @@ class HeadTrackedEntity extends EventTarget {
 
     this.headTracker = headTracker || new HeadTracker(this);
   }
-  /* setHeadTracker(headTracker) {
-    this.headTracker = headTracker;
-  } */
 }
 
 //
@@ -126,13 +106,11 @@ class HeadTracker extends EventTarget {
   #cachedHeadRealm = null;
   #connectedRealms = new Map(); // realm -> link count
   getHeadRealm() {
+    // XXX this method can be optimized with a cache
     if (this.#connectedRealms.size === 1) { // by far the most common case
       return this.#connectedRealms.keys().next().value;
     } else {
       const {arrayId, arrayIndexId} = this.headTrackedEntity;
-      /* if (!arrayId || !arrayIndexId) {
-        debugger;
-      } */
       let dcMaps = [];
       for (const realm of this.#connectedRealms.keys()) {
         const {dataClient} = realm;
@@ -158,8 +136,6 @@ class HeadTracker extends EventTarget {
           dcMaps = dcMaps.sort((a, b) => {
             return b.getMapEpoch() - a.getMapEpoch();
           });
-          // console.log('got top epoch', dcMaps[0].getMapEpoch());
-          // debugger;
           dcMap = dcMaps[0];
         }
         return dcMap.dataClient.userData.realm;
