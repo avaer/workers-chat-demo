@@ -204,35 +204,26 @@ class EntityTracker extends EventTarget {
     this.virtualMaps = new Map();
     this.linkedRealms = new Map();
     this.cleanupFns = new Map();
-
-    this.stack = new Error().stack;
   }
   getSize() {
     return this.virtualMaps.size;
   }
   linkMap(realm, map) {
-    // sanityCheck();
-
     // bind local array maps to virtual maps
     const _getOrCreateVirtualMap = (arrayIndexId) => {
       let virtualMap = this.virtualMaps.get(map.arrayIndexId);
       if (!virtualMap) {
         // console.log('*** create new', map.arrayId, arrayIndexId);
         virtualMap = new HeadlessVirtualEntityMap(arrayIndexId);
-        if (!map.arrayIndexId) {
-          debugger;
-        }
         this.virtualMaps.set(map.arrayIndexId, virtualMap);
 
         virtualMap.addEventListener('garbagecollect', e => {
-          // console.log('gc', e.data);
           this.virtualMaps.delete(map.arrayIndexId);
 
           this.dispatchEvent(new MessageEvent('entityremove', {
             data: {
               entityId: arrayIndexId,
               entity: virtualMap,
-              // realm,
             },
           }));
         });
@@ -242,44 +233,27 @@ class EntityTracker extends EventTarget {
       return virtualMap;
     };
 
-    // sanityCheck();
-
     const added = !this.virtualMaps.has(map.arrayIndexId);
     const virtualMap = _getOrCreateVirtualMap(map.arrayIndexId);
 
-    // sanityCheck();
-
     virtualMap.link(map.arrayId, realm);
 
-    // console.log('entity tracker link', map.arrayId, map.arrayIndexId, added);
-
-    // sanityCheck();
     if (added) {
       this.dispatchEvent(new MessageEvent('entityadd', {
         data: {
           entityId: map.arrayIndexId,
           entity: virtualMap,
-          // realm,
         },
       }));
-      // sanityCheck();
     }
     return virtualMap;
   }
   unlinkMap(realm, arrayId, arrayIndexId) {
     // console.log('entity tracker unlink map', realm, arrayIndexId);
 
-    // if (window.lol) {
-    //   debugger;
-    // }
-
     const virtualMap = this.virtualMaps.get(arrayIndexId);
-    if (!virtualMap) {
-      debugger;
-    }
     virtualMap.unlink(arrayId, realm);
 
-    // this.virtualMaps.delete(arrayIndexId);
   }
   // each realm will only be linked once
   #linkInternal(arrayId, realm) {
