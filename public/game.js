@@ -247,10 +247,10 @@ export const startGame = async ({
       if (e.ctrlKey) {
         // nothing
       } else {
-        e.preventDefault();
-        e.stopPropagation();
-        
         if (localPlayerFocused) {
+          e.preventDefault();
+          e.stopPropagation();
+        
           // WASD
           switch (e.code) {
             case 'KeyW': {
@@ -286,25 +286,27 @@ export const startGame = async ({
       if (e.ctrlKey) {
         // nothing
       } else {
-        e.preventDefault();
-        e.stopPropagation();
+        if (localPlayerFocused) {
+          e.preventDefault();
+          e.stopPropagation();
 
-        switch (e.code) {
-          case 'KeyW': {
-            keyState.W = false;
-            break;
-          }
-          case 'KeyA': {
-            keyState.A = false;
-            break;
-          }
-          case 'KeyS': {
-            keyState.S = false;
-            break;
-          }
-          case 'KeyD': {
-            keyState.D = false;
-            break;
+          switch (e.code) {
+            case 'KeyW': {
+              keyState.W = false;
+              break;
+            }
+            case 'KeyA': {
+              keyState.A = false;
+              break;
+            }
+            case 'KeyS': {
+              keyState.S = false;
+              break;
+            }
+            case 'KeyD': {
+              keyState.D = false;
+              break;
+            }
           }
         }
       }
