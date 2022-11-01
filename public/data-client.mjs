@@ -436,12 +436,15 @@ export class DCArray extends EventTarget {
       }));
     };
 
+    const stack = new Error().stack;
+
     const addKey = 'add.' + this.arrayId;
     const addFn = e => {
       const {
         arrayIndexId,
         val,
       } = e.data;
+      console.log('dispatch add', {arrayIndexId, val}, stack);
       _addMap(arrayIndexId, val);
     };
     this.dataClient.addEventListener(addKey, addFn);
@@ -451,7 +454,7 @@ export class DCArray extends EventTarget {
       const {
         arrayIndexId,
       } = e.data;
-      // console.log('data client remove', {arrayId: this.arrayId, arrayIndexId});
+      console.log('dispatch remove', {arrayIndexId}, stack);
       this.dispatchEvent(new MessageEvent('remove', {
         data: {
           arrayIndexId,

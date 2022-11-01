@@ -47,15 +47,9 @@ export const startGame = async ({
   const playerId = makeId();
   let localPlayerCanvas = null;
   let remotePlayerCanvases = new Map();
-  const realms = new NetworkRealms(playerId);
-
-  // main game element
-  const gameEl = document.getElementById('game');
-  // realms canvas
-  const realmsCanvases = new GameRealmsCanvases(realms);
-  gameEl.appendChild(realmsCanvases.element);
   
   // realms
+  const realms = new NetworkRealms(playerId);
   const realmCleanupFns = new Map();
   realms.addEventListener('realmconnecting', e => {
     const {realm} = e.data;
@@ -192,6 +186,7 @@ export const startGame = async ({
   const virtualWorld = realms.getVirtualWorld();
   const virtualPlayers = realms.getVirtualPlayers();
 
+  // states
   const keyState = {
     W: false,
     A: false,
@@ -208,6 +203,12 @@ export const startGame = async ({
     x: 0,
     y: 0,
   };
+
+  // main game element
+  const gameEl = document.getElementById('game');
+  // realms canvases
+  const realmsCanvases = new GameRealmsCanvases(realms);
+  gameEl.appendChild(realmsCanvases.element);
 
   const _initRenderers = () => {
     GamePlayerCanvas.waitForLoad(); // note: not actually waiting
@@ -345,6 +346,8 @@ export const startGame = async ({
         remotePlayerCanvases.delete(playerId);
       }
     });
+
+    // XXX remote player leave must be triggered before we try to render the dead player
 
     // action methods
     const _pickupDrop = () => {

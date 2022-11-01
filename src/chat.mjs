@@ -609,7 +609,7 @@ export class ChatRoom {
     };
     _sendJoinMessage(playerId);
 
-    const _sendLeaveMessage = () => {
+    /* const _sendLeaveMessage = () => {
       console.log('send leave message', roomName, playerId);
       const leaveMessage = new MessageEvent('leave', {
         data: {
@@ -619,7 +619,7 @@ export class ChatRoom {
       const leaveBuffer = serializeMessage(leaveMessage);
       dataClient.emitUpdate(leaveMessage);
       proxyMessageToPeers(leaveBuffer);
-    };
+    }; */
 
     // Set event handlers to receive messages.
     // let receivedUserInfo = false;

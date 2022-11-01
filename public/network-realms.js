@@ -571,28 +571,14 @@ class VirtualPlayer extends HeadTrackedEntity {
     _initializePlayer();
   }
   link(realm) {
-    // console.log('player link', this.arrayIndexId, realm.key, new Error().stack);
-
     const {dataClient} = realm;
     const map = dataClient.getArrayMap(this.arrayId, this.arrayIndexId); // note: this map might not exist in the crdt yet
     const update = e => {
-      // const {key, val} = e.data;
-      
       this.dispatchEvent(new MessageEvent('update', {
         data: e.data,
       }));
-
-      // if (key === positionKey) {
-      //   this.headTracker.updateHeadRealm(val);
-      // }
     };
     map.addEventListener('update', update);
-    
-    // XXX need to handle initial position set here
-    // XXX note however that it won't be here on the first tick, because the first tick is just the link before the connect
-    // XXX therefore we probably need to listen to the array wait here, so we get it once we connect
-    // XXX OR, we can defer ream linking until the connection succeeds and the data is ready to read here (and update the head tracker)
-    // debugger;
     
     // link child arrays
     this.playerApps.link(realm);
@@ -602,9 +588,6 @@ class VirtualPlayer extends HeadTrackedEntity {
     this.headTracker.linkRealm(realm);
 
     // cleanup
-    if (this.cleanupMapFns.has(realm)) {
-      debugger;
-    }
     this.cleanupMapFns.set(realm, () => {
       this.headTracker.unlinkRealm(realm);
       
@@ -616,10 +599,6 @@ class VirtualPlayer extends HeadTrackedEntity {
     });
   }
   unlink(realm) {
-    // console.log('player unlink', this.arrayIndexId, realm.key);
-    // if (!this.cleanupMapFns.has(realm)) {
-    //   debugger;
-    // }
     this.cleanupMapFns.get(realm)();
     this.cleanupMapFns.delete(realm);
   }
@@ -685,7 +664,10 @@ class VirtualPlayersArray extends EventTarget {
     const _linkData = () => {
       const playersArray = dataClient.getArray(this.arrayId);
 
+      // console.log('players array listen', this.arrayId, realm.key);
+
       const _linkPlayer = arrayIndexId => {
+        console.log('link player', arrayIndexId, realm.key);
         const playerId = arrayIndexId;
         if (playerId === this.parent.playerId) {
           // this.parent.localPlayer;
@@ -707,6 +689,8 @@ class VirtualPlayersArray extends EventTarget {
       const _unlinkPlayer = arrayIndexId => {
         const playerId = arrayIndexId;
 
+        console.log('unlink player', arrayIndexId, realm.key);
+
         if (playerId == this.parent.playerId) {
           // this.parent.localPlayer;
         } else {
@@ -715,6 +699,7 @@ class VirtualPlayersArray extends EventTarget {
             // XXX this needs to handle the case where the user has moved across realms and then leaves
             // XXX this realm will be the same as when the player joined
             virtualPlayer.unlink(realm);
+            // console.log('post unlink', arrayIndexId, realm.key);
 
             if (!virtualPlayer.headTracker.isLinked()) {
               this.virtualPlayers.delete(playerId);
@@ -734,14 +719,14 @@ class VirtualPlayersArray extends EventTarget {
       };
 
       const onadd = e => {
-        // console.log('got player add', e.data);
+        console.log('player add', e.data);
         const {arrayIndexId, map, val} = e.data;
         _linkPlayer(arrayIndexId);
       };
       playersArray.addEventListener('add', onadd);
 
       const onremove = e => {
-        // console.log('got player remove', e.data, realm.key, this, new Error().stack);
+        console.log('player remove', e.data, realm.key);
         const {arrayIndexId} = e.data;
         _unlinkPlayer(arrayIndexId);
       };
@@ -749,12 +734,14 @@ class VirtualPlayersArray extends EventTarget {
 
       // link initial players
       for (const arrayIndexId of playersArray.getKeys()) {
-        console.log('got player initial', arrayIndexId);
+        console.log('player initial', arrayIndexId);
         _linkPlayer(arrayIndexId);
       }
 
       this.cleanupFns.set(networkedDataClient, () => {
         playersArray.unlisten();
+
+        console.log('player unlisten', realm.key, new Error().stack);
 
         playersArray.removeEventListener('add', onadd);
         playersArray.removeEventListener('remove', onremove);
@@ -816,10 +803,10 @@ class VirtualEntityArray extends VirtualPlayersArray {
       // sanityCheck();
       const needledEntity = new NeedledVirtualEntityMap(arrayId, entity);
 
-      // needledEntity.toObject();
-
       needledEntity.cleanupFn = () => {
         needledEntity.destroy();
+
+        this.needledVirtualEntities.delete(entity);
 
         this.dispatchEvent(new MessageEvent('needledentityremove', {
           data: {
@@ -851,7 +838,6 @@ class VirtualEntityArray extends VirtualPlayersArray {
       }
       const needledEntity = this.needledVirtualEntities.get(entity);
       needledEntity.cleanupFn();
-      this.needledVirtualEntities.delete(entity);
     };
     this.entityTracker.addEventListener('entityremove', onentityremove);
 
@@ -1289,12 +1275,49 @@ export class NetworkRealm extends EventTarget {
   }
   disconnect() {
     this.ws.close();
-    /* const updates = this.dataClient.clearUpdates();
-    console.log('realm disconnect', updates);
-    for (const update of updates) {
-      this.dataClient.emitUpdate(update);
-    } */
+    const clearUpdateFns = this.getClearUpdateFns();
+    // console.log('realm disconnect', clearUpdates.length);
+    for (const clearUpdateFn of clearUpdateFns) {
+      const clearUpdate = clearUpdateFn();
+      console.log('clear update', clearUpdate);
+      this.dataClient.emitUpdate(clearUpdate);
+    }
     this.connected = false;
+  }
+  *getClearUpdateFns() {
+    const playersArray = this.dataClient.getArray('players', {
+      listen: false,
+    });
+
+    // players
+    const playerIds = playersArray.getKeys();
+    for (const playerId of playerIds) {
+      if (playerId === this.parent.playerId) {
+        debugger;
+        throw new Error('would have removed self during clear!');
+      }
+      if (typeof playerId !== 'string' || typeof this.parent.playerId !== 'string') {
+        debugger;
+      }
+
+      const playerAppsArray = this.dataClient.getArray('playerApps:' + playerId, {
+        listen: false,
+      });
+      const playerActionsArray = this.dataClient.getArray('playerActions:' + playerId, {
+        listen: false,
+      });
+
+      // actions
+      for (const actionId of playerActionsArray.getKeys()) {
+        yield () => playerActionsArray.removeAt(actionId);
+      }
+      // apps
+      for (const appId of playerAppsArray.getKeys()) {
+        yield () => playerAppsArray.removeAt(appId);
+      }
+      // player
+      yield () => playersArray.removeAt(playerId);
+    }
   }
   emitUpdate(update) {
     // if (update.type === 'add.worldApps') {
@@ -1656,6 +1679,7 @@ export class NetworkRealms extends EventTarget {
         const oldRealms = [];
         for (const connectedRealm of this.connectedRealms) {
           if (!candidateRealms.find(candidateRealm => candidateRealm.key === connectedRealm.key)) {
+            // XXX we must perform the clean before hitting here, or else the remove handlers will be unlinked by the time we emit
             this.players.unlink(connectedRealm);
             this.localPlayer.unlink(connectedRealm);
             this.world.unlink(connectedRealm);
