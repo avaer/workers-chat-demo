@@ -120,6 +120,8 @@ class HeadTracker extends EventTarget {
     super();
 
     this.headTrackedEntity = headTrackedEntity;
+    
+    this.onMigrate = null;
   }
   #cachedHeadRealm = null;
   #connectedRealms = new Map(); // realm -> link count
@@ -173,20 +175,11 @@ class HeadTracker extends EventTarget {
     const headRealm = _getHeadRealm(position, this.#connectedRealms.keys());
     return headRealm;
   }
-  /* getReadable() {
-    return new ReadableHeadTracker(this);
-  } */
-  updateHeadRealm(headPosition) {
+  async updateHeadRealm(headPosition) {
     if (!headPosition || isNaN(headPosition[0]) || isNaN(headPosition[1]) || isNaN(headPosition[2])) {
       debugger;
       throw new Error('try to update head realm for unpositioned player: ' + headPosition);
     }
-
-    /* const onclose = e => {
-      if (this.#headRealm.ws.readyState !== 1) {
-        debugger;
-      }
-    }; */
 
     if (this.isLinked()) {
       const newHeadRealm = _getHeadRealm(headPosition, Array.from(this.#connectedRealms.keys()));
@@ -201,7 +194,7 @@ class HeadTracker extends EventTarget {
             this.#cachedHeadRealm = newHeadRealm;
             // console.log('replace head realm', newHeadRealm.key);
             
-            this.dispatchEvent(new MessageEvent('migrate', {
+            this.onMigrate && await this.onMigrate(new MessageEvent('migrate', {
               data: {
                 oldHeadRealm,
                 newHeadRealm,
@@ -214,7 +207,7 @@ class HeadTracker extends EventTarget {
         }
       }
     } else {
-      debugger;
+      // debugger;
       throw new Error('try to get head realm for fully unlinked player ' + this.playerId);
     }
   }
@@ -1390,7 +1383,7 @@ export class NetworkRealms extends EventTarget {
       appsEntityTracker: this.appsEntityTracker,
       // actionsEntityTracker: this.actionsEntityTracker,
     });
-    this.localPlayer.headTracker.addEventListener('migrate', function(e) { // note: binding local this -> this.localPlayer
+    this.localPlayer.headTracker.onMigrate = async function(e) { // note: binding local this -> this.localPlayer
       const {oldHeadRealm, newHeadRealm} = e.data;
 
       console.log('migrate', oldHeadRealm.key, '->', newHeadRealm.key);
@@ -1486,6 +1479,8 @@ export class NetworkRealms extends EventTarget {
         }
       } */
 
+      await newHeadRealm.sync();
+
       // delete old
       // delete apps
       for (const arrayIndexId of oldPlayerAppsArray.getKeys()) {
@@ -1508,7 +1503,7 @@ export class NetworkRealms extends EventTarget {
 //   console.warn(err.stack);
 //   throw err;
 // }
-    }.bind(this.localPlayer));
+    }.bind(this.localPlayer);
     
     this.irc = new VirtualIrc(this);
     this.connectedRealms = new Set();
@@ -1643,7 +1638,7 @@ export class NetworkRealms extends EventTarget {
         } // else {
           // migrate localPlayer if needed
           // console.log('pre-migrate 1', position);
-          this.localPlayer.headTracker.updateHeadRealm(position);
+          await this.localPlayer.headTracker.updateHeadRealm(position);
           // console.log('post-migrate 1');
         // }
 
