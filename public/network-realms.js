@@ -779,8 +779,6 @@ class VirtualIrc {
 
 //
 
-window.bannedLinks = [];
-
 // one per arrayIndexId per EntityTracker
 class HeadlessVirtualEntityMap extends EventTarget {
   constructor(arrayIndexId) {
@@ -790,25 +788,7 @@ class HeadlessVirtualEntityMap extends EventTarget {
 
     this.maps = new Map(); // bound dc maps
     this.cleanupFns = new Map();
-    this.linkStacks = new Map();
   }
-  /* getHeadMap() {
-    // try to use a map from the current head realm
-    const headRealm = this.headTracker.getHeadRealm();
-    if (headRealm) {
-      const map = this.getHeadMapFromRealm(headRealm);
-      if (!map) {
-        debugger;
-      }
-      return map;
-    }
-    // otherwise, try to use the only map
-    if (this.maps.size === 1) {
-      return this.maps.values().next().value.map;
-    } else {
-      return null;
-    }
-  } */
   getInitial(key) { // can only be used if there is one bound map
     if (this.maps.size !== 1) {
       debugger;
@@ -827,29 +807,8 @@ class HeadlessVirtualEntityMap extends EventTarget {
     debugger;
     return null;
   }
-  links = new Set();
-  lastLinks = [];
-  bannedLinks = [];
   link(arrayId, realm) {
     const key = arrayId + ':' + realm.key;
-
-    // if (window.lol && realm.key === '0:0:0') {
-    //   debugger;
-    // }
-
-    if (this.bannedLinks.includes(key)) {
-      debugger;
-    }
-    if (this.links.has(key)) {
-      debugger;
-    }
-    this.lastLinks.push([
-      key,
-      new Error().stack,
-    ]);
-    this.links.add(key);
-    // console.log('link', key, this.links.size);
-    this.linkStacks.set(key, new Error().stack);
 
     // listen
     const map = new DCMap(arrayId, this.arrayIndexId, realm.dataClient);
@@ -866,11 +825,6 @@ class HeadlessVirtualEntityMap extends EventTarget {
     };
     map.addEventListener('update', update);
 
-    // if (/worldApps/.test(arrayId)) {
-    //   debugger;
-    // }
-
-    // XXX listen for this at the needled entity level, in order to headTracker.linkRealm(realm)
     this.dispatchEvent(new MessageEvent('link', {
       data: {
         realm,
@@ -880,15 +834,6 @@ class HeadlessVirtualEntityMap extends EventTarget {
     this.cleanupFns.set(key, () => {
       map.removeEventListener('update', update);
 
-      if (!this.links.has(key)) {
-        debugger;
-      }
-      this.links.delete(key);
-      // console.log('unlink', key, this.links.size);
-  
-      if (!this.maps.has(key)) {
-        debugger;
-      }
       this.maps.delete(key);
 
       this.dispatchEvent(new MessageEvent('unlink', {
@@ -907,13 +852,7 @@ class HeadlessVirtualEntityMap extends EventTarget {
     this.cleanupFns.delete(key);
 
     // garbage collect
-    // console.log('check maps size', arrayId, this.maps.size);
     if (this.maps.size === 0) {
-      // console.log('garbage collect virtual entity map', arrayId, this.arrayIndexId);
-      // if (/playerApps/.test(arrayId)) {
-      //   debugger;
-      // }
-      // debugger;
       this.dispatchEvent(new MessageEvent('garbagecollect'));
     }
   }
@@ -948,12 +887,6 @@ class NeedledVirtualEntityMap extends HeadTrackedEntity {
       this.headTracker.linkRealm(realm);
     }
   }
-  /* get arrayId() {
-    return this.arrayId;
-  }
-  set arrayId(arrayId) {
-    throw new Error('cannot set arrayId');
-  } */
   get arrayIndexId() {
     return this.entityMap.arrayIndexId;
   }
@@ -963,57 +896,26 @@ class NeedledVirtualEntityMap extends HeadTrackedEntity {
   get(key) {
     const realm = this.headTracker.getHeadRealm();
     const map = this.entityMap.getHeadMapFromRealm(realm);
-    // if (!map) {
-    //   debugger;
-    // }
-    /* const map = headRealm.dataClient.getArrayMap(this.parent.arrayId, this.arrayIndexId, {
-      listen: false,
-    }); */
     return map.getKey(key);
   }
   set(key, val) {
     const realm = this.headTracker.getHeadRealm();
     const map = this.entityMap.getHeadMapFromRealm(realm);
-    // if (!map) {
-    //   debugger;
-    // }
     const update = map.setKeyValueUpdate(key, val);
-    // console.log('got update', update);
     realm.emitUpdate(update);
   }
   remove() {
     const realm = this.headTracker.getHeadRealm();
     const map = this.entityMap.getHeadMapFromRealm(realm);
-    if (!map) {
-      debugger;
-    }
     const array = map.dataClient.getArray(map.arrayId, map.arrayIndexId, {
       listen: false,
     });
-    /* const array = headRealm.dataClient.getArray(this.parent.arrayId, {
-      listen: false,
-    }); */
     const update = array.removeAt(this.entityMap.arrayIndexId);
     realm.emitUpdate(update);
-
-    // the head might have changed if it pointed at this entity map
-    // in that case, we need to update the head as if this were an initialization
-    // this.snapHeadRealm();
   }
-  /* snapHeadRealm() {
-    if (this.entityMap.maps.size > 0) {
-      const initialPosition = this.entityMap.getInitial(positionKey);
-      if (initialPosition) {
-        this.headTracker.updateHeadRealm(initialPosition);
-      }
-    }
-  } */
   toObject() {
     const realm = this.headTracker.getHeadRealm();
     const map = this.entityMap.getHeadMapFromRealm(realm);
-    // if (!map?.toObject) {
-    //   debugger;
-    // }
     return map.toObject();
   }
 }
@@ -1081,14 +983,6 @@ export class NetworkRealm extends EventTarget {
     // players
     const playerIds = playersArray.getKeys();
     for (const playerId of playerIds) {
-      // if (playerId === this.parent.playerId) {
-      //   debugger;
-      //   throw new Error('would have removed self during clear!');
-      // }
-      // if (typeof playerId !== 'string' || typeof this.parent.playerId !== 'string') {
-      //   debugger;
-      // }
-
       const playerAppsArray = this.dataClient.getArray('playerApps:' + playerId, {
         listen: false,
       });
@@ -1156,10 +1050,8 @@ export class NetworkRealms extends EventTarget {
 
     this.lastPosition = [NaN, NaN, NaN];
     this.appsEntityTracker = new EntityTracker();
-    // this.actionsEntityTracker = new EntityTracker();
     this.localPlayer = new VirtualPlayer('players', this.playerId, this, 'local', {
       appsEntityTracker: this.appsEntityTracker,
-      // actionsEntityTracker: this.actionsEntityTracker,
     });
     this.world = new VirtualWorld('worldApps', this, {
       entityTracker: this.appsEntityTracker,
@@ -1167,7 +1059,6 @@ export class NetworkRealms extends EventTarget {
 
     this.players = new VirtualPlayersArray('players', this, {
       appsEntityTracker: this.appsEntityTracker,
-      // actionsEntityTracker: this.actionsEntityTracker,
     });
     this.localPlayer.headTracker.onMigrate = async e => {
       const {oldHeadRealm, newHeadRealm} = e.data;
