@@ -1325,52 +1325,6 @@ export class NetworkRealm extends EventTarget {
     this.dataClient.emitUpdate(update);
     this.networkedDataClient.emitUpdate(update);
   }
-  async sync() {
-    // for all realms
-    const promises = Array.from(this.parent.connectedRealms.values()).map(async realm => {
-      const {dataClient} = realm;
-
-      const playersArray = dataClient.getArray('players', {
-        listen: false,
-      });
-      const playersArrayMaps = playersArray.getMaps();
-      let numPlayers = playersArrayMaps.filter(player => player.arrayIndexId !== this.parent.playerId).length;
-      // console.log('sync', numPlayers, playersArray.getKeys(), playersArrayMaps, this.parent.playerId);
-      if (numPlayers > 0) {
-        const synId = makeId();
-        const synMessage = this.dataClient.getSynMessage(synId);
-        this.networkedDataClient.emitUpdate(synMessage);
-
-        // wait for >= numPlayers synAcks, with a 2-second timeout
-        await new Promise((accept, reject) => {
-          let seenSynAcks = 0;
-          const onSynAck = e => {
-            if (e.data.synId === synId) {
-              seenSynAcks++;
-              if (seenSynAcks >= numPlayers) {
-                cleanup();
-                accept();
-              }
-            }
-          };
-          this.dataClient.addEventListener('synAck', onSynAck);
-
-          const timeout = setTimeout(() => {
-            cleanup();
-            accept();
-          }, 2000);
-
-          const cleanup = () => {
-            this.dataClient.removeEventListener('synAck', onSynAck);
-            clearTimeout(timeout);
-          };
-        });
-      } else {
-        // throw new Error('expected at least 1 player');
-      }
-    });
-    await Promise.all(promises);
-  }
 }
 
 //
@@ -1510,7 +1464,7 @@ export class NetworkRealms extends EventTarget {
         }
       } */
 
-      await newHeadRealm.sync();
+      await realms.sync();
 
       // delete old
       // delete apps
@@ -1565,6 +1519,55 @@ export class NetworkRealms extends EventTarget {
       }
     }
     return null;
+  }
+  async sync() {
+    // for all realms
+    const promises = Array.from(this.connectedRealms.values()).map(async realm => {
+      const {dataClient} = realm;
+
+      const playersArray = dataClient.getArray('players', {
+        listen: false,
+      });
+      const playersArrayMaps = playersArray.getMaps();
+      let numPlayers = playersArrayMaps.filter(player => player.arrayIndexId !== this.playerId).length;
+      // console.log('sync', numPlayers, playersArray.getKeys(), playersArrayMaps, this.playerId);
+      if (numPlayers > 0) {
+        const synId = makeId();
+        const synMessage = dataClient.getSynMessage(synId);
+        realm.networkedDataClient.emitUpdate(synMessage);
+        // console.log('emit to ws', realm.key, playersArrayMaps.map(p => p.arrayIndexId), realm.networkedDataClient.ws.readyState);
+
+        // wait for >= numPlayers synAcks, with a 2-second timeout
+        await new Promise((accept, reject) => {
+          let seenSynAcks = 0;
+          const onSynAck = e => {
+            if (e.data.synId === synId) {
+              seenSynAcks++;
+              if (seenSynAcks >= numPlayers) {
+                cleanup();
+                accept();
+              }
+            }
+          };
+          dataClient.addEventListener('synAck', onSynAck);
+
+          const timeout = setTimeout(() => {
+            console.log('timeout', realm.key, playersArrayMaps);
+            cleanup();
+            accept();
+          }, 2000);
+
+          const cleanup = () => {
+            dataClient.removeEventListener('synAck', onSynAck);
+            clearTimeout(timeout);
+          };
+        });
+      } else {
+        // throw new Error('expected at least 1 player');
+      }
+    });
+    // console.log('num promises', promises.length);
+    await Promise.all(promises);
   }
   isMicEnabled() {
     return !!this.microphoneSource;

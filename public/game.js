@@ -74,10 +74,12 @@ export const startGame = async ({
     const {realm} = e.data;
     
     const {dataClient, networkedDataClient} = realm;
+
+    // console.log('realm join', realm.key);
     
     const onsyn = e => {
-      // console.log('send syn', e.data);
       const {synId} = e.data;
+      // console.log('response synAck', synId);
       const synAckMessage = dataClient.getSynAckMessage(synId);
       networkedDataClient.emitUpdate(synAckMessage);
     };
@@ -167,6 +169,9 @@ export const startGame = async ({
   });
   realms.addEventListener('realmleave', e => {
     const {realm} = e.data;
+
+    // console.log('realm leave', realm.key);
+
     const el = Array.from(realmsCanvases.element.childNodes).find(el => {
       return el.min[0] === realm.min[0] && el.min[2] === realm.min[2];
     });
@@ -324,7 +329,7 @@ export const startGame = async ({
     // remote players rendering
     realms.players.addEventListener('join', e => {
       const {playerId, player} = e.data;
-      console.log('join', e.data);
+      // console.log('join', e.data);
 
       if (playerId !== realms.playerId) {
         const remotePlayer = player;
@@ -337,7 +342,7 @@ export const startGame = async ({
     });
     realms.players.addEventListener('leave', e => {
       const {playerId} = e.data;
-      console.log('leave', e.data);
+      // console.log('leave', e.data);
 
       if (playerId !== realms.playerId) {
         const remotePlayerCanvas = remotePlayerCanvases.get(playerId);

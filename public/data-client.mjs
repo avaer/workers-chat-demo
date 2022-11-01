@@ -1209,16 +1209,16 @@ export class NetworkedDataClient extends EventTarget {
 
     const mainMessage = e => {
       if (e.data.constructor === ArrayBuffer) {
-        if (e.data.byteLength === 0) {
-          debugger;
-        }
+        // if (e.data.byteLength === 0) {
+        //   debugger;
+        // }
 
         const updateBuffer = e.data;
         const uint8Array = new Uint8Array(updateBuffer);
         const updateObject = parseUpdateObject(uint8Array);
         
         const {method} = updateObject;
-        // console.log('got message', e.data, updateObject, NetworkedDataClient.handlesMethod(method));
+        // console.log('got message', updateObject);
         if (NetworkedDataClient.handlesMethod(method)) {
           const {
             rollback,
