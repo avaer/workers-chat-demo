@@ -60,7 +60,7 @@ export const startGame = async ({
     return el.min[0] === realm.min[0] && el.min[2] === realm.min[2];
   });
 
-  const onentityadd2 = e => {
+  /* const onentityadd2 = e => {
     // const {entity} = e.data;
     // console.log('world app entity add', e.data);
   };
@@ -68,7 +68,7 @@ export const startGame = async ({
   const onentityremove2 = e => {
     // console.log('world app entity remove', e.data);
   };
-  realms.getVirtualWorld().worldApps.addEventListener('entityremove', onentityremove2);
+  realms.getVirtualWorld().worldApps.addEventListener('entityremove', onentityremove2); */
 
   realms.addEventListener('realmjoin', e => {
     const {realm} = e.data;
