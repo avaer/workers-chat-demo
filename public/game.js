@@ -193,6 +193,11 @@ export const startGame = async ({
     S: false,
     D: false,
   };
+  const _resetKeys = () => {
+    for (const k in keyState) {
+      keyState[k] = false;
+    }
+  };
   const mouseState = {
     buttons: 0,
     x: 0,
@@ -223,15 +228,24 @@ export const startGame = async ({
     localPlayerCanvas = new GamePlayerCanvas(realms.localPlayer, {
       local: true,
     });
+
+    // controls tracking
     let localPlayerFocused = true;
     localPlayerCanvas.element.addEventListener('focus', e => {
-      // console.log('character focus 1');
       localPlayerFocused = true;
     });
     localPlayerCanvas.element.addEventListener('blur', e => {
-      // console.log('character blur 1');
       localPlayerFocused = false;
     });
+
+    // reset keys on blur
+    window.document.addEventListener('contextmenu', e => {
+      _resetKeys();
+    });
+    window.addEventListener('blur', e => {
+      _resetKeys();
+    });
+
     window.addEventListener('keydown', e => {
       // if it's Ctrl, ignore
       if (e.ctrlKey) {
@@ -240,37 +254,35 @@ export const startGame = async ({
         e.preventDefault();
         e.stopPropagation();
         
-        // if (!e.repeat) {
-          if (localPlayerFocused) {
-            // WASD
-            switch (e.code) {
-              case 'KeyW': {
-                keyState.W = true;
-                // localPlayerCanvas.velocity[2] = -1;
-                break;
-              }
-              case 'KeyA': {
-                keyState.A = true;
-                // localPlayerCanvas.velocity[0] = -1;
-                break;
-              }
-              case 'KeyS': {
-                keyState.S = true;
-                // localPlayerCanvas.velocity[2] = 1;
-                break;
-              }
-              case 'KeyD': {
-                keyState.D = true;
-                // localPlayerCanvas.velocity[0] = 1;
-                break;
-              }
-              case 'KeyE': {
-                _pickupDrop();
-                break;
-              }
+        if (localPlayerFocused) {
+          // WASD
+          switch (e.code) {
+            case 'KeyW': {
+              keyState.W = true;
+              // localPlayerCanvas.velocity[2] = -1;
+              break;
+            }
+            case 'KeyA': {
+              keyState.A = true;
+              // localPlayerCanvas.velocity[0] = -1;
+              break;
+            }
+            case 'KeyS': {
+              keyState.S = true;
+              // localPlayerCanvas.velocity[2] = 1;
+              break;
+            }
+            case 'KeyD': {
+              keyState.D = true;
+              // localPlayerCanvas.velocity[0] = 1;
+              break;
+            }
+            case 'KeyE': {
+              _pickupDrop();
+              break;
             }
           }
-        // }
+        }
       }
     });
     window.addEventListener('keyup', e => {
@@ -281,38 +293,24 @@ export const startGame = async ({
         e.preventDefault();
         e.stopPropagation();
 
-        // if (!e.repeat) {
-          switch (e.code) {
-            case 'KeyW': {
-              keyState.W = false;
-              // if (localPlayerCanvas.velocity[2] === -1) {
-              //   localPlayerCanvas.velocity[2] = 0;
-              // }
-              break;
-            }
-            case 'KeyA': {
-              keyState.A = false;
-              // if (localPlayerCanvas.velocity[0] === -1) {
-              //   localPlayerCanvas.velocity[0] = 0;
-              // }
-              break;
-            }
-            case 'KeyS': {
-              keyState.S = false;
-              // if (localPlayerCanvas.velocity[2] === 1) {
-              //   localPlayerCanvas.velocity[2] = 0;
-              // }
-              break;
-            }
-            case 'KeyD': {
-              keyState.D = false;
-              // if (localPlayerCanvas.velocity[0] === 1) {
-              //   localPlayerCanvas.velocity[0] = 0;
-              // }
-              break;
-            }
+        switch (e.code) {
+          case 'KeyW': {
+            keyState.W = false;
+            break;
           }
-        // }
+          case 'KeyA': {
+            keyState.A = false;
+            break;
+          }
+          case 'KeyS': {
+            keyState.S = false;
+            break;
+          }
+          case 'KeyD': {
+            keyState.D = false;
+            break;
+          }
+        }
       }
     });
     localPlayerCanvas.element.focus();
