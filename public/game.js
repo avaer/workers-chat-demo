@@ -277,6 +277,10 @@ export const startGame = async ({
               _pickupDrop();
               break;
             }
+            case 'KeyT': {
+              realms.toggleMic();
+              break;
+            }
           }
         }
       }

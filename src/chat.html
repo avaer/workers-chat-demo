@@ -1288,18 +1288,17 @@ function join() {
     // }
     {
       const div = document.createElement('p');
+      div.id = 'record';
       div.classList.add('message');
       div.innerHTML = `<a href="#">Record</a>`;
-      let recording = false;
+      realms.addEventListener('micenabled', e => {
+        div.childNodes[0].innerText = 'Stop';
+      });
+      realms.addEventListener('micdisabled', e => {
+        div.childNodes[0].innerText = 'Record';
+      });
       div.childNodes[0].addEventListener('click', e => {
-        if (!recording) {
-          div.childNodes[0].innerText = 'Stop';
-          realms.enableMic();
-        } else {
-          div.childNodes[0].innerText = 'Record';
-          realms.disableMic();
-        }
-        recording = !recording;
+        realms.toggleMic();
       });
       pushChat(div);
     }

@@ -1566,16 +1566,30 @@ export class NetworkRealms extends EventTarget {
     }
     return null;
   }
+  isMicEnabled() {
+    return !!this.microphoneSource;
+  }
+  toggleMic() {
+    if (!this.isMicEnabled()) {
+      this.enableMic();
+    } else {
+      this.disableMic();
+    }
+  }
   async enableMic() {
     if (!this.microphoneSource) {
       this.microphoneSource = await createMicrophoneSource();
+
+      this.dispatchEvent(new MessageEvent('micenabled', {
+        data: {},
+      }));
       
       // XXX this should only connect to the local player's head realm, with correct migration
-      return;
-      for (const realm of this.connectedRealms) {
+      // XXX or, it should go to the head tracked realm
+      /* for (const realm of this.connectedRealms) {
         const {networkedAudioClient} = realm;
         networkedAudioClient.addMicrophoneSource(this.microphoneSource);
-      }
+      } */
     } else {
       debugger;
     }
@@ -1590,6 +1604,10 @@ export class NetworkRealms extends EventTarget {
       this.microphoneSource.destroy();
 
       this.microphoneSource = null;
+
+      this.dispatchEvent(new MessageEvent('micdisabled', {
+        data: {},
+      }));
     } else {
       debugger;
     }
