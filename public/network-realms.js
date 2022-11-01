@@ -1280,13 +1280,13 @@ export class NetworkRealm extends EventTarget {
     // players
     const playerIds = playersArray.getKeys();
     for (const playerId of playerIds) {
-      if (playerId === this.parent.playerId) {
-        debugger;
-        throw new Error('would have removed self during clear!');
-      }
-      if (typeof playerId !== 'string' || typeof this.parent.playerId !== 'string') {
-        debugger;
-      }
+      // if (playerId === this.parent.playerId) {
+      //   debugger;
+      //   throw new Error('would have removed self during clear!');
+      // }
+      // if (typeof playerId !== 'string' || typeof this.parent.playerId !== 'string') {
+      //   debugger;
+      // }
 
       const playerAppsArray = this.dataClient.getArray('playerApps:' + playerId, {
         listen: false,
@@ -1464,6 +1464,9 @@ export class NetworkRealms extends EventTarget {
         }
       } */
 
+      // migrate networked audio client
+      realms.migrateAudioRealm(oldHeadRealm, newHeadRealm);
+
       await realms.sync();
 
       // delete old
@@ -1587,12 +1590,13 @@ export class NetworkRealms extends EventTarget {
         data: {},
       }));
       
-      // XXX this should only connect to the local player's head realm, with correct migration
-      // XXX or, it should go to the head tracked realm
-      /* for (const realm of this.connectedRealms) {
-        const {networkedAudioClient} = realm;
-        networkedAudioClient.addMicrophoneSource(this.microphoneSource);
-      } */
+      // get the head realm from the local player
+      const headRealm = this.localPlayer.headTracker.getHeadRealm();
+      if (!headRealm) {
+        debugger;
+      }
+      const {networkedAudioClient} = headRealm;
+      networkedAudioClient.addMicrophoneSource(this.microphoneSource);
     } else {
       debugger;
     }
@@ -1603,6 +1607,12 @@ export class NetworkRealms extends EventTarget {
         const {networkedAudioClient} = realm;
         networkedAudioClient.removeMicrophoneSource(this.microphoneSource);
       } */
+      const headRealm = this.localPlayer.headTracker.getHeadRealm();
+      if (!headRealm) {
+        debugger;
+      }
+      const {networkedAudioClient} = headRealm;
+      networkedAudioClient.removeMicrophoneSource(this.microphoneSource);
 
       this.microphoneSource.destroy();
 
@@ -1613,6 +1623,14 @@ export class NetworkRealms extends EventTarget {
       }));
     } else {
       debugger;
+    }
+  }
+  migrateAudioRealm(oldRealm, newRealm) {
+    if (this.microphoneSource) {
+      const {networkedAudioClient: oldNetworkedAudioClient} = oldRealm;
+      const {networkedAudioClient: newNetworkedAudioClient} = newRealm;
+      oldNetworkedAudioClient.removeMicrophoneSource(this.microphoneSource);
+      newNetworkedAudioClient.addMicrophoneSource(this.microphoneSource);
     }
   }
   sendChatMessage(message) {
