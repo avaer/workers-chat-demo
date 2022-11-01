@@ -160,25 +160,21 @@ class HeadTracker extends EventTarget {
       } else {
         const oldHeadRealm = this.#cachedHeadRealm;
         if (newHeadRealm.key !== oldHeadRealm.key) {          
-          // only try to migrate if we are not curerntly reconfiguring the network (tx busy)
-          // if (!this.#connectedRealms.keys().next().value.parent.tx.running) {
-            this.#cachedHeadRealm = newHeadRealm;
-            // console.log('replace head realm', newHeadRealm.key);
+          this.#cachedHeadRealm = newHeadRealm;
             
-            this.onMigrate && await this.onMigrate(new MessageEvent('migrate', {
-              data: {
-                oldHeadRealm,
-                newHeadRealm,
-              },
-            }));
-          // }
-          // throw new Error('migration happening outside of a lock -- wrap in realms.tx()');
+          this.onMigrate && await this.onMigrate(new MessageEvent('migrate', {
+            data: {
+              oldHeadRealm,
+              newHeadRealm,
+            },
+          }));
         } else {
-          console.log('keys same');
+          console.log('keys same! why are you updating me?');
+          debugger;
         }
       }
     } else {
-      // debugger;
+      debugger;
       throw new Error('try to get head realm for fully unlinked player ' + this.playerId);
     }
   }
@@ -186,17 +182,11 @@ class HeadTracker extends EventTarget {
     return this.#connectedRealms.size > 0;
   }
   linkRealm(realm) {
-    /* if (this.#connectedRealms.has(realm)) {
-      debugger;
-    } */
     let val = this.#connectedRealms.get(realm) ?? 0;
     val++;
     this.#connectedRealms.set(realm, val);
   }
   unlinkRealm(realm) {
-    if (!this.#connectedRealms.has(realm)) {
-      debugger;
-    }
     let val = this.#connectedRealms.get(realm);
     val--;
     if (val <= 0) {
@@ -204,34 +194,6 @@ class HeadTracker extends EventTarget {
     }
   }
 }
-/* class ReadableHeadTracker extends EventTarget {
-  constructor(writable) {
-    super();
-
-    this.writable = writable;
-
-    writable.addEventListener('migrate', e => {
-      this.dispatchEvent(new MessageEvent('migrate', {
-        data: e.data,
-      }));
-    });
-  }
-  getHeadRealm() {
-    return this.writable.getHeadRealm();
-  }
-  setHeadRealm(realm) {
-    // nothing
-  }
-  linkRealm(realm) {
-    // nothing
-  }
-  unlinkRealm(realm) {
-    // nothing
-  }
-  updateHeadRealm(headPosition) {
-    // nothing
-  }
-} */
 
 //
 
