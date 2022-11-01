@@ -1255,8 +1255,8 @@ function join() {
   // If we are running via wrangler dev, use ws:
   // const wss = document.location.protocol === "http:" ? "ws://" : "wss://";
   // let ws = new WebSocket(wss + hostname + "/api/room/" + roomname + "/websocket?playerId=" + playerId);
-  const ws = createTestWs();
-  ws.binaryType = 'arraybuffer';
+  // const ws = createTestWs();
+  // ws.binaryType = 'arraybuffer';
   let rejoined = false;
   let startTime = Date.now();
 
@@ -1351,7 +1351,7 @@ function join() {
     }
   }); */
 
-  const interval = setInterval(() => {
+  /* const interval = setInterval(() => {
     ws.send(JSON.stringify({method: 'ping'}));
   }, 5000);
   ws.addEventListener("close", event => {
@@ -1362,7 +1362,7 @@ function join() {
   ws.addEventListener("error", event => {
     console.log("WebSocket error, reconnecting:", event);
     rejoin();
-  });
+  }); */
 }
 
 function addChatMessage(name, text) {
