@@ -1344,13 +1344,7 @@ export class NetworkRealms extends EventTarget {
             }));
 
             const connectPromise = (async () => {
-              // try to connect
-              // this.players.link(realm);
-              // this.localPlayer.link(realm);
-              // this.world.link(realm);
-              // this.irc.link(realm);
-              
-              try {
+              // try {
                 await realm.connect();
 
                 this.players.link(realm);
@@ -1367,16 +1361,10 @@ export class NetworkRealms extends EventTarget {
                     realm,
                   },
                 }));
-              } catch (err) {
-                console.warn(err.stack);
-                throw err;
-                /* realm.dispatchEvent(new Event('connecterror'));
-                this.dispatchEvent(new MessageEvent('realmconnecterror', {
-                  data: {
-                    realm,
-                  },
-                })); */
-              }
+              // } catch (err) {
+              //   console.warn(err.stack);
+              //   throw err;
+              // }
             })();
             connectPromises.push(connectPromise);
           }
@@ -1386,12 +1374,9 @@ export class NetworkRealms extends EventTarget {
         // if this is the first network configuration, initialize our local player
         if (oldNumConnectedRealms === 0 && connectPromises.length > 0) {
           onConnect && onConnect(position);
-        } // else {
-          // migrate localPlayer if needed
-          // console.log('pre-migrate 1', position);
-          await this.localPlayer.headTracker.updateHeadRealm(position);
-          // console.log('post-migrate 1');
-        // }
+        }
+        // we are in the middle of a network configuration, so take the opportunity to migrate the local player if necessary
+        await this.localPlayer.headTracker.updateHeadRealm(position);
 
         // check if we need to disconnect from any realms
         const oldRealms = [];
