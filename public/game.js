@@ -82,16 +82,24 @@ export const startGame = async ({
 
   realms.addEventListener('realmjoin', e => {
     const {realm} = e.data;
-    const el = getRealmElement(realm);
     
     const {dataClient, networkedDataClient} = realm;
-    dataClient.addEventListener('syn', e => {
+    
+    const onsyn = e => {
       // console.log('send syn', e.data);
       const {synId} = e.data;
       const synAckMessage = dataClient.getSynAckMessage(synId);
       networkedDataClient.emitUpdate(synAckMessage);
-    });
+    };
+    dataClient.addEventListener('syn', onsyn);
 
+    const cleanupFns = [
+      () => {
+        dataClient.removeEventListener('syn', onsyn);
+      },
+    ];
+    
+    const el = getRealmElement(realm);
     if (el) {
       el.classList.add('connected');
       el.classList.remove('connecting');
@@ -152,17 +160,20 @@ export const startGame = async ({
       };
       virtualWorld.worldApps.addEventListener('needledentityremove', onentityremove3);
   
-      realmCleanupFns.set(realm, () => {
+      cleanupFns.push(() => {
         dataClient.removeEventListener('add', onadd);
         dataClient.removeEventListener('remove', onremove);
         virtualWorld.worldApps.removeEventListener('needledentityadd', onentityadd3);
         virtualWorld.worldApps.removeEventListener('needledentityremove', onentityremove3);
 
         playersArray.unlisten();
-
-        // console.log('game players array cancel on realm', realm.key);
       });
     }
+    realmCleanupFns.set(realm, () => {
+      for (const cleanupFn of cleanupFns) {
+        cleanupFn();
+      }
+    });
   });
   realms.addEventListener('realmleave', e => {
     const {realm} = e.data;
@@ -172,10 +183,9 @@ export const startGame = async ({
     if (el) {
       el.classList.remove('connected');
       el.classList.remove('connecting');
-
-      realmCleanupFns.get(realm)();
-      realmCleanupFns.delete(realm);
     }
+    realmCleanupFns.get(realm)();
+    realmCleanupFns.delete(realm);
   });
 
   // local objects
