@@ -729,25 +729,11 @@ class VirtualPlayersArray extends EventTarget {
       playersArray.addEventListener('add', onadd);
 
       const onremove = e => {
-        // console.log('got player remove', e.data);
+        // console.log('got player remove', e.data, realm.key, this, new Error().stack);
         const {arrayIndexId} = e.data;
         _unlinkPlayer(arrayIndexId);
       };
       playersArray.addEventListener('remove', onremove);
-
-      /* const importArrayKey = 'importArray.' + this.arrayId;
-      const onimportarray = e => {
-        console.log('got player importarray', e.data);
-        // const {arrayIndexId} = e.data;
-      };
-      dataClient.addEventListener(importArrayKey, onimportarray);
-
-      const importMapKey = 'importMap.' + this.arrayId;
-      const onimportmap = e => {
-        const {arrayIndexId} = e.data;
-        _linkPlayer(arrayIndexId);
-      };
-      dataClient.addEventListener(importMapKey, onimportmap); */
 
       // link initial players
       for (const arrayIndexId of playersArray.getKeys()) {
@@ -759,9 +745,6 @@ class VirtualPlayersArray extends EventTarget {
 
         playersArray.removeEventListener('add', onadd);
         playersArray.removeEventListener('remove', onremove);
-
-        // dataClient.removeEventListener(importArrayKey, onimportarray);
-        // dataClient.removeEventListener(importMapKey, onimportmap);
       });
     };
     _linkData();
