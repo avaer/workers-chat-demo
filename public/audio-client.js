@@ -39,7 +39,7 @@ const stopMediaStream = mediaStream => {
     track.stop();
   }
 };
-async function createMicrophoneSource() {
+export async function createMicrophoneSource() {
   const audioContext = await ensureAudioContext();
   audioContext.resume();
   
