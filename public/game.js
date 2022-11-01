@@ -383,11 +383,6 @@ export const startGame = async ({
           targetRealm
         );
 
-        // XXX collidedVirtualMap needs to get the new headTracker
-        if (!realms.localPlayer.headTracker) {
-          debugger;
-        }
-
         // add new action
         const action = {
           position: targetPosition,
