@@ -1080,7 +1080,7 @@ export class NetworkRealms extends EventTarget {
       });
 
       // new objects
-      const newPlayersArray = newHeadRealm.dataClient.getArray(this.localPlayer.arrayId, {
+      /* const newPlayersArray = newHeadRealm.dataClient.getArray(this.localPlayer.arrayId, {
         listen: false,
       });
       const newPlayerAppsArray = newHeadRealm.dataClient.getArray('playerApps:' + this.playerId, {
@@ -1088,7 +1088,8 @@ export class NetworkRealms extends EventTarget {
       });
       const newPlayerActionsArray = newHeadRealm.dataClient.getArray('playerActions:' + this.playerId, {
         listen: false,
-      });
+      }); */
+
       // set dead hands
       const deadHandKeys = [
         this.localPlayer.arrayId + '.' + this.localPlayer.arrayIndexId, // player
@@ -1264,15 +1265,12 @@ export class NetworkRealms extends EventTarget {
       const {networkedAudioClient} = headRealm;
       networkedAudioClient.addMicrophoneSource(this.microphoneSource);
     } else {
-      debugger;
+      // debugger;
     }
   }
   disableMic() {
     if (this.microphoneSource) {
       const headRealm = this.localPlayer.headTracker.getHeadRealm();
-      if (!headRealm) {
-        debugger;
-      }
       const {networkedAudioClient} = headRealm;
       networkedAudioClient.removeMicrophoneSource(this.microphoneSource);
 
@@ -1284,7 +1282,7 @@ export class NetworkRealms extends EventTarget {
         data: {},
       }));
     } else {
-      debugger;
+      // debugger;
     }
   }
   migrateAudioRealm(oldRealm, newRealm) {
