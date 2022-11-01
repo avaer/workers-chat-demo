@@ -1368,57 +1368,51 @@ export class NetworkRealms extends EventTarget {
       appsEntityTracker: this.appsEntityTracker,
       // actionsEntityTracker: this.actionsEntityTracker,
     });
-    this.localPlayer.headTracker.onMigrate = async function(e) { // note: binding local this -> this.localPlayer
+    this.localPlayer.headTracker.onMigrate = async e => {
       const {oldHeadRealm, newHeadRealm} = e.data;
 
       console.log('migrate', oldHeadRealm.key, '->', newHeadRealm.key);
-// try {
 
       // old objects
-      const oldPlayersArray = oldHeadRealm.dataClient.getArray(this.arrayId, {
+      const oldPlayersArray = oldHeadRealm.dataClient.getArray(this.localPlayer.arrayId, {
         listen: false,
       });
-      const oldPlayerAppsArray = oldHeadRealm.dataClient.getArray('playerApps:' + this.realms.playerId, {
+      const oldPlayerAppsArray = oldHeadRealm.dataClient.getArray('playerApps:' + this.playerId, {
         listen: false,
       });
-      const oldPlayerActionsArray = oldHeadRealm.dataClient.getArray('playerActions:' + this.realms.playerId, {
+      const oldPlayerActionsArray = oldHeadRealm.dataClient.getArray('playerActions:' + this.playerId, {
         listen: false,
       });
-      const oldPlayerMap = oldPlayersArray.getMap(this.realms.playerId, {
+      const oldPlayerMap = oldPlayersArray.getMap(this.playerId, {
         listen: false,
       });
 
       // new objects
-      const newPlayersArray = newHeadRealm.dataClient.getArray(this.arrayId, {
+      const newPlayersArray = newHeadRealm.dataClient.getArray(this.localPlayer.arrayId, {
         listen: false,
       });
-      const newPlayerAppsArray = newHeadRealm.dataClient.getArray('playerApps:' + this.realms.playerId, {
+      const newPlayerAppsArray = newHeadRealm.dataClient.getArray('playerApps:' + this.playerId, {
         listen: false,
       });
-      const newPlayerActionsArray = newHeadRealm.dataClient.getArray('playerActions:' + this.realms.playerId, {
+      const newPlayerActionsArray = newHeadRealm.dataClient.getArray('playerActions:' + this.playerId, {
         listen: false,
       });
       // set dead hands
       const deadHandKeys = [
-        this.arrayId + '.' + this.arrayIndexId, // player
-        'playerApps:' + this.arrayIndexId, // playerApps
-        'playerActions:' + this.arrayIndexId, // playerActions
+        this.localPlayer.arrayId + '.' + this.localPlayer.arrayIndexId, // player
+        'playerApps:' + this.localPlayer.arrayIndexId, // playerApps
+        'playerActions:' + this.localPlayer.arrayIndexId, // playerActions
       ];
       const _emitDeadHands = realm => {
-        const deadHandupdate = realm.dataClient.deadHandKeys(deadHandKeys, this.realms.playerId);
+        const deadHandupdate = realm.dataClient.deadHandKeys(deadHandKeys, this.playerId);
         realm.emitUpdate(deadHandupdate);
       };
-      // const _emitLiveHands = realm => {
-      //   const liveHandupdate = realm.dataClient.liveHandKeys(deadHandKeys, this.realms.playerId);
-      //   realm.emitUpdate(liveHandupdate);
-      // };
       _emitDeadHands(oldHeadRealm);
       _emitDeadHands(newHeadRealm);
 
       // add new
       // import apps
       const _applyMessageToRealm = (realm, message) => {
-        // console.log('apply message to realm', message);
         const uint8Array = serializeMessage(message);
         const updateObject = parseUpdateObject(uint8Array);
         const {
@@ -1436,33 +1430,21 @@ export class NetworkRealms extends EventTarget {
           throw new Error('migrate failed 2');
         }
       };
-      const playerAppsImportMessages = oldPlayerAppsArray.importArrayUpdates();
-      for (const m of playerAppsImportMessages) {
-        _applyMessageToRealm(newHeadRealm, m);
-      }
-      // import actions
-      const playerActionsImportMessages = oldPlayerActionsArray.importArrayUpdates();
-      for (const m of playerActionsImportMessages) {
-        _applyMessageToRealm(newHeadRealm, m);
-      }
-      // import player
-      const playerImportMessage = oldPlayerMap.importMapUpdate();
-      _applyMessageToRealm(newHeadRealm, playerImportMessage);
-      /* {
-        const oldPlayer = oldPlayersArray.getMap(this.realms.playerId, {
-          listen: false,
-        });
-        const oldEpoch = oldPlayer.getMapEpoch();
-        const newPlayer = newPlayersArray.getMap(this.realms.playerId, {
-          listen: false,
-        });
-        const newEpoch = newPlayer.getMapEpoch();
-        // console.log('post migrate epoch', [oldEpoch, newEpoch], playerImportMessage);
-        if (oldEpoch >= newEpoch) {
-          debugger;
-          throw new Error('migrate failed 3');
+      const _importPlayer = () => {
+        const playerAppsImportMessages = oldPlayerAppsArray.importArrayUpdates();
+        for (const m of playerAppsImportMessages) {
+          _applyMessageToRealm(newHeadRealm, m);
         }
-      } */
+        // import actions
+        const playerActionsImportMessages = oldPlayerActionsArray.importArrayUpdates();
+        for (const m of playerActionsImportMessages) {
+          _applyMessageToRealm(newHeadRealm, m);
+        }
+        // import player
+        const playerImportMessage = oldPlayerMap.importMapUpdate();
+        _applyMessageToRealm(newHeadRealm, playerImportMessage);
+      };
+      _importPlayer();
 
       // migrate networked audio client
       realms.migrateAudioRealm(oldHeadRealm, newHeadRealm);
@@ -1471,27 +1453,22 @@ export class NetworkRealms extends EventTarget {
 
       // delete old
       // delete apps
-      for (const arrayIndexId of oldPlayerAppsArray.getKeys()) {
-        const update = oldPlayerAppsArray.removeAt(arrayIndexId);
-        oldHeadRealm.emitUpdate(update);
-      }
-      // delete actions
-      for (const arrayIndexId of oldPlayerActionsArray.getKeys()) {
-        const update = oldPlayerActionsArray.removeAt(arrayIndexId);
-        oldHeadRealm.emitUpdate(update);
-      }
-      // delete player
-      const oldPlayerRemoveUpdate = oldPlayerMap.removeUpdate();
-      oldHeadRealm.emitUpdate(oldPlayerRemoveUpdate);
-
-      // _emitLiveHands(oldHeadRealm);
-
-//       console.log('migrate 2');
-// } catch (err) {
-//   console.warn(err.stack);
-//   throw err;
-// }
-    }.bind(this.localPlayer);
+      const _deleteOldArrayMaps = () => {
+        for (const arrayIndexId of oldPlayerAppsArray.getKeys()) {
+          const update = oldPlayerAppsArray.removeAt(arrayIndexId);
+          oldHeadRealm.emitUpdate(update);
+        }
+        // delete actions
+        for (const arrayIndexId of oldPlayerActionsArray.getKeys()) {
+          const update = oldPlayerActionsArray.removeAt(arrayIndexId);
+          oldHeadRealm.emitUpdate(update);
+        }
+        // delete player
+        const oldPlayerRemoveUpdate = oldPlayerMap.removeUpdate();
+        oldHeadRealm.emitUpdate(oldPlayerRemoveUpdate);
+      };
+      _deleteOldArrayMaps();
+    };
     
     this.irc = new VirtualIrc(this);
     this.connectedRealms = new Set();
@@ -1514,9 +1491,7 @@ export class NetworkRealms extends EventTarget {
             realm.min[2] + realm.size,
           ],
         };
-        // console.log('check box', box.min, box.max, position);
         if (boxContains(box, position)) {
-          // console.log('got head', realm.min);
           return realm;
         }
       }
@@ -1569,7 +1544,6 @@ export class NetworkRealms extends EventTarget {
         // throw new Error('expected at least 1 player');
       }
     });
-    // console.log('num promises', promises.length);
     await Promise.all(promises);
   }
   isMicEnabled() {
@@ -1603,10 +1577,6 @@ export class NetworkRealms extends EventTarget {
   }
   disableMic() {
     if (this.microphoneSource) {
-      /* for (const realm of this.connectedRealms) {
-        const {networkedAudioClient} = realm;
-        networkedAudioClient.removeMicrophoneSource(this.microphoneSource);
-      } */
       const headRealm = this.localPlayer.headTracker.getHeadRealm();
       if (!headRealm) {
         debugger;
