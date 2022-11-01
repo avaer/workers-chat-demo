@@ -84,6 +84,28 @@ export const startGame = async ({
       el.classList.remove('connecting');
 
       const {dataClient} = realm;
+      
+      const {networkedDataClient} = realm;
+      /* setInterval(() => {
+        console.log('send syn');
+        const synMessage = dataClient.getSynMessage();
+        networkedDataClient.emitUpdate(synMessage);
+      }, 2 * 1000); */
+
+      window.sync = synId => {
+        const synMessage = dataClient.getSynMessage(synId);
+        networkedDataClient.emitUpdate(synMessage);
+      };
+
+      dataClient.addEventListener('syn', e => {
+        // console.log('got syn', e.data);
+        const {synId} = e.data;
+        const synAckMessage = dataClient.getSynAckMessage(synId);
+        networkedDataClient.emitUpdate(synAckMessage);
+      });
+      /* this.addEventListener('synAck', e => {
+        console.log('got synack', e.data);
+      }); */
 
       el.updateText(dataClient);
 

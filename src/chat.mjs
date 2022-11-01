@@ -376,6 +376,7 @@ export class ChatRoom {
 
     const playerId = url.searchParams.get('playerId');
     if (!playerId) {
+      console.log('closing due to no playerId');
       webSocket.close();
       return;
     }
@@ -594,11 +595,6 @@ export class ChatRoom {
       if (NetworkedAudioClient.handlesMethod(method)) {
         proxyMessageToPeers(uint8Array);
       }
-      /* if (method === UPDATE_METHODS.SYNC) {
-        const syncMessage = dataClient.getSyncMessage();
-        const uint8Array = serializeMessage(syncMessage);
-        respondToSelf(uint8Array);
-      } */
     };
 
     const _sendJoinMessage = () => {
@@ -614,6 +610,7 @@ export class ChatRoom {
     _sendJoinMessage(playerId);
 
     const _sendLeaveMessage = () => {
+      console.log('send leave message', roomName, playerId);
       const leaveMessage = new MessageEvent('leave', {
         data: {
           playerId,
@@ -634,6 +631,7 @@ export class ChatRoom {
           // close(), which might throw, in which case we'll try to send an error, which will also
           // throw, and whatever, at least we won't accept the message. (This probably can't
           // actually happen. This is defensive coding.)
+          console.log('closing due to webasocket broken');
           webSocket.close(1011, "WebSocket broken.");
           return;
         }

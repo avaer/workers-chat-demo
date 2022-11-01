@@ -324,6 +324,9 @@ class EntityTracker extends EventTarget {
     // sanityCheck();
 
     virtualMap.link(map.arrayId, realm);
+
+    // console.log('entity tracker link', map.arrayId, map.arrayIndexId, added);
+
     // sanityCheck();
     if (added) {
       this.dispatchEvent(new MessageEvent('entityadd', {
@@ -356,9 +359,9 @@ class EntityTracker extends EventTarget {
   #linkInternal(arrayId, realm) {
     const key = arrayId + ':' + realm.key;
 
-    if (this.cleanupFns.get(key)) {
-      debugger;
-    }
+    // if (this.cleanupFns.get(key)) {
+    //   debugger;
+    // }
 
     if (!this.linkStacks) {
       this.linkStacks = new Map();
@@ -575,6 +578,8 @@ class VirtualPlayer extends HeadTrackedEntity {
     _initializePlayer();
   }
   link(realm) {
+    // console.log('player link', this.arrayIndexId, realm.key, new Error().stack);
+
     const {dataClient} = realm;
     const map = dataClient.getArrayMap(this.arrayId, this.arrayIndexId); // note: this map might not exist in the crdt yet
     const update = e => {
@@ -604,6 +609,9 @@ class VirtualPlayer extends HeadTrackedEntity {
     this.headTracker.linkRealm(realm);
 
     // cleanup
+    if (this.cleanupMapFns.has(realm)) {
+      debugger;
+    }
     this.cleanupMapFns.set(realm, () => {
       this.headTracker.unlinkRealm(realm);
       
@@ -615,6 +623,10 @@ class VirtualPlayer extends HeadTrackedEntity {
     });
   }
   unlink(realm) {
+    // console.log('player unlink', this.arrayIndexId, realm.key);
+    // if (!this.cleanupMapFns.has(realm)) {
+    //   debugger;
+    // }
     this.cleanupMapFns.get(realm)();
     this.cleanupMapFns.delete(realm);
   }
@@ -685,6 +697,7 @@ class VirtualPlayersArray extends EventTarget {
           const created = !this.virtualPlayers.has(playerId);
           const virtualPlayer = this.getOrCreateVirtualPlayer(playerId);
           virtualPlayer.link(realm);
+
           if (created) {
             this.dispatchEvent(new MessageEvent('join', {
               data: {
@@ -703,7 +716,10 @@ class VirtualPlayersArray extends EventTarget {
         } else {
           const virtualPlayer = this.virtualPlayers.get(playerId);
           if (virtualPlayer) {
+            // XXX this needs to handle the case where the user has moved across realms and then leaves
+            // XXX this realm will be the same as when the player joined
             virtualPlayer.unlink(realm);
+
             if (!virtualPlayer.headTracker.isLinked()) {
               this.virtualPlayers.delete(playerId);
               
@@ -737,6 +753,7 @@ class VirtualPlayersArray extends EventTarget {
 
       // link initial players
       for (const arrayIndexId of playersArray.getKeys()) {
+        console.log('got player initial', arrayIndexId);
         _linkPlayer(arrayIndexId);
       }
 
@@ -796,8 +813,10 @@ class VirtualEntityArray extends VirtualPlayersArray {
 
     const onentityadd = e => {
       // console.log('entity add', e.data);
-      
       const {entityId, entity} = e.data;
+
+      // console.log('entity add', arrayId, entityId, entity);
+      
       // sanityCheck();
       const needledEntity = new NeedledVirtualEntityMap(arrayId, entity);
 
@@ -805,6 +824,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
 
       needledEntity.cleanupFn = () => {
         needledEntity.destroy();
+
         this.dispatchEvent(new MessageEvent('needledentityremove', {
           data: {
             entityId,

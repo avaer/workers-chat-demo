@@ -496,9 +496,22 @@ export class DataClient extends EventTarget {
           ],
         });
       }
-      case 'sync': {
+      case 'syn': {
+        const {synId} = parsedMessage;
         return zbencode({
-          method: UPDATE_METHODS.SYNC,
+          method: UPDATE_METHODS.SYN,
+          args: [
+            synId,
+          ],
+        });
+      }
+      case 'synAck': {
+        const {synId} = parsedMessage;
+        return zbencode({
+          method: UPDATE_METHODS.SYN_ACK,
+          args: [
+            synId,
+          ],
         });
       }
       case 'set': {
@@ -598,8 +611,25 @@ export class DataClient extends EventTarget {
       },
     });
   }
-  getSyncMessage() {
-    return new MessageEvent('sync');
+  getSynMessage(synId) {
+    if (!synId) {
+      debugger;
+    }
+    return new MessageEvent('syn', {
+      data: {
+        synId,
+      },
+    });
+  }
+  getSynAckMessage(synId) {
+    if (!synId) {
+      debugger;
+    }
+    return new MessageEvent('synAck', {
+      data: {
+        synId,
+      },
+    });
   }
   deadHandKeys(keys, deadHand) {
     return new MessageEvent('deadhand', {
@@ -639,6 +669,7 @@ export class DataClient extends EventTarget {
   applyUpdateObject(updateObject, {
     force = false, // force if it's coming from the server
   } = {}) {
+    // console.log('apply update object', updateObject);
     let rollback = null;
     let update = null;
 
@@ -707,11 +738,6 @@ export class DataClient extends EventTarget {
           debugger;
         }
         this.crdt.set(key, crdtWrap);
-        // if (arrayId === 'players') {
-        //   // console.log('add epoch 1', key, epoch);
-        //   const map = new DCMap(arrayId, arrayIndexId, this);
-        //   // console.log('add epoch 2', key, epoch, [key, map.key(), key === map.key()], map.dataClient.crdt.get(key), map.getMapEpoch());
-        // }
         
         let array = this.crdt.get(arrayId);
         if (!array) {
@@ -750,25 +776,6 @@ export class DataClient extends EventTarget {
             // arrayId,
             arrayIndexId,
           },
-        });
-        break;
-      }
-      case UPDATE_METHODS.REMOVE_ARRAY: {
-        const [arrayId] = args;
-        let array = this.crdt.get(arrayId);
-        if (!array) {
-          throw new Error('remove from nonexistent array: ' + arrayId);
-        }
-        const mapKeys = Object.keys(array);
-        delete array[arrayId];
-
-        // remove the maps, too
-        for (const mapKey of mapKeys) {
-          this.crdt.delete(mapKey);
-        }
-
-        update = new MessageEvent('removeArray.' + arrayId, {
-          data: {},
         });
         break;
       }
@@ -818,9 +825,39 @@ export class DataClient extends EventTarget {
         }));
         break;
       }
+      case UPDATE_METHODS.SYN: {
+        // console.log('got syn update');
+        // this.dispatchEvent(new MessageEvent('syned', {
+        //   data: {},
+        // }));
+        const [synId] = args;
+        console.log('got syn', {
+          synId,
+        });
+        update = new MessageEvent('syn', {
+          data: {
+            synId,
+          },
+        });
+        break;
+      }
+      case UPDATE_METHODS.SYN_ACK: {
+        // console.log('got syn ack update');
+        // this.dispatchEvent(new MessageEvent('synacked', {
+        //   data: {},
+        // }));
+        const [synId] = args;
+        console.log('got synAck', {
+          synId,
+        });
+        update = new MessageEvent('synAck', {
+          data: {
+            synId,
+          },
+        });
+        break;
+      }
     }
-    // this.storage = zbdecode(new Uint8Array(arrayBuffer));
-    // const rollbackUint8Array = new Uint8Array(0);
     return {
       rollback,
       update,
@@ -896,6 +933,18 @@ export class DataClient extends EventTarget {
               type: 'livehand',
               keys,
               liveHand,
+            };
+          } else if (m.type === 'syn') {
+            const {synId} = m.data;
+            return {
+              type: 'syn',
+              synId,
+            };
+          } else if (m.type === 'synAck') {
+            const {synId} = m.data;
+            return {
+              type: 'synAck',
+              synId,
             };
           } else {
             throw new Error('unrecognized message type: ' + m.type);
@@ -1079,13 +1128,11 @@ export class NetworkedDataClient extends EventTarget {
   static handlesMethod(method) {
     return [
       UPDATE_METHODS.IMPORT,
-      UPDATE_METHODS.IMPORT_MAP,
-      UPDATE_METHODS.IMPORT_ARRAY,
-      UPDATE_METHODS.SYNC,
+      UPDATE_METHODS.SYN,
+      UPDATE_METHODS.SYN_ACK,
       UPDATE_METHODS.SET,
       UPDATE_METHODS.ADD,
       UPDATE_METHODS.REMOVE,
-      UPDATE_METHODS.REMOVE_ARRAY,
       UPDATE_METHODS.ROLLBACK,
       UPDATE_METHODS.DEAD_HAND,
       UPDATE_METHODS.LIVE_HAND,
@@ -1172,8 +1219,9 @@ export class NetworkedDataClient extends EventTarget {
         const updateBuffer = e.data;
         const uint8Array = new Uint8Array(updateBuffer);
         const updateObject = parseUpdateObject(uint8Array);
-
+        
         const {method} = updateObject;
+        // console.log('got message', e.data, updateObject, NetworkedDataClient.handlesMethod(method));
         if (NetworkedDataClient.handlesMethod(method)) {
           const {
             rollback,
