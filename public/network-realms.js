@@ -259,24 +259,11 @@ class EntityTracker extends EventTarget {
   #linkInternal(arrayId, realm) {
     const key = arrayId + ':' + realm.key;
 
-    // if (this.cleanupFns.get(key)) {
-    //   debugger;
-    // }
-
-    if (!this.linkStacks) {
-      this.linkStacks = new Map();
-    }
-    /*if (this.linkStacks.has(key)) {
-      debugger;
-    } */
-    this.linkStacks.set(key, new Error().stack);
-
     const {dataClient} = realm;
     const dcArray = dataClient.getArray(arrayId); // note: auto listen
     
     const localVirtualMaps = new Map();
     const _bind = map => {
-      globalThis.linkStacks = this.linkStacks;
       const virtualMap = this.linkMap(realm, map);
       localVirtualMaps.set(map.arrayIndexId, virtualMap);
     };
