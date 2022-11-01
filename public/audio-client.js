@@ -125,7 +125,7 @@ export class NetworkedAudioClient extends EventTarget {
     };
     microphoneSource.outputSocket.addEventListener('data', ondata);
 
-    microphoneSourceCleanupFns.set(microphoneSource, () => {
+    this.microphoneSourceCleanupFns.set(microphoneSource, () => {
       this.ws.send(zbencode({
         method: UPDATE_METHODS.AUDIO_END,
         args: [
