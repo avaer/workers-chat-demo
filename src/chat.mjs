@@ -435,34 +435,47 @@ export class ChatRoom {
 
     // set up dead hands tracking
     const deadHands = new Map();
+    // let triggered = false;
     const _triggerDeadHands = () => {
+      // console.log('trigger dead hands');
+      // if (triggered) {
+      //   throw new Error('double trigger');
+      // } else {
+      //   triggered = true;
+      // }
       // const entries = Array.from(deadHands.entries());
       for (const [key, {arrayId, arrayIndexId}] of deadHands.entries()) {
+        const array = dataClient.getArray(arrayId, {
+          listen: false,
+        });
         if (arrayIndexId !== null) { // map mode
-          // console.log('dead hand map', arrayId, arrayIndexId, deadHands);
-          const map = dataClient.getArrayMap(arrayId, arrayIndexId, {
-            listen: false,
-          });
-          const removeMapUpdate = map.removeUpdate();
-          const removeMapUpdateBuffer = dataClient.serializeMessage(removeMapUpdate);
-          proxyMessageToPeers(removeMapUpdateBuffer);
-
-          /* const array = dataClient.getArray(arrayId, {
-            listen: false,
-          });
-          for (const arrayIndexId of array.getKeys()) {
+          console.log('dead hand map', arrayId, arrayIndexId);
+          // const map = dataClient.getArrayMap(arrayId, arrayIndexId, {
+          //   listen: false,
+          // });
+          if (array.hasKey(arrayIndexId)) {
             const map = array.getMap(arrayIndexId, {
               listen: false,
             });
-            const removeMessage = map.removeUpdate();
-            const removeArrayUpdateBuffer = dataClient.serializeMessage(removeMessage);
-            proxyMessageToPeers(removeArrayUpdateBuffer);
-          } */
+            const removeMapUpdate = map.removeUpdate();
+            const removeMapUpdateBuffer = dataClient.serializeMessage(removeMapUpdate);
+            proxyMessageToPeers(removeMapUpdateBuffer);
+
+            /* const array = dataClient.getArray(arrayId, {
+              listen: false,
+            });
+            for (const arrayIndexId of array.getKeys()) {
+              const map = array.getMap(arrayIndexId, {
+                listen: false,
+              });
+              const removeMessage = map.removeUpdate();
+              const removeArrayUpdateBuffer = dataClient.serializeMessage(removeMessage);
+              proxyMessageToPeers(removeArrayUpdateBuffer);
+            } */
+          }
         } else { // array mode
-          // console.log('dead hand array', arrayId);
-          const array = dataClient.getArray(arrayId, {
-            listen: false,
-          });
+          console.log('dead hand array', arrayId);
+          
           for (const arrayIndexId of array.getKeys()) {
             const map = array.getMap(arrayIndexId, {
               listen: false,
@@ -738,7 +751,8 @@ export class ChatRoom {
         
         _triggerDeadHands();
 
-        _sendLeaveMessage();
+        // console.log('send leave', new Error().stack);
+        // _sendLeaveMessage();
         
         /* if (session.name) {
           this.broadcast({quit: session.name});
@@ -746,10 +760,17 @@ export class ChatRoom {
       } catch(err) {
         console.warn(err.stack);
         throw err;
+      } finally {
+        cleanup();
       }
     };
     webSocket.addEventListener("close", closeOrErrorHandler);
     webSocket.addEventListener("error", closeOrErrorHandler);
+
+    const cleanup = () => {
+      webSocket.removeEventListener("close", closeOrErrorHandler);
+      webSocket.removeEventListener("error", closeOrErrorHandler);
+    };
 
     _resumeWebsocket();
   }
