@@ -43,15 +43,19 @@ const _updateCoord = _throttleFn((coord) => {
 export const startGame = async ({
   initialCoord = [0, 0, 0],
 } = {}) => {
+  // locals
   const playerId = makeId();
   let localPlayerCanvas = null;
   let remotePlayerCanvases = new Map();
-  
-  // console.log('got initial coord', initialCoord);
-
-  // realms
   const realms = new NetworkRealms(playerId);
-  // globalThis.realms = realms; // XXX for testing
+
+  // main game element
+  const gameEl = document.getElementById('game');
+  // realms canvas
+  const realmsCanvases = new GameRealmsCanvases(realms);
+  gameEl.appendChild(realmsCanvases.element);
+  
+  // realms
   const realmCleanupFns = new Map();
   realms.addEventListener('realmconnecting', e => {
     const {realm} = e.data;
@@ -79,30 +83,30 @@ export const startGame = async ({
   realms.addEventListener('realmjoin', e => {
     const {realm} = e.data;
     const el = getRealmElement(realm);
+    
+    const {dataClient, networkedDataClient} = realm;
+    dataClient.addEventListener('syn', e => {
+      // console.log('send syn', e.data);
+      const {synId} = e.data;
+      const synAckMessage = dataClient.getSynAckMessage(synId);
+      networkedDataClient.emitUpdate(synAckMessage);
+    });
+
     if (el) {
       el.classList.add('connected');
       el.classList.remove('connecting');
-
-      const {dataClient} = realm;
       
-      const {networkedDataClient} = realm;
       /* setInterval(() => {
         console.log('send syn');
         const synMessage = dataClient.getSynMessage();
         networkedDataClient.emitUpdate(synMessage);
       }, 2 * 1000); */
 
-      window.sync = synId => {
+      /* window.sync = synId => {
         const synMessage = dataClient.getSynMessage(synId);
         networkedDataClient.emitUpdate(synMessage);
-      };
+      }; */
 
-      dataClient.addEventListener('syn', e => {
-        // console.log('got syn', e.data);
-        const {synId} = e.data;
-        const synAckMessage = dataClient.getSynAckMessage(synId);
-        networkedDataClient.emitUpdate(synAckMessage);
-      });
       /* this.addEventListener('synAck', e => {
         console.log('got synack', e.data);
       }); */
@@ -173,12 +177,6 @@ export const startGame = async ({
       realmCleanupFns.delete(realm);
     }
   });
-
-  const gameEl = document.getElementById('game');
-  
-  // realms canvas
-  const realmsCanvases = new GameRealmsCanvases(realms);
-  gameEl.appendChild(realmsCanvases.element);
 
   // local objects
   const virtualWorld = realms.getVirtualWorld();

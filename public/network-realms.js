@@ -680,6 +680,9 @@ class VirtualPlayersArray extends EventTarget {
     }
     return virtualPlayer;
   }
+  getSize() {
+    return this.virtualPlayers.size;
+  }
   getValues() {
     return Array.from(this.virtualPlayers.values());
   }
@@ -1267,9 +1270,6 @@ export class NetworkRealm extends EventTarget {
     this.networkedIrcClient = new NetworkedIrcClient(this.parent.playerId);
     this.networkedAudioClient = new NetworkedAudioClient(this.parent.playerId);
   }
-  /* sendRegisterMessage() {
-    this.networkedIrcClient.sendRegisterMessage();
-  } */
   sendChatMessage(message) {
     this.networkedIrcClient.sendChatMessage(message);
   }
@@ -1309,6 +1309,43 @@ export class NetworkRealm extends EventTarget {
     // }
     this.dataClient.emitUpdate(update);
     this.networkedDataClient.emitUpdate(update);
+  }
+  async sync() {
+    let numPlayers = this.parent.players.getSize();
+    if (numPlayers > 0) {
+      numPlayers--; // do not count ourselves
+
+      const synId = makeId();
+      const synMessage = this.dataClient.getSynMessage(synId);
+      this.networkedDataClient.emitUpdate(synMessage);
+
+      // wait for >= numPlayers synAcks, with a 2-second timeout
+      await new Promise((accept, reject) => {
+        let seenSynAcks = 0;
+        const onSynAck = e => {
+          if (e.data.synId === synId) {
+            seenSynAcks++;
+            if (seenSynAcks >= numPlayers) {
+              cleanup();
+              accept();
+            }
+          }
+        };
+        this.dataClient.addEventListener('synAck', onSynAck);
+
+        const timeout = setTimeout(() => {
+          cleanup();
+          accept();
+        }, 2000);
+
+        const cleanup = () => {
+          this.dataClient.removeEventListener('synAck', onSynAck);
+          clearTimeout(timeout);
+        };
+      });
+    } else {
+      throw new Error('expected at least 1 player');
+    }
   }
 }
 

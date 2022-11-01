@@ -831,7 +831,7 @@ export class DataClient extends EventTarget {
         //   data: {},
         // }));
         const [synId] = args;
-        console.log('got syn', {
+        console.log('got syn', this, {
           synId,
         });
         update = new MessageEvent('syn', {
@@ -847,7 +847,7 @@ export class DataClient extends EventTarget {
         //   data: {},
         // }));
         const [synId] = args;
-        console.log('got synAck', {
+        console.log('got synAck', this, {
           synId,
         });
         update = new MessageEvent('synAck', {
@@ -983,7 +983,7 @@ export class DataClient extends EventTarget {
     return saveKeys;
   }
   emitUpdate(messageEvent) {
-    // console.log('data client emit update', messageEvent.type);
+    // console.log('data client emit update', this, messageEvent.type);
     this.dispatchEvent(messageEvent);
   }
   
@@ -1240,8 +1240,8 @@ export class NetworkedDataClient extends EventTarget {
     };
     this.ws.addEventListener('message', mainMessage);
   }
-  disconnect() {
-  }
+  /* disconnect() {
+  } */
   send(msg) {
     this.ws.send(msg);
   }
