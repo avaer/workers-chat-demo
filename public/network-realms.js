@@ -152,11 +152,6 @@ class HeadTracker extends EventTarget {
     return headRealm;
   }
   async updateHeadRealm(headPosition) {
-    if (!headPosition || isNaN(headPosition[0]) || isNaN(headPosition[1]) || isNaN(headPosition[2])) {
-      debugger;
-      throw new Error('try to update head realm for unpositioned player: ' + headPosition);
-    }
-
     if (this.isLinked()) {
       const newHeadRealm = _getHeadRealm(headPosition, Array.from(this.#connectedRealms.keys()));
       if (!this.#cachedHeadRealm) {
