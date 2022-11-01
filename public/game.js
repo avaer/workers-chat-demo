@@ -7,10 +7,6 @@ import {NetworkRealms} from "./network-realms.js";
 
 //
 
-// XXX wait for sync before we finally disconnect, or else the message might not have been sent befor we disconnect
-
-//
-
 // throttle a function every ms, queueing
 const _throttleFn = (fn, ms) => {
   let running = false;

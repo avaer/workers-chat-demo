@@ -101,53 +101,44 @@ export class NetworkedAudioClient extends EventTarget {
     
     this.playerId = playerId;
 
-    this.audioStreams = new Map();
-
     this.ws = null;
 
-    if (typeof window !== 'undefined') {
-      window.startAudio = async () => {
-        const microphone = await createMicrophoneSource();
-
-        microphone.outputSocket.addEventListener('data', e => {
-          // console.log('send mic data', e.data.byteLength);
-          this.ws.send(zbencode({
-            method: UPDATE_METHODS.AUDIO,
-            args: [
-              this.playerId,
-              e.data,
-            ],
-          }));
-        });
-
-        window.stopAudio = () => {
-          this.ws.send(zbencode({
-            method: UPDATE_METHODS.AUDIO_END,
-            args: [
-              this.playerId,
-            ],
-          }));
-          
-          microphone.destroy();
-
-          window.stopAudio = null;
-        };
-      };
-      window.stopAudio = null;
-    }
+    this.microphoneSourceCleanupFns = new Map();
+    this.outputAudioStreams = new Map();
   }
   static handlesMethod(method) {
     return [
       // UPDATE_METHODS.AUDIO_START,
-      UPDATE_METHODS.AUDIO,
       UPDATE_METHODS.AUDIO_END,
     ].includes(method);
   }
-  async enableMic() {
-    await window.startAudio();
+  addMicrophoneSource(microphoneSource) {
+    const ondata = e => {
+      // console.log('send mic data', e.data.byteLength);
+      this.ws.send(zbencode({
+        method: UPDATE_METHODS.AUDIO,
+        args: [
+          this.playerId,
+          e.data,
+        ],
+      }));
+    };
+    microphoneSource.outputSocket.addEventListener('data', ondata);
+
+    microphoneSourceCleanupFns.set(microphoneSource, () => {
+      this.ws.send(zbencode({
+        method: UPDATE_METHODS.AUDIO_END,
+        args: [
+          this.playerId,
+        ],
+      }));
+
+      microphoneSource.outputSocket.removeEventListener('data', ondata);
+    });
   }
-  disableMic() {
-    window.stopAudio();
+  removeMicrophoneSource(microphoneSource) {
+    this.microphoneSourceCleanupFns.get(microphoneSource)();
+    this.microphoneSourceCleanupFns.delete(microphoneSource);
   }
   async connect(ws) {
     this.ws = ws;
@@ -221,11 +212,11 @@ export class NetworkedAudioClient extends EventTarget {
       // console.log('got irc chat', {method, args});
       const [playerId, data] = args;
 
-      let audioStream = this.audioStreams.get(playerId);
+      let audioStream = this.outputAudioStreams.get(playerId);
       if (!audioStream) {
         const outputStream = createAudioOutputStream();
         outputStream.outputNode.connect(getAudioContext().destination);
-        this.audioStreams.set(playerId, outputStream);
+        this.outputAudioStreams.set(playerId, outputStream);
         // console.log('unknown audio event', playerId);
         // debugger;
         // throw new Error('no audio stream for player id: ' + playerId);
@@ -243,13 +234,13 @@ export class NetworkedAudioClient extends EventTarget {
       // console.log('got leave', {method, args});
       const [playerId] = args;
 
-      const audioStream = this.audioStreams.get(playerId);
+      const audioStream = this.outputAudioStreams.get(playerId);
       if (audioStream) {
         // console.log('unknown audio ended', playerId);
         // debugger;
         // throw new Error('no audio stream for player id: ' + playerId);
         audioStream.close();
-        this.audioStreams.delete(playerId);
+        this.outputAudioStreams.delete(playerId);
 
         this.dispatchEvent(new MessageEvent('audiostreamend', {
           data: {

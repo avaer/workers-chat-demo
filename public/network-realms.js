@@ -1,6 +1,6 @@
 import {DataClient, NetworkedDataClient, DCMap, DCArray} from './data-client.mjs';
 import {NetworkedIrcClient} from './irc-client.js';
-import {NetworkedAudioClient} from './audio-client.js';
+import {NetworkedAudioClient, createMicrophoneSource} from './audio-client.js';
 import {
   createWs,
   makePromise,
@@ -755,9 +755,6 @@ class VirtualPlayersArray extends EventTarget {
           data: e.data,
         }));
       };
-      /* if (!networkedAudioClient) {
-        debugger;
-      } */
       networkedAudioClient.addEventListener('audiostreamstart', audiostreamstart);
       const audiostreamend = e => {
         this.dispatchEvent(new MessageEvent('audiostreamend', {
@@ -1248,6 +1245,8 @@ export class NetworkRealm extends EventTarget {
     });
     this.networkedIrcClient = new NetworkedIrcClient(this.parent.playerId);
     this.networkedAudioClient = new NetworkedAudioClient(this.parent.playerId);
+
+    this.microphoneSource = null;
   }
   sendChatMessage(message) {
     this.networkedIrcClient.sendChatMessage(message);
@@ -1568,12 +1567,33 @@ export class NetworkRealms extends EventTarget {
     }
     return null;
   }
-  enableMic() {
-    // XXX this needs to be a per-realm thing
-    throw new Error('not implemented');
+  async enableMic() {
+    if (!this.microphoneSource) {
+      this.microphoneSource = await createMicrophoneSource();
+      
+      // XXX this should only connect to the local player's head realm, with correct migration
+      return;
+      for (const realm of this.connectedRealms) {
+        const {networkedAudioClient} = realm;
+        networkedAudioClient.addMicrophoneSource(this.microphoneSource);
+      }
+    } else {
+      debugger;
+    }
   }
   disableMic() {
-    throw new Error('not implemented');
+    if (this.microphoneSource) {
+      /* for (const realm of this.connectedRealms) {
+        const {networkedAudioClient} = realm;
+        networkedAudioClient.removeMicrophoneSource(this.microphoneSource);
+      } */
+
+      this.microphoneSource.destroy();
+
+      this.microphoneSource = null;
+    } else {
+      debugger;
+    }
   }
   sendChatMessage(message) {
     const headRealm = this.localPlayer.headTracker.getHeadRealm();
