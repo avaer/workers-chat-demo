@@ -347,8 +347,6 @@ export const startGame = async ({
       }
     });
 
-    // XXX remote player leave must be triggered before we try to render the dead player
-
     // action methods
     const _pickupDrop = () => {
       // console.log('drop 1');

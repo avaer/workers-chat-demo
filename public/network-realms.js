@@ -1,4 +1,4 @@
-import {DataClient, NetworkedDataClient, DCMap, DCArray, convertCrdtValToVal} from './data-client.mjs';
+import {DataClient, NetworkedDataClient, DCMap, DCArray} from './data-client.mjs';
 import {NetworkedIrcClient} from './irc-client.js';
 import {NetworkedAudioClient} from './audio-client.js';
 import {
@@ -1273,17 +1273,6 @@ export class NetworkRealm extends EventTarget {
     ]);
     this.connected = true;
   }
-  disconnect() {
-    this.ws.close();
-    const clearUpdateFns = this.getClearUpdateFns();
-    // console.log('realm disconnect', clearUpdates.length);
-    for (const clearUpdateFn of clearUpdateFns) {
-      const clearUpdate = clearUpdateFn();
-      console.log('clear update', clearUpdate);
-      this.dataClient.emitUpdate(clearUpdate);
-    }
-    this.connected = false;
-  }
   *getClearUpdateFns() {
     const playersArray = this.dataClient.getArray('players', {
       listen: false,
@@ -1318,6 +1307,17 @@ export class NetworkRealm extends EventTarget {
       // player
       yield () => playersArray.removeAt(playerId);
     }
+  }
+  flush() {
+    const clearUpdateFns = this.getClearUpdateFns();
+    for (const clearUpdateFn of clearUpdateFns) {
+      const clearUpdate = clearUpdateFn();
+      this.dataClient.emitUpdate(clearUpdate);
+    }
+  }
+  disconnect() {
+    this.ws.close();
+    this.connected = false;
   }
   emitUpdate(update) {
     // if (update.type === 'add.worldApps') {
@@ -1679,13 +1679,20 @@ export class NetworkRealms extends EventTarget {
         const oldRealms = [];
         for (const connectedRealm of this.connectedRealms) {
           if (!candidateRealms.find(candidateRealm => candidateRealm.key === connectedRealm.key)) {
-            // XXX we must perform the clean before hitting here, or else the remove handlers will be unlinked by the time we emit
+            // first, disconnect to make sure no corrupted state goes on the network
+            connectedRealm.disconnect();
+
+            // note: we must perform a flush before unlinking
+            // otherwise, the remove handlers will be unlinked by the time we emit
+            connectedRealm.flush();
+            
+            // unlink arrays
             this.players.unlink(connectedRealm);
             this.localPlayer.unlink(connectedRealm);
             this.world.unlink(connectedRealm);
             this.irc.unlink(connectedRealm);
-
-            connectedRealm.disconnect();
+            
+            // bookkeeping
             this.connectedRealms.delete(connectedRealm);
             oldRealms.push(connectedRealm);
           }

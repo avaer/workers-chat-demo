@@ -436,15 +436,13 @@ export class DCArray extends EventTarget {
       }));
     };
 
-    const stack = new Error().stack;
-
     const addKey = 'add.' + this.arrayId;
     const addFn = e => {
       const {
         arrayIndexId,
         val,
       } = e.data;
-      console.log('dispatch add', {arrayIndexId, val}, stack);
+      console.log('dispatch add', {arrayIndexId, val});
       _addMap(arrayIndexId, val);
     };
     this.dataClient.addEventListener(addKey, addFn);
@@ -454,7 +452,7 @@ export class DCArray extends EventTarget {
       const {
         arrayIndexId,
       } = e.data;
-      console.log('dispatch remove', {arrayIndexId}, stack);
+      console.log('dispatch remove', {arrayIndexId});
       this.dispatchEvent(new MessageEvent('remove', {
         data: {
           arrayIndexId,
@@ -1070,22 +1068,14 @@ export class DataClient extends EventTarget {
       throw new Error('array index not found in array');
     }
   }
-  clearUpdates() {
-    // console.log('clearing', Array.from(this.arrayListeners.entries()), Array.from(this.arrayMapListeners.entries()));
+  /* clearUpdates() {
     const updates = [];
     for (const map of this.arrayMapListeners.values()) {
       const update = map.clearUpdate();
-      // this.emitUpdate(update);
       updates.push(update);
     }
-    // currently, arrays cannot be removed
-    // XXX in that case, we don't need to track this.arrayListeners?
-    // for (const array of this.arrayListeners.values()) {
-    //   const update = array.clearUpdate();
-    //   this.emitUpdate(update);
-    // }
     return updates;
-  }
+  } */
   readBinding(arrayNames) {
     let arrays = {};
     let arrayMaps = {};
