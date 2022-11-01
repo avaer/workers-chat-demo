@@ -667,10 +667,10 @@ class VirtualPlayersArray extends EventTarget {
       // console.log('players array listen', this.arrayId, realm.key);
 
       const _linkPlayer = arrayIndexId => {
-        console.log('link player', arrayIndexId, realm.key);
+        // console.log('link player', arrayIndexId, realm.key);
         const playerId = arrayIndexId;
         if (playerId === this.parent.playerId) {
-          // this.parent.localPlayer;
+          // nothing
         } else {
           const created = !this.virtualPlayers.has(playerId);
           const virtualPlayer = this.getOrCreateVirtualPlayer(playerId);
@@ -689,10 +689,10 @@ class VirtualPlayersArray extends EventTarget {
       const _unlinkPlayer = arrayIndexId => {
         const playerId = arrayIndexId;
 
-        console.log('unlink player', arrayIndexId, realm.key);
+        // console.log('unlink player', arrayIndexId, realm.key);
 
         if (playerId == this.parent.playerId) {
-          // this.parent.localPlayer;
+          // nothing
         } else {
           const virtualPlayer = this.virtualPlayers.get(playerId);
           if (virtualPlayer) {
@@ -719,14 +719,14 @@ class VirtualPlayersArray extends EventTarget {
       };
 
       const onadd = e => {
-        console.log('player add', e.data);
+        // console.log('player add', e.data);
         const {arrayIndexId, map, val} = e.data;
         _linkPlayer(arrayIndexId);
       };
       playersArray.addEventListener('add', onadd);
 
       const onremove = e => {
-        console.log('player remove', e.data, realm.key);
+        // console.log('player remove', e.data, realm.key);
         const {arrayIndexId} = e.data;
         _unlinkPlayer(arrayIndexId);
       };
@@ -734,14 +734,14 @@ class VirtualPlayersArray extends EventTarget {
 
       // link initial players
       for (const arrayIndexId of playersArray.getKeys()) {
-        console.log('player initial', arrayIndexId);
+        // console.log('player initial', arrayIndexId);
         _linkPlayer(arrayIndexId);
       }
 
       this.cleanupFns.set(networkedDataClient, () => {
         playersArray.unlisten();
 
-        console.log('player unlisten', realm.key, new Error().stack);
+        // console.log('player unlisten', realm.key, new Error().stack);
 
         playersArray.removeEventListener('add', onadd);
         playersArray.removeEventListener('remove', onremove);

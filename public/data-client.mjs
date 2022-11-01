@@ -442,7 +442,7 @@ export class DCArray extends EventTarget {
         arrayIndexId,
         val,
       } = e.data;
-      console.log('dispatch add', {arrayIndexId, val});
+      // console.log('dispatch add', {arrayIndexId, val});
       _addMap(arrayIndexId, val);
     };
     this.dataClient.addEventListener(addKey, addFn);
@@ -452,7 +452,7 @@ export class DCArray extends EventTarget {
       const {
         arrayIndexId,
       } = e.data;
-      console.log('dispatch remove', {arrayIndexId});
+      // console.log('dispatch remove', {arrayIndexId});
       this.dispatchEvent(new MessageEvent('remove', {
         data: {
           arrayIndexId,
