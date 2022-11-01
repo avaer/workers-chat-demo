@@ -720,23 +720,13 @@ class VirtualEntityArray extends VirtualPlayersArray {
   }
   linkedRealms = new Map();
   link(realm) {
-    // const {dataClient} = realm;
-    // const dcArray = dataClient.getArray(this.arrayId, {
-    //   listen: false,
-    // });
-    
-    // console.log('link', this.r, this.arrayId, dcArray.toArray());
-
-    if (!this.linkedRealms.has(realm.key)) {
+    // if (!this.linkedRealms.has(realm.key)) {
       this.linkedRealms.set(realm.key, new Error().stack);
-    } else {
-      debugger;
-    }
-
-    // link the entity tracker
-    // if (/worldApps/.test(this.arrayId)) {
+    // } else {
     //   debugger;
     // }
+
+    // link the entity tracker
     this.entityTracker.link(this.arrayId, realm);
 
     this.cleanupFns.set(realm, () => {
@@ -745,14 +735,11 @@ class VirtualEntityArray extends VirtualPlayersArray {
     });
   }
   unlink(realm) {
-    // if (/playerApps/.test(this.arrayId)) {
-    //   console.log('unlink realm', this.arrayId, realm.key);
-    // }
-    if (this.linkedRealms.has(realm.key)) {
+    // if (this.linkedRealms.has(realm.key)) {
       this.linkedRealms.delete(realm.key);
-    } else {
-      debugger;
-    }
+    // } else {
+    //   debugger;
+    // }
 
     this.cleanupFns.get(realm)();
     this.cleanupFns.delete(realm);
@@ -779,8 +766,6 @@ class VirtualIrc {
     networkedIrcClient.addEventListener('chat', onchat);
 
     this.cleanupFns.set(networkedIrcClient, () => {
-      // networkedIrcClient.removeEventListener('join', onjoin);
-      // networkedIrcClient.removeEventListener('leave', onleave);
       networkedIrcClient.removeEventListener('chat', onchat);
     });
   }
