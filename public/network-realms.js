@@ -1304,41 +1304,51 @@ export class NetworkRealm extends EventTarget {
     this.networkedDataClient.emitUpdate(update);
   }
   async sync() {
-    let numPlayers = this.parent.players.getSize();
-    if (numPlayers > 0) {
-      numPlayers--; // do not count ourselves
+    // for all realms
+    const promises = Array.from(this.parent.connectedRealms.values()).map(async realm => {
+      const {dataClient} = realm;
 
-      const synId = makeId();
-      const synMessage = this.dataClient.getSynMessage(synId);
-      this.networkedDataClient.emitUpdate(synMessage);
-
-      // wait for >= numPlayers synAcks, with a 2-second timeout
-      await new Promise((accept, reject) => {
-        let seenSynAcks = 0;
-        const onSynAck = e => {
-          if (e.data.synId === synId) {
-            seenSynAcks++;
-            if (seenSynAcks >= numPlayers) {
-              cleanup();
-              accept();
-            }
-          }
-        };
-        this.dataClient.addEventListener('synAck', onSynAck);
-
-        const timeout = setTimeout(() => {
-          cleanup();
-          accept();
-        }, 2000);
-
-        const cleanup = () => {
-          this.dataClient.removeEventListener('synAck', onSynAck);
-          clearTimeout(timeout);
-        };
+      const playersArray = dataClient.getArray('players', {
+        listen: false,
       });
-    } else {
-      throw new Error('expected at least 1 player');
-    }
+      let numPlayers = playersArray.getSize();
+      console.log('sync', numPlayers);
+      if (numPlayers > 1) {
+        numPlayers--; // do not count ourselves
+
+        const synId = makeId();
+        const synMessage = this.dataClient.getSynMessage(synId);
+        this.networkedDataClient.emitUpdate(synMessage);
+
+        // wait for >= numPlayers synAcks, with a 2-second timeout
+        await new Promise((accept, reject) => {
+          let seenSynAcks = 0;
+          const onSynAck = e => {
+            if (e.data.synId === synId) {
+              seenSynAcks++;
+              if (seenSynAcks >= numPlayers) {
+                cleanup();
+                accept();
+              }
+            }
+          };
+          this.dataClient.addEventListener('synAck', onSynAck);
+
+          const timeout = setTimeout(() => {
+            cleanup();
+            accept();
+          }, 2000);
+
+          const cleanup = () => {
+            this.dataClient.removeEventListener('synAck', onSynAck);
+            clearTimeout(timeout);
+          };
+        });
+      } else {
+        // throw new Error('expected at least 1 player');
+      }
+    });
+    await Promise.all(promises);
   }
 }
 
