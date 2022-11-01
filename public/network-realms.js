@@ -1335,7 +1335,7 @@ export class NetworkRealm extends EventTarget {
         listen: false,
       });
       let numPlayers = playersArray.getSize();
-      console.log('sync', numPlayers);
+      // console.log('sync', numPlayers);
       if (numPlayers > 1) {
         numPlayers--; // do not count ourselves
 

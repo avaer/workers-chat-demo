@@ -827,14 +827,10 @@ export class DataClient extends EventTarget {
         break;
       }
       case UPDATE_METHODS.SYN: {
-        // console.log('got syn update');
-        // this.dispatchEvent(new MessageEvent('syned', {
-        //   data: {},
-        // }));
         const [synId] = args;
-        console.log('got syn', this, {
-          synId,
-        });
+        // console.log('got syn', this, {
+        //   synId,
+        // });
         update = new MessageEvent('syn', {
           data: {
             synId,
@@ -843,14 +839,10 @@ export class DataClient extends EventTarget {
         break;
       }
       case UPDATE_METHODS.SYN_ACK: {
-        // console.log('got syn ack update');
-        // this.dispatchEvent(new MessageEvent('synacked', {
-        //   data: {},
-        // }));
         const [synId] = args;
-        console.log('got synAck', this, {
-          synId,
-        });
+        // console.log('got synAck', this, {
+        //   synId,
+        // });
         update = new MessageEvent('synAck', {
           data: {
             synId,
