@@ -108,7 +108,7 @@ export class NetworkedAudioClient extends EventTarget {
   }
   static handlesMethod(method) {
     return [
-      // UPDATE_METHODS.AUDIO_START,
+      UPDATE_METHODS.AUDIO,
       UPDATE_METHODS.AUDIO_END,
     ].includes(method);
   }
