@@ -1161,11 +1161,7 @@ export class NetworkedDataClient extends EventTarget {
     const _waitForInitialImport = async () => {
       await new Promise((resolve, reject) => {
         const initialMessage = e => {
-          if (e.data.constructor === ArrayBuffer) {
-            if (e.data.byteLength === 0) {
-              debugger;
-            }
-            
+          if (e?.data?.byteLength > 0) {            
             const updateBuffer = e.data;
             const uint8Array = new Uint8Array(updateBuffer);
             const updateObject = parseUpdateObject(uint8Array);
@@ -1200,6 +1196,8 @@ export class NetworkedDataClient extends EventTarget {
               resolve();
               this.ws.removeEventListener('message', initialMessage);
             }
+          } else {
+            // debugger;
           }
         };
         this.ws.addEventListener('message', initialMessage);
@@ -1208,11 +1206,8 @@ export class NetworkedDataClient extends EventTarget {
     await _waitForInitialImport();
 
     const mainMessage = e => {
-      if (e.data.constructor === ArrayBuffer) {
-        // if (e.data.byteLength === 0) {
-        //   debugger;
-        // }
-
+      // if some other listener hasn't consumed the message already
+      if (e?.data?.byteLength > 0) {
         const updateBuffer = e.data;
         const uint8Array = new Uint8Array(updateBuffer);
         const updateObject = parseUpdateObject(uint8Array);
@@ -1233,6 +1228,8 @@ export class NetworkedDataClient extends EventTarget {
 
           this.dataClient.emitUpdate(update);
         }
+      } else {
+        // debugger;
       }
     };
     this.ws.addEventListener('message', mainMessage);

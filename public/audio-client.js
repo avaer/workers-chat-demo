@@ -190,8 +190,8 @@ export class NetworkedAudioClient extends EventTarget {
 
     // console.log('irc listen');
     this.ws.addEventListener('message', e => {
-      // console.log('got ws data', e.data);
-      if (e.data instanceof ArrayBuffer && e.data.byteLength > 0) {
+      // console.log('got irc data', e.data);
+      if (e?.data?.byteLength > 0) {
         const updateBuffer = e.data;
         // console.log('irc data', e.data);
         const uint8Array = new Uint8Array(updateBuffer);
@@ -202,12 +202,14 @@ export class NetworkedAudioClient extends EventTarget {
         if (NetworkedAudioClient.handlesMethod(method)) {
           this.handleUpdateObject(updateObject);
         }
+      } else {
+        // debugger;
       }
     });
   }
   handleUpdateObject(updateObject) {
     const {method, args} = updateObject;
-    // console.log('got audio message event', {method, args});
+    // console.log('audio update object', {method, args});
     if (method === UPDATE_METHODS.AUDIO) {
       // console.log('got irc chat', {method, args});
       const [playerId, data] = args;
