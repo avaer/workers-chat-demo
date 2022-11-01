@@ -794,7 +794,7 @@ class VirtualEntityArray extends VirtualPlayersArray {
 
     this.needledVirtualEntities = new Map(); // entity -> needled entity
 
-    this.entityTracker.addEventListener('entityadd', e => {
+    const onentityadd = e => {
       // console.log('entity add', e.data);
       
       const {entityId, entity} = e.data;
@@ -816,7 +816,6 @@ class VirtualEntityArray extends VirtualPlayersArray {
 
       // sanityCheck();
 
-      // XXX this emit should not be passthrough, but a saturation accumulator for whether this exact array view currently sees the entity
       this.dispatchEvent(new MessageEvent('needledentityadd', {
         data: {
           entityId,
@@ -824,14 +823,32 @@ class VirtualEntityArray extends VirtualPlayersArray {
         },
       }));
       // sanityCheck();
-    });
-    this.entityTracker.addEventListener('entityremove', e => {
+    };
+    this.entityTracker.addEventListener('entityadd', onentityadd);
+    const onentityremove = e => {
       const {entityId, entity} = e.data;
 
+      // console.log('entity remove', arrayId, entityId, entity);
+
+      if (!this.needledVirtualEntities.has(entity)) {
+        debugger;
+      }
       const needledEntity = this.needledVirtualEntities.get(entity);
       needledEntity.cleanupFn();
       this.needledVirtualEntities.delete(entity);
-    });
+    };
+    this.entityTracker.addEventListener('entityremove', onentityremove);
+
+    // console.log('adding defaults', arrayId, this.entityTracker.virtualMaps, this.entityTracker.virtualMaps.size);
+    for (const [entityId, entity] of this.entityTracker.virtualMaps.entries()) {
+      // console.log('add initial entity', arrayId, entityId, entity);
+      onentityadd(new MessageEvent('entityadd', {
+        data: {
+          entityId,
+          entity,
+        },
+      }));
+    }
   }
   addEntityAt(arrayIndexId, val, realm) {
     const deadHandUpdate = realm.dataClient.deadHandArrayMap(this.arrayId, arrayIndexId, this.parent.playerId);
