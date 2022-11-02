@@ -119,9 +119,11 @@ class HeadTracker extends EventTarget {
     }
     return this.#cachedHeadRealm;
   }
+
   #updateCachedHeadRealm() {
     this.#cachedHeadRealm = this.#computeHeadRealm();
   }
+
   #computeHeadRealm() {
     if (this.#connectedRealms.size === 1) { // by far the most common case
       return this.#connectedRealms.keys().next().value;

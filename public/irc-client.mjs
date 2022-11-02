@@ -62,7 +62,6 @@ export class NetworkedIrcClient extends EventTarget {
 
             const {method/*, args */} = updateObject;
             if (method === UPDATE_METHODS.NETWORK_INIT) {
-
               this.handleUpdateObject(updateObject);
 
               resolve();

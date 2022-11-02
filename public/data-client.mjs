@@ -1076,7 +1076,6 @@ export class DataClient extends EventTarget {
     }
   }
 
-
   readBinding(arrayNames) {
     const arrays = {};
     const arrayMaps = {};
