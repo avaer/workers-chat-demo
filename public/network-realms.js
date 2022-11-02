@@ -1009,9 +1009,6 @@ export class NetworkRealm extends EventTarget {
     this.connected = false;
   }
   emitUpdate(update) {
-    // if (update.type === 'add.worldApps') {
-    //   console.log('emit update to realm', this.key, update.type, update);
-    // }
     this.dataClient.emitUpdate(update);
     this.networkedDataClient.emitUpdate(update);
   }
@@ -1339,27 +1336,22 @@ export class NetworkRealms extends EventTarget {
             }));
 
             const connectPromise = (async () => {
-              // try {
-                await realm.connect();
+              await realm.connect();
 
-                this.players.link(realm);
-                this.localPlayer.link(realm);
-                this.world.link(realm);
-                this.irc.link(realm);
+              this.players.link(realm);
+              this.localPlayer.link(realm);
+              this.world.link(realm);
+              this.irc.link(realm);
 
-                this.connectedRealms.add(realm);
+              this.connectedRealms.add(realm);
 
-                // emit event
-                realm.dispatchEvent(new Event('connect'));
-                this.dispatchEvent(new MessageEvent('realmjoin', {
-                  data: {
-                    realm,
-                  },
-                }));
-              // } catch (err) {
-              //   console.warn(err.stack);
-              //   throw err;
-              // }
+              // emit event
+              realm.dispatchEvent(new Event('connect'));
+              this.dispatchEvent(new MessageEvent('realmjoin', {
+                data: {
+                  realm,
+                },
+              }));
             })();
             connectPromises.push(connectPromise);
           }
