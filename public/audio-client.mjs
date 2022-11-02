@@ -1,6 +1,6 @@
 import {UPDATE_METHODS} from './update-types.js';
 import {parseUpdateObject, makeId} from './util.mjs';
-import {zbencode, zbdecode} from "./encoding.mjs";
+import {zbencode} from './encoding.mjs';
 import {ensureAudioContext, getAudioContext} from './wsrtc/ws-audio-context.js';
 import {WsMediaStreamAudioReader, WsAudioEncoder, WsAudioDecoder} from './wsrtc/ws-codec.js';
 import {getEncodedAudioChunkBuffer, getAudioDataBuffer} from './wsrtc/ws-util.js';
@@ -10,11 +10,11 @@ function createAudioOutputStream() {
 
   const audioWorkletNode = new AudioWorkletNode(
     audioContext,
-    'ws-output-worklet'
+    'ws-output-worklet',
   );
 
   const audioDecoder = new WsAudioDecoder({
-    output: (data) => {
+    output: data => {
       data = getAudioDataBuffer(data);
       audioWorkletNode.port.postMessage(data, [data.buffer]);
     },
@@ -30,7 +30,7 @@ function createAudioOutputStream() {
       audioWorkletNode.disconnect();
       audioDecoder.close();
     },
-  }
+  };
 }
 
 const stopMediaStream = mediaStream => {
@@ -39,10 +39,11 @@ const stopMediaStream = mediaStream => {
     track.stop();
   }
 };
+
 export async function createMicrophoneSource() {
   const audioContext = await ensureAudioContext();
   audioContext.resume();
-  
+
   const mediaStream = await navigator.mediaDevices.getUserMedia({
     audio: true,
   });
@@ -57,13 +58,13 @@ export async function createMicrophoneSource() {
   _renderOutput(); */
 
   const muxAndSend = encodedChunk => {
-    const {type, timestamp} = encodedChunk;
     const data = getEncodedAudioChunkBuffer(encodedChunk);
 
     fakeWs.dispatchEvent(new MessageEvent('data', {
       data,
     }));
   };
+
   function onEncoderError(err) {
     console.warn('encoder error', err);
   }
@@ -98,7 +99,7 @@ export async function createMicrophoneSource() {
 export class NetworkedAudioClient extends EventTarget {
   constructor(playerId = makeId()) {
     super();
-    
+
     this.playerId = playerId;
 
     this.ws = null;
@@ -106,12 +107,14 @@ export class NetworkedAudioClient extends EventTarget {
     this.microphoneSourceCleanupFns = new Map();
     this.outputAudioStreams = new Map();
   }
+
   static handlesMethod(method) {
     return [
       UPDATE_METHODS.AUDIO,
       UPDATE_METHODS.AUDIO_END,
     ].includes(method);
   }
+
   addMicrophoneSource(microphoneSource) {
     const ondata = e => {
       // console.log('send mic data', e.data.byteLength);
@@ -136,10 +139,12 @@ export class NetworkedAudioClient extends EventTarget {
       microphoneSource.outputSocket.removeEventListener('data', ondata);
     });
   }
+
   removeMicrophoneSource(microphoneSource) {
     this.microphoneSourceCleanupFns.get(microphoneSource)();
     this.microphoneSourceCleanupFns.delete(microphoneSource);
   }
+
   async connect(ws) {
     this.ws = ws;
 
@@ -152,7 +157,7 @@ export class NetworkedAudioClient extends EventTarget {
         reject();
         _cleanup();
       })(reject);
-      
+
       this.ws.addEventListener('open', resolve);
       this.ws.addEventListener('error', reject);
 
@@ -169,16 +174,16 @@ export class NetworkedAudioClient extends EventTarget {
             const updateBuffer = e.data;
             const uint8Array = new Uint8Array(updateBuffer);
             const updateObject = parseUpdateObject(uint8Array);
-            
+
             const {method, args} = updateObject;
             if (method === UPDATE_METHODS.NETWORK_INIT) {
               // const [playerIds] = args;
               // console.log('irc init', {playerIds});
 
               this.handleUpdateObject(updateObject);
-    
+
               resolve();
-              
+
               this.ws.removeEventListener('message', initialMessage);
             }
           }
@@ -197,7 +202,7 @@ export class NetworkedAudioClient extends EventTarget {
         const uint8Array = new Uint8Array(updateBuffer);
         const updateObject = parseUpdateObject(uint8Array);
 
-        const {method, args} = updateObject;
+        const {method /*, args */} = updateObject;
         // console.log('irc handles method', method, NetworkedIrcClient.handlesMethod(method));
         if (NetworkedAudioClient.handlesMethod(method)) {
           this.handleUpdateObject(updateObject);
@@ -207,6 +212,7 @@ export class NetworkedAudioClient extends EventTarget {
       }
     });
   }
+
   handleUpdateObject(updateObject) {
     const {method, args} = updateObject;
     // console.log('audio update object', {method, args});
@@ -272,6 +278,7 @@ export class NetworkedAudioClient extends EventTarget {
       debugger;
     }
   }
+
   sendChatMessage(message) {
     const buffer = zbencode({
       method: UPDATE_METHODS.CHAT,
