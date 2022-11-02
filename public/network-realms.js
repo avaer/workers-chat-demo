@@ -64,7 +64,7 @@ const makeTransactionHandler = () => {
 
 //
 
-const _getHeadRealm = (position, realms) => {
+const _getContainingHeadRealm = (position, realms) => {
   for (const realm of realms) {
     if (realm.connected) {
       const box = {
@@ -102,11 +102,23 @@ class HeadTracker extends EventTarget {
     this.headTrackedEntity = headTrackedEntity;
     
     this.onMigrate = null;
+    this.cleanupFns = new Map();
   }
-  #cachedHeadRealm = null;
+  #needsUpdate = false;
+  #currentHeadRealm = null; // based on position, used for migrate + write
+  #cachedHeadRealm = null; // based on linkage, used for events + read
   #connectedRealms = new Map(); // realm -> link count
   getHeadRealm() {
-    // XXX this method can be optimized with a cache
+    if (this.#needsUpdate) {
+      this.#updateCachedHeadRealm();
+      this.#needsUpdate = false;
+    }
+    return this.#cachedHeadRealm;
+  }
+  #updateCachedHeadRealm() {
+    this.#cachedHeadRealm = this.#computeHeadRealm();
+  }
+  #computeHeadRealm() {
     if (this.#connectedRealms.size === 1) { // by far the most common case
       return this.#connectedRealms.keys().next().value;
     } else {
@@ -117,7 +129,6 @@ class HeadTracker extends EventTarget {
         const dcArray = dataClient.getArray(arrayId, {
           listen: false,
         });
-        // console.log('got dc array', dcArray, dcArray.toArray());
         if (dcArray.hasKey(arrayIndexId)) {
           const dcMap = dcArray.getMap(arrayIndexId, {
             listen: false,
@@ -148,19 +159,19 @@ class HeadTracker extends EventTarget {
     }
   }
   getHeadRealmForCreate(position) {
-    const headRealm = _getHeadRealm(position, this.#connectedRealms.keys());
+    const headRealm = _getContainingHeadRealm(position, this.#connectedRealms.keys());
     return headRealm;
   }
-  async updateHeadRealm(headPosition) {
+  async tryMigrate(headPosition) {
     if (this.isLinked()) {
-      const newHeadRealm = _getHeadRealm(headPosition, Array.from(this.#connectedRealms.keys()));
-      if (!this.#cachedHeadRealm) {
-        this.#cachedHeadRealm = newHeadRealm;
+      const newHeadRealm = _getContainingHeadRealm(headPosition, Array.from(this.#connectedRealms.keys()));
+      if (!this.#currentHeadRealm) {
+        this.#currentHeadRealm = newHeadRealm;
         // console.log('init head realm', newHeadRealm.key);
       } else {
-        const oldHeadRealm = this.#cachedHeadRealm;
+        const oldHeadRealm = this.#currentHeadRealm;
         if (newHeadRealm.key !== oldHeadRealm.key) {          
-          this.#cachedHeadRealm = newHeadRealm;
+          this.#currentHeadRealm = newHeadRealm;
             
           this.onMigrate && await this.onMigrate(new MessageEvent('migrate', {
             data: {
@@ -182,16 +193,48 @@ class HeadTracker extends EventTarget {
     return this.#connectedRealms.size > 0;
   }
   linkRealm(realm) {
+    // listen for array add/remove which might trigger head update
+    const _listen = () => {
+      const {arrayId} = this.headTrackedEntity;
+      const {dataClient} = realm;
+      const dcArray = dataClient.getArray(arrayId); // note: auto-listen
+      const onadd = e => {
+        this.#needsUpdate = true;
+      };
+      dcArray.addEventListener('add', onadd);
+      const onremove = e => {
+        this.#needsUpdate = true;
+      };
+      dcArray.addEventListener('remove', onremove);
+
+      this.cleanupFns.set(realm, () => {
+        // stop listening for array add/remove
+        dcArray.unlisten();
+        dcArray.removeEventListener('add', onadd);
+        dcArray.removeEventListener('remove', onremove);
+      });
+    };
+
+    // add connected realm
     let val = this.#connectedRealms.get(realm) ?? 0;
     val++;
+    if (val === 1) {
+      _listen();
+    }
     this.#connectedRealms.set(realm, val);
+    this.#needsUpdate = true;
   }
   unlinkRealm(realm) {
+    // remove connected realm
     let val = this.#connectedRealms.get(realm);
     val--;
     if (val <= 0) {
       this.#connectedRealms.delete(realm);
+      
+      this.cleanupFns.get(realm)();
+      this.cleanupFns.delete(realm);
     }
+    this.#needsUpdate = true;
   }
 }
 
@@ -1363,7 +1406,7 @@ export class NetworkRealms extends EventTarget {
           onConnect && onConnect(position);
         }
         // we are in the middle of a network configuration, so take the opportunity to migrate the local player if necessary
-        await this.localPlayer.headTracker.updateHeadRealm(position);
+        await this.localPlayer.headTracker.tryMigrate(position);
 
         // check if we need to disconnect from any realms
         const oldRealms = [];
