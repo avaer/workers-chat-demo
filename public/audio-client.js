@@ -50,11 +50,6 @@ export async function createMicrophoneSource() {
   const audioReader = new WsMediaStreamAudioReader(mediaStream);
 
   const fakeWs = new EventTarget();
-  /* const _renderOutput = async () => {
-    const result = createAudioOutputFromStream(fakeWs);
-    result.outputNode.connect(audioContext.destination);
-  };
-  _renderOutput(); */
 
   const muxAndSend = encodedChunk => {
     const {type, timestamp} = encodedChunk;
@@ -162,43 +157,15 @@ export class NetworkedAudioClient extends EventTarget {
       };
     });
 
-    /* const _waitForInitialImport = async () => {
-      await new Promise((resolve, reject) => {
-        const initialMessage = e => {
-          if (e.data instanceof ArrayBuffer) {
-            const updateBuffer = e.data;
-            const uint8Array = new Uint8Array(updateBuffer);
-            const updateObject = parseUpdateObject(uint8Array);
-            
-            const {method, args} = updateObject;
-            if (method === UPDATE_METHODS.NETWORK_INIT) {
-              // const [playerIds] = args;
-              // console.log('irc init', {playerIds});
-
-              this.handleUpdateObject(updateObject);
-    
-              resolve();
-              
-              this.ws.removeEventListener('message', initialMessage);
-            }
-          }
-        };
-        this.ws.addEventListener('message', initialMessage);
-      });
-    };
-    await _waitForInitialImport(); */
-
     // console.log('irc listen');
     this.ws.addEventListener('message', e => {
       // console.log('got irc data', e.data);
       if (e?.data?.byteLength > 0) {
         const updateBuffer = e.data;
-        // console.log('irc data', e.data);
         const uint8Array = new Uint8Array(updateBuffer);
         const updateObject = parseUpdateObject(uint8Array);
 
         const {method, args} = updateObject;
-        // console.log('irc handles method', method, NetworkedIrcClient.handlesMethod(method));
         if (NetworkedAudioClient.handlesMethod(method)) {
           this.handleUpdateObject(updateObject);
         }
@@ -219,9 +186,6 @@ export class NetworkedAudioClient extends EventTarget {
         const outputStream = createAudioOutputStream();
         outputStream.outputNode.connect(getAudioContext().destination);
         this.outputAudioStreams.set(playerId, outputStream);
-        // console.log('unknown audio event', playerId);
-        // debugger;
-        // throw new Error('no audio stream for player id: ' + playerId);
         audioStream = outputStream;
 
         this.dispatchEvent(new MessageEvent('audiostreamstart', {
@@ -233,14 +197,10 @@ export class NetworkedAudioClient extends EventTarget {
       // console.log('receive mic data', data.byteLength);
       audioStream.write(data);
     } else if (method === UPDATE_METHODS.LEAVE || method === UPDATE_METHODS.AUDIO_END) {
-      // console.log('got leave', {method, args});
       const [playerId] = args;
 
       const audioStream = this.outputAudioStreams.get(playerId);
       if (audioStream) {
-        // console.log('unknown audio ended', playerId);
-        // debugger;
-        // throw new Error('no audio stream for player id: ' + playerId);
         audioStream.close();
         this.outputAudioStreams.delete(playerId);
 
