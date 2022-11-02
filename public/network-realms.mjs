@@ -1,6 +1,6 @@
 import {DataClient, NetworkedDataClient, DCMap, DCArray} from './data-client.mjs';
-import {NetworkedIrcClient} from './irc-client.js';
-import {NetworkedAudioClient, createMicrophoneSource} from './audio-client.js';
+import {NetworkedIrcClient} from './irc-client.mjs';
+import {NetworkedAudioClient, createMicrophoneSource} from './audio-client.mjs';
 import {
   createWs,
   makePromise,
