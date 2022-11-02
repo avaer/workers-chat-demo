@@ -59,8 +59,6 @@ export class NetworkedIrcClient extends EventTarget {
             
             const {method, args} = updateObject;
             if (method === UPDATE_METHODS.NETWORK_INIT) {
-              // const [playerIds] = args;
-              // console.log('irc init', {args});
 
               this.handleUpdateObject(updateObject);
     
@@ -85,8 +83,6 @@ export class NetworkedIrcClient extends EventTarget {
         const updateObject = parseUpdateObject(uint8Array);
 
         const {method, args} = updateObject;
-        // console.log('irc handles method', method, NetworkedIrcClient.handlesMethod(method));
-        // console.log('irc client handles method', method, args, NetworkedIrcClient.handlesMethod(method));
         if (NetworkedIrcClient.handlesMethod(method)) {
           this.handleUpdateObject(updateObject);
         }
