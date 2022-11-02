@@ -21,7 +21,6 @@ export const convertValToCrdtVal = val => {
 export const convertCrdtValToVal = crdtVal => {
   const val = {};
   for (const k in crdtVal) {
-    // eslint-disable-next-line no-unused-vars
     const [epoch, v] = crdtVal[k];
     val[k] = v;
   }
@@ -98,7 +97,6 @@ export class DCMap extends EventTarget {
     if (object) {
       const result = {};
       for (const key in object) {
-        // eslint-disable-next-line no-unused-vars
         const [epoch, val] = object[key];
         result[key] = val;
       }
@@ -114,7 +112,6 @@ export class DCMap extends EventTarget {
     if (object) {
       const valSpec = object[key];
       if (valSpec !== undefined) {
-        // eslint-disable-next-line no-unused-vars
         const [epoch, val] = valSpec;
         return val;
       } else {
@@ -130,7 +127,6 @@ export class DCMap extends EventTarget {
     if (object) {
       const valSpec = object[key];
       if (valSpec !== undefined) {
-        // eslint-disable-next-line no-unused-vars
         const [epoch, val] = valSpec;
         return epoch;
       } else {
@@ -425,7 +421,6 @@ export class DCArray extends EventTarget {
   removeAt(arrayIndexId) {
     return this.dataClient.removeArrayMapElement(this.arrayId, arrayIndexId);
   }
-
 
   listen() {
     const _addMap = (arrayIndexId, val) => {

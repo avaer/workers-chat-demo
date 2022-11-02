@@ -3,10 +3,11 @@ import {UPDATE_METHODS} from './update-types.js';
 import {parseUpdateObject, makeId} from './util.mjs';
 
 export class IrcPlayer extends EventTarget {
-  // eslint-disable-next-line no-useless-constructor
+  /*
   constructor() {
     super();
   }
+  */
 }
 
 export class NetworkedIrcClient extends EventTarget {
