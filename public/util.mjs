@@ -10,13 +10,13 @@ const align4 = alignN(4);
 const parseUpdateObject = uint8Array => zbdecode(uint8Array);
 
 function makeid(length) {
-  var result           = '';
-  var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  var result = '';
+  var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   var charactersLength = characters.length;
-  for ( var i = 0; i < length; i++ ) {
+  for (var i = 0; i < length; i++) {
     result += characters.charAt(Math.floor(Math.random() * charactersLength));
- }
- return result;
+  }
+  return result;
 }
 const makeId = () => makeid(10);
 
@@ -93,7 +93,7 @@ function parseMessage(m) {
         } else {
           console.warn('failed to parse', m);
           throw new Error('unrecognized message type: ' + m.type);
-        } 
+        }
       }
     }
   }
@@ -200,8 +200,8 @@ function serializeMessage(m) {
 }
 
 const createWs = (roomname, playerId) => {
-  const wss = document.location.protocol === "http:" ? "ws://" : "wss://";
-  const ws = new WebSocket(wss + location.host + "/api/room/" + roomname + "/websocket?playerId=" + playerId);
+  const wss = document.location.protocol === 'http:' ? 'ws://' : 'wss://';
+  const ws = new WebSocket(wss + location.host + '/api/room/' + roomname + '/websocket?playerId=' + playerId);
   /* ws.waitForConnect = async () => {
     return new Promise((accept, reject) => {
       ws.onopen = () => {
@@ -225,7 +225,7 @@ const makePromise = () => {
   promise.resolve = resolve;
   promise.reject = reject;
   return promise;
-}
+};
 
 const zstringify = o => {
   let result = '';

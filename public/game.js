@@ -3,7 +3,7 @@ import {makeId, zstringify} from './util.mjs';
 import {frameSize, realmSize} from './constants.js';
 
 import {RemotePlayerCursorHtmlRenderer, AppsHtmlRenderer, GameRealmsCanvases, GamePlayerCanvas} from "./renderers/html-renderer.js";
-import {NetworkRealms} from "./network-realms.js";
+import {NetworkRealms} from "./network-realms.mjs";
 
 //
 

@@ -1,10 +1,10 @@
-import {zbencode, zbdecode} from "./encoding.mjs";
-import {UPDATE_METHODS} from "./update-types.js";
+import {zbencode, zbdecode} from './encoding.mjs';
+import {UPDATE_METHODS} from './update-types.js';
 import {
   parseUpdateObject,
   makeId,
   serializeMessage,
-} from "./util.mjs";
+} from './util.mjs';
 
 //
 
@@ -16,7 +16,8 @@ export const convertValToCrdtVal = val => {
     crdtVal[k] = [startEpoch, v];
   }
   return crdtVal;
-}
+};
+
 export const convertCrdtValToVal = crdtVal => {
   const val = {};
   for (const k in crdtVal) {
@@ -24,7 +25,7 @@ export const convertCrdtValToVal = crdtVal => {
     val[k] = v;
   }
   return val;
-}
+};
 
 export const convertMapToObject = map => {
   const o = {};
@@ -33,6 +34,7 @@ export const convertMapToObject = map => {
   }
   return o;
 };
+
 export const convertObjectToMap = map => {
   const o = new Map();
   for (const key in map) {
@@ -45,6 +47,7 @@ export const convertObjectToMap = map => {
 //
 
 const _key = (arrayId, arrayIndexId) => `${arrayId}:${arrayIndexId}`;
+
 export class DCMap extends EventTarget {
   constructor(arrayId, arrayIndexId, dataClient) {
     super();
@@ -55,9 +58,11 @@ export class DCMap extends EventTarget {
 
     this.cleanupFn = null;
   }
+
   key() {
     return _key(this.arrayId, this.arrayIndexId);
   }
+
   getRawObject() {
     const key = this.key();
     if (!key) {
@@ -70,6 +75,7 @@ export class DCMap extends EventTarget {
     const rawObject = crdtWrap[1];
     return rawObject;
   }
+
   setRawObject(rawObject, epoch) {
     const key = this.key();
     const crdtWrap = [
@@ -78,12 +84,14 @@ export class DCMap extends EventTarget {
     ];
     this.dataClient.crdt.set(key, crdtWrap);
   }
+
   getMapEpoch() {
     const key = this.key();
     const crdtWrap = this.dataClient.crdt.get(key);
     const epoch = crdtWrap[0];
     return epoch;
   }
+
   toObject() {
     const object = this.getRawObject();
     if (object) {
@@ -98,6 +106,7 @@ export class DCMap extends EventTarget {
       return {};
     }
   }
+
   getKey(key) {
     const object = this.getRawObject();
     if (object) {
@@ -112,6 +121,7 @@ export class DCMap extends EventTarget {
       return undefined;
     }
   }
+
   getKeyEpoch(key) {
     const object = this.getRawObject();
     if (object) {
@@ -129,7 +139,7 @@ export class DCMap extends EventTarget {
 
   // client
   setKeyEpochValue(key, epoch, val) {
-    let object = this.getRawObject();
+    const object = this.getRawObject();
     if (!object) {
       debugger;
       throw new Error('setKeyEpochValue on nonexistent object');
@@ -152,9 +162,10 @@ export class DCMap extends EventTarget {
         key,
         epoch: newEpoch,
         val,
-      }
+      },
     });
   }
+
   setKeyEpochValueUpdate(key, epoch, val) {
     this.setKeyEpochValue(key, epoch, val);
 
@@ -163,33 +174,35 @@ export class DCMap extends EventTarget {
         key,
         epoch,
         val,
-      }
+      },
     });
   }
+
   removeUpdate() {
     const key = this.key();
     this.dataClient.crdt.delete(key);
-    
-    let array = this.dataClient.crdt.get(this.arrayId);
+
+    const array = this.dataClient.crdt.get(this.arrayId);
     if (!array) {
       throw new Error('remove from nonexistent array!');
     }
     delete array[this.arrayIndexId];
-    
+
     return new MessageEvent('remove.' + this.arrayId, {
       data: {
         arrayIndexId: this.arrayIndexId, // XXX is this needed?
       },
     });
   }
+
   importMapUpdate() {
     const map = this;
     const {arrayIndexId} = map;
 
-    // convert the curernt value to JSON
+    // convert the current value to JSON
     // notice that this loses per-key epoch information
     // however, during a migration, the map's overall epoch is increased
-    // migration conflicts are detected at the map level, not the key level 
+    // migration conflicts are detected at the map level, not the key level
     const crdtVal = map.getRawObject();
     const val = convertCrdtValToVal(crdtVal);
     const epoch = map.getMapEpoch() + 1;
@@ -226,6 +239,7 @@ export class DCMap extends EventTarget {
       return object[key];
     }
   }
+
   listen() {
     const setKey = 'set.' + this.arrayId + '.' + this.arrayIndexId;
     const setFn = e => {
@@ -265,7 +279,7 @@ export class DCMap extends EventTarget {
 
     // listener
     // this.dataClient.arrayMapListeners.set(this.arrayIndexId, this);
-    
+
     this.cleanupFn = () => {
       // console.log('map unlink', setKey);
       this.dataClient.removeEventListener(setKey, setFn);
@@ -276,6 +290,7 @@ export class DCMap extends EventTarget {
       // this.dataClient.arrayMapListeners.delete(this.arrayIndexId);
     };
   }
+
   unlisten() {
     if (this.cleanupFn) {
       this.cleanupFn();
@@ -295,6 +310,7 @@ export class DCArray extends EventTarget {
 
     this.cleanupFn = null;
   }
+
   getKeys() {
     const array = this.dataClient.crdt.get(this.arrayId);
     if (array) {
@@ -303,6 +319,7 @@ export class DCArray extends EventTarget {
       return [];
     }
   }
+
   getMaps() {
     const array = this.dataClient.crdt.get(this.arrayId);
     if (array) {
@@ -315,15 +332,18 @@ export class DCArray extends EventTarget {
       return [];
     }
   }
+
   getMap(arrayIndexId, {listen = true} = {}) {
     const map = new DCMap(this.arrayId, arrayIndexId, this.dataClient);
     listen && map.listen();
     return map;
   }
+
   hasKey(key) {
     const array = this.dataClient.crdt.get(this.arrayId);
     return array ? (array[key] !== undefined) : false;
   }
+
   getIndex(index, opts) {
     const array = this.dataClient.crdt.get(this.arrayId);
     if (array) {
@@ -339,10 +359,12 @@ export class DCArray extends EventTarget {
       return undefined;
     }
   }
+
   getSize() {
     const array = this.dataClient.crdt.get(this.arrayId);
     return array ? Object.keys(array).length : 0;
   }
+
   toArray() {
     const array = this.dataClient.crdt.get(this.arrayId);
     if (array) {
@@ -359,6 +381,7 @@ export class DCArray extends EventTarget {
       return [];
     }
   }
+
   importArrayUpdates() {
     const arrayVal = this.dataClient.crdt.get(this.arrayId);
 
@@ -386,15 +409,19 @@ export class DCArray extends EventTarget {
     }
     return messages;
   }
+
   add(val, epoch, opts) {
     return this.dataClient.createArrayMapElement(this.arrayId, val, epoch, opts);
   }
+
   addAt(arrayIndexId, val, epoch, opts) {
     return this.dataClient.addArrayMapElement(this.arrayId, arrayIndexId, val, epoch, opts);
   }
+
   removeAt(arrayIndexId) {
     return this.dataClient.removeArrayMapElement(this.arrayId, arrayIndexId);
   }
+
   listen() {
     const _addMap = (arrayIndexId, val) => {
       const map = new DCMap(this.arrayId, arrayIndexId, this.dataClient);
@@ -436,6 +463,7 @@ export class DCArray extends EventTarget {
       this.dataClient.removeEventListener(removeKey, removeFn);
     };
   }
+
   unlisten() {
     if (this.cleanupFn) {
       this.cleanupFn();
@@ -443,6 +471,9 @@ export class DCArray extends EventTarget {
     }
   }
 }
+
+//
+
 export class DataClient extends EventTarget {
   constructor({
     crdt = null,
@@ -572,6 +603,7 @@ export class DataClient extends EventTarget {
       }
     }
   }
+
   getImportMessage() {
     const crtdObject = convertMapToObject(this.crdt);
     const crdtExport = zbencode(crtdObject);
@@ -581,6 +613,7 @@ export class DataClient extends EventTarget {
       },
     });
   }
+
   getSynMessage(synId) {
     if (!synId) {
       debugger;
@@ -591,6 +624,7 @@ export class DataClient extends EventTarget {
       },
     });
   }
+
   getSynAckMessage(synId) {
     if (!synId) {
       debugger;
@@ -601,6 +635,7 @@ export class DataClient extends EventTarget {
       },
     });
   }
+
   deadHandKeys(keys, deadHand) {
     return new MessageEvent('deadhand', {
       data: {
@@ -609,15 +644,18 @@ export class DataClient extends EventTarget {
       },
     });
   }
+
   deadHandArrayMap(arrayId, arrayIndexId, deadHand) {
     if (typeof arrayIndexId !== 'string') {
       debugger;
     }
     return this.deadHandKeys([arrayId + '.' + arrayIndexId], deadHand);
   }
+
   deadHandArrayMaps(arrayId, arrayIndexId, deadHand) {
     return this.deadHandKeys(arrayIndexId.map(arrayIndexId => arrayId + '.' + arrayIndexId), deadHand);
   }
+
   liveHandKeys(keys, liveHand) {
     return new MessageEvent('livehand', {
       data: {
@@ -626,16 +664,20 @@ export class DataClient extends EventTarget {
       },
     });
   }
+
   liveHandArrayMap(arrayId, arrayIndexId, liveHand) {
     return this.liveHandKeys([arrayId + '.' + arrayIndexId], liveHand);
   }
+
   liveHandArrayMaps(arrayId, arrayIndex, liveHand) {
     return this.liveHandKeys(arrayIndex.map(arrayIndexId => arrayId + '.' + arrayIndexId), liveHand);
   }
+
   applyUint8Array(uint8Array, opts) {
     const updateObject = parseUpdateObject(uint8Array);
     return this.applyUpdateObject(updateObject, opts);
   }
+
   applyUpdateObject(updateObject, {
     force = false, // force if it's coming from the server
   } = {}) {
@@ -683,8 +725,8 @@ export class DataClient extends EventTarget {
               key,
               oldEpoch,
               oldVal,
-            }
-          })
+            },
+          });
         }
         break;
       }
@@ -694,7 +736,7 @@ export class DataClient extends EventTarget {
           debugger;
         }
         const crdtVal = convertValToCrdtVal(val);
-        
+
         const key = _key(arrayId, arrayIndexId);
         const crdtWrap = [
           epoch,
@@ -704,7 +746,7 @@ export class DataClient extends EventTarget {
           debugger;
         }
         this.crdt.set(key, crdtWrap);
-        
+
         let array = this.crdt.get(arrayId);
         if (!array) {
           array = {};
@@ -725,9 +767,9 @@ export class DataClient extends EventTarget {
       }
       case UPDATE_METHODS.REMOVE: {
         const [arrayId, arrayIndexId] = args;
-        
+
         // remove from array
-        let array = this.crdt.get(arrayId);
+        const array = this.crdt.get(arrayId);
         if (!array) {
           throw new Error('remove from nonexistent array: ' + arrayId);
         }
@@ -911,6 +953,7 @@ export class DataClient extends EventTarget {
       }
     }
   }
+
   getSaveKeys(m) {
     const mo = this.parseMessage(m);
     const {type, arrayId, arrayIndexId} = mo;
@@ -938,25 +981,29 @@ export class DataClient extends EventTarget {
 
     return saveKeys;
   }
+
   emitUpdate(messageEvent) {
     this.dispatchEvent(messageEvent);
   }
-  
+
   // for client
   getArray(arrayId, {listen = true} = {}) {
     const array = new DCArray(arrayId, this);
     listen && array.listen();
     return array;
   }
+
   getArrayMap(arrayId, arrayIndexId, {listen = true} = {}) {
     const map = new DCMap(arrayId, arrayIndexId, this);
     listen && map.listen();
     return map;
   }
+
   createArrayMapElement(arrayId, val, epoch, opts) {
     const arrayIndexId = makeId();
     return this.addArrayMapElement(arrayId, arrayIndexId, val, epoch, opts);
   }
+
   addArrayMapElement(arrayId, arrayIndexId, val, epoch, {
     listen = true,
   } = {}) {
@@ -965,14 +1012,14 @@ export class DataClient extends EventTarget {
     }
 
     const crdtVal = convertValToCrdtVal(val);
-    
+
     const key = _key(arrayId, arrayIndexId);
     const crdtWrap = [
       epoch,
       crdtVal,
     ];
     this.crdt.set(key, crdtWrap);
-    
+
     let array = this.crdt.get(arrayId);
     if (!array) {
       array = {};
@@ -993,6 +1040,7 @@ export class DataClient extends EventTarget {
     });
     return {map, update};
   }
+
   removeArrayMapElement(arrayId, arrayIndexId) {
     let array = this.crdt.get(arrayId);
     if (!array) {
@@ -1022,9 +1070,10 @@ export class DataClient extends EventTarget {
       throw new Error('array index not found in array');
     }
   }
+
   readBinding(arrayNames) {
-    let arrays = {};
-    let arrayMaps = {};
+    const arrays = {};
+    const arrayMaps = {};
     if (this.crdt) {
       arrayNames.forEach(arrayId => {
         const array = this.crdt.get(arrayId);
@@ -1064,6 +1113,7 @@ export class NetworkedDataClient extends EventTarget {
 
     this.ws = null;
   }
+
   static handlesMethod(method) {
     return [
       UPDATE_METHODS.IMPORT,
@@ -1077,6 +1127,7 @@ export class NetworkedDataClient extends EventTarget {
       UPDATE_METHODS.LIVE_HAND,
     ].includes(method);
   }
+
   async connect(ws) {
     this.ws = ws;
 
@@ -1089,7 +1140,7 @@ export class NetworkedDataClient extends EventTarget {
         reject();
         _cleanup();
       })(reject);
-      
+
       this.ws.addEventListener('open', resolve);
       this.ws.addEventListener('error', reject);
 
@@ -1102,15 +1153,15 @@ export class NetworkedDataClient extends EventTarget {
     const _waitForInitialImport = async () => {
       await new Promise((resolve, reject) => {
         const initialMessage = e => {
-          if (e?.data?.byteLength > 0) {            
+          if (e?.data?.byteLength > 0) {
             const updateBuffer = e.data;
             const uint8Array = new Uint8Array(updateBuffer);
             const updateObject = parseUpdateObject(uint8Array);
-            
+
             const {method, args} = updateObject;
             if (method === UPDATE_METHODS.IMPORT) {
               const [crdtExport] = args;
-              
+
               const importMessage = new MessageEvent('import', {
                 data: {
                   crdtExport,
@@ -1152,7 +1203,7 @@ export class NetworkedDataClient extends EventTarget {
         const updateBuffer = e.data;
         const uint8Array = new Uint8Array(updateBuffer);
         const updateObject = parseUpdateObject(uint8Array);
-        
+
         const {method} = updateObject;
         // console.log('got message', updateObject);
         if (NetworkedDataClient.handlesMethod(method)) {
@@ -1175,11 +1226,14 @@ export class NetworkedDataClient extends EventTarget {
     };
     this.ws.addEventListener('message', mainMessage);
   }
+
   /* disconnect() {
   } */
+
   send(msg) {
     this.ws.send(msg);
   }
+
   emitUpdate(update) {
     this.send(this.dataClient.serializeMessage(update));
   }

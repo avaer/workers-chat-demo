@@ -3,9 +3,11 @@ import {UPDATE_METHODS} from './update-types.js';
 import {parseUpdateObject, makeId} from './util.mjs';
 
 export class IrcPlayer extends EventTarget {
+  /*
   constructor() {
     super();
   }
+  */
 }
 
 export class NetworkedIrcClient extends EventTarget {
@@ -17,6 +19,7 @@ export class NetworkedIrcClient extends EventTarget {
 
     this.ws = null;
   }
+
   static handlesMethod(method) {
     return [
       UPDATE_METHODS.NETWORK_INIT,
@@ -26,6 +29,7 @@ export class NetworkedIrcClient extends EventTarget {
       UPDATE_METHODS.CHAT,
     ].includes(method);
   }
+
   async connect(ws) {
     this.ws = ws;
 
@@ -38,7 +42,7 @@ export class NetworkedIrcClient extends EventTarget {
         reject();
         _cleanup();
       })(reject);
-      
+
       this.ws.addEventListener('open', resolve);
       this.ws.addEventListener('error', reject);
 
@@ -56,14 +60,13 @@ export class NetworkedIrcClient extends EventTarget {
             const updateBuffer = e.data;
             const uint8Array = new Uint8Array(updateBuffer);
             const updateObject = parseUpdateObject(uint8Array);
-            
-            const {method, args} = updateObject;
-            if (method === UPDATE_METHODS.NETWORK_INIT) {
 
+            const {method/*, args */} = updateObject;
+            if (method === UPDATE_METHODS.NETWORK_INIT) {
               this.handleUpdateObject(updateObject);
-    
+
               resolve();
-              
+
               this.ws.removeEventListener('message', initialMessage);
             }
           }
@@ -82,7 +85,7 @@ export class NetworkedIrcClient extends EventTarget {
         const uint8Array = new Uint8Array(updateBuffer);
         const updateObject = parseUpdateObject(uint8Array);
 
-        const {method, args} = updateObject;
+        const {method/*, args */} = updateObject;
         if (NetworkedIrcClient.handlesMethod(method)) {
           this.handleUpdateObject(updateObject);
         }
@@ -91,6 +94,7 @@ export class NetworkedIrcClient extends EventTarget {
       }
     });
   }
+
   handleUpdateObject(updateObject) {
     const {method, args} = updateObject;
     // console.log('got irc event', {method, args});
@@ -147,6 +151,7 @@ export class NetworkedIrcClient extends EventTarget {
       console.warn('unhandled irc method', {method, args});
     }
   }
+
   sendRegisterMessage() {
     const buffer = zbencode({
       method: UPDATE_METHODS.REGISTER,
@@ -156,6 +161,7 @@ export class NetworkedIrcClient extends EventTarget {
     });
     this.ws.send(buffer);
   }
+
   sendChatMessage(message) {
     const buffer = zbencode({
       method: UPDATE_METHODS.CHAT,

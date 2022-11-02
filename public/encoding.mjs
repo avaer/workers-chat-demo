@@ -41,7 +41,7 @@ const encodableConstructors = [
 ];
 const _isAddendumEncodable = o =>
   encodableConstructors.includes(
-    o?.constructor
+    o?.constructor,
   );
 const nullUint8Array = textEncoder.encode('null');
 function zbencode(o) {
@@ -62,7 +62,7 @@ function zbencode(o) {
           addendums.push(o);
           addendumIndexes.push(recursionIndex);
           const addendumType = ADDENDUM_TYPES.get(o.constructor);
-          addendumTypes.push(addendumType)
+          addendumTypes.push(addendumType);
           return null;
         } else {
           return o;
@@ -85,7 +85,7 @@ function zbencode(o) {
     }
   };
   const sb = _getSb();
-    
+
   let totalSize = 0;
   totalSize += Uint32Array.BYTES_PER_ELEMENT; // length
   totalSize += sb.byteLength; // data
@@ -98,21 +98,21 @@ function zbencode(o) {
     totalSize += addendum.byteLength; // data
     totalSize = align4(totalSize);
   }
-  
+
   const ab = new ArrayBuffer(totalSize);
   const uint8Array = new Uint8Array(ab);
   const dataView = new DataView(ab);
   {
     let index = 0;
+
     // sb
-    {
-      dataView.setUint32(index, sb.byteLength, true);
-      index += Uint32Array.BYTES_PER_ELEMENT;
-      
-      uint8Array.set(sb, index);
-      index += sb.byteLength;
-      index = align4(index);
-    }
+    dataView.setUint32(index, sb.byteLength, true);
+    index += Uint32Array.BYTES_PER_ELEMENT;
+
+    uint8Array.set(sb, index);
+    index += sb.byteLength;
+    index = align4(index);
+
     // addendums
     dataView.setUint32(index, addendums.length, true);
     index += Uint32Array.BYTES_PER_ELEMENT;
@@ -120,16 +120,16 @@ function zbencode(o) {
       const addendum = addendums[i];
       const addendumIndex = addendumIndexes[i];
       const addendumType = addendumTypes[i];
-      
+
       dataView.setUint32(index, addendumIndex, true);
       index += Uint32Array.BYTES_PER_ELEMENT;
-      
+
       dataView.setUint32(index, addendumType, true);
       index += Uint32Array.BYTES_PER_ELEMENT;
-      
+
       dataView.setUint32(index, addendum.byteLength, true);
       index += Uint32Array.BYTES_PER_ELEMENT;
-      
+
       uint8Array.set(new Uint8Array(addendum.buffer, addendum.byteOffset, addendum.byteLength), index);
       index += addendum.byteLength;
       index = align4(index);
@@ -139,33 +139,33 @@ function zbencode(o) {
 }
 function zbdecode(uint8Array) {
   const dataView = new DataView(uint8Array.buffer, uint8Array.byteOffset, uint8Array.byteLength);
-  
+
   let index = 0;
   const sbLength = dataView.getUint32(index, true);
   index += Uint32Array.BYTES_PER_ELEMENT;
-  
+
   const sb = new Uint8Array(uint8Array.buffer, uint8Array.byteOffset + index, sbLength);
   index += sbLength;
   index = align4(index);
   const s = textDecoder.decode(sb);
   let j = JSON.parse(s);
-  
+
   const numAddendums = dataView.getUint32(index, true);
   index += Uint32Array.BYTES_PER_ELEMENT;
-  
+
   const addendums = Array(numAddendums);
   const addendumIndexes = Array(numAddendums);
   const addendumTypes = Array(numAddendums);
   for (let i = 0; i < numAddendums; i++) {
     const addendumIndex = dataView.getUint32(index, true);
     index += Uint32Array.BYTES_PER_ELEMENT;
-    
+
     const addendumType = dataView.getUint32(index, true);
     index += Uint32Array.BYTES_PER_ELEMENT;
-    
+
     const addendumLength = dataView.getUint32(index, true);
     index += Uint32Array.BYTES_PER_ELEMENT;
-    
+
     const TypedArrayCons = ADDENDUM_CONSTRUCTORS[addendumType];
     /* if (!TypedArrayCons) {
       console.warn('failed to find typed array cons for', addendumType);
@@ -173,22 +173,22 @@ function zbdecode(uint8Array) {
     const addendum = new TypedArrayCons(
       uint8Array.buffer,
       uint8Array.byteOffset + index,
-      addendumLength / TypedArrayCons.BYTES_PER_ELEMENT
+      addendumLength / TypedArrayCons.BYTES_PER_ELEMENT,
     );
     index += addendumLength;
     index = align4(index);
-    
+
     addendums[i] = addendum;
     addendumIndexes[i] = addendumIndex;
     addendumTypes[i] = addendumType;
   }
-  
+
   {
     let recursionIndex = 0;
     let currentAddendum = 0;
     const _recurseBindAddendums = o => {
       recursionIndex++;
-      
+
       const addendumIndex = addendumIndexes[currentAddendum];
       if (addendumIndex === recursionIndex) {
         const addendum = addendums[currentAddendum];

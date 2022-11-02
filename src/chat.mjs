@@ -65,8 +65,8 @@ import manifestJSON from '__STATIC_CONTENT_MANIFEST'
 const assetManifest = JSON.parse(manifestJSON);
 import {zbencode, zbdecode} from "../public/encoding.mjs";
 import {DataClient, NetworkedDataClient, DCMap, DCArray} from "../public/data-client.mjs";
-import {NetworkedIrcClient} from "../public/irc-client.js";
-import {NetworkedAudioClient} from "../public/audio-client.js";
+import {NetworkedIrcClient} from "../public/irc-client.mjs";
+import {NetworkedAudioClient} from "../public/audio-client.mjs";
 import {parseUpdateObject, serializeMessage} from "../public/util.mjs";
 import {UPDATE_METHODS} from "../public/update-types.js";
 
