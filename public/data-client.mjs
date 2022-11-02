@@ -309,14 +309,9 @@ export class DCArray extends EventTarget {
   constructor(arrayId, dataClient) {
     super();
 
-    // if (!arrayId) {
-    //   debugger;
-    // }
     this.arrayId = arrayId;
     this.dataClient = dataClient;
 
-    // this.r = Math.random();
-    // this.stack = new Error().stack;
     this.cleanupFn = null;
   }
 
@@ -350,19 +345,7 @@ export class DCArray extends EventTarget {
 
   hasKey(key) {
     const array = this.dataClient.crdt.get(this.arrayId);
-    if (array) {
-      // console.log('has key 1', {key, arrayId: this.arrayId, array});
-      if (array[key] !== undefined) {
-        // debugger;
-        return true;
-      } else {
-        // console.log('has key 2', {key, arrayId: this.arrayId, array});
-        return false;
-      }
-    } else {
-      // console.log('has key 3', {key, arrayId: this.arrayId, array});
-      return false;
-    }
+    return array ? (array[key] !== undefined) : false;
   }
 
   getIndex(index, opts) {
@@ -397,9 +380,6 @@ export class DCArray extends EventTarget {
         const val = convertCrdtValToVal(crdtVal);
         arrayMaps.push(val);
       }
-      // if (arrayMaps.length > 0 && window.lol) {
-      //   debugger;
-      // }
       return arrayMaps;
     } else {
       return [];
@@ -446,27 +426,6 @@ export class DCArray extends EventTarget {
     return this.dataClient.removeArrayMapElement(this.arrayId, arrayIndexId);
   }
 
-  /* removeArrayUpdate() {
-    let array = this.dataClient.crdt.get(this.arrayId);
-    if (!array) {
-      throw new Error('remove nonexistent array!');
-    }
-    const mapKeys = Object.keys(array);
-
-    // delete the array
-    this.dataClient.crdt.delete(this.arrayId);
-
-    // delete the maps, too
-    for (const arrayIndexId of mapKeys) {
-      const key = _key(this.arrayId, arrayIndexId);
-      this.dataClient.crdt.delete(key);
-    }
-
-    return new MessageEvent('removeArray.' + this.arrayId, {
-      data: {},
-    });
-  } */
-  // arrayListeners = new Map();
 
   listen() {
     const _addMap = (arrayIndexId, val) => {
@@ -624,7 +583,6 @@ export class DataClient extends EventTarget {
       }
       case 'deadhand': {
         // console.log('serialize dead hand');
-        // debugger;
         const {keys, deadHand} = m.data;
         return zbencode({
           method: UPDATE_METHODS.DEAD_HAND,
@@ -636,7 +594,6 @@ export class DataClient extends EventTarget {
       }
       case 'livehand': {
         // console.log('serialize live hand');
-        // debugger;
         const {keys, liveHand} = m.data;
         return zbencode({
           method: UPDATE_METHODS.LIVE_HAND,
@@ -729,18 +686,14 @@ export class DataClient extends EventTarget {
   applyUpdateObject(updateObject, {
     force = false, // force if it's coming from the server
   } = {}) {
-    // console.log('apply update object', updateObject);
     let rollback = null;
     let update = null;
 
     const {method, args} = updateObject;
-    // console.log('apply update object', {method, args});
     switch (method) {
       case UPDATE_METHODS.IMPORT: {
         const [crdtExport] = args;
-        // console.log('importing export', crdtExport, zbdecode(crdtExport));
         this.crdt = convertObjectToMap(zbdecode(crdtExport));
-        // console.log('crdt imported', this.crdt);
         update = new MessageEvent('import', {
           data: {
             crdtExport,
@@ -1025,8 +978,6 @@ export class DataClient extends EventTarget {
     } else if (type === 'rollback') {
       saveKeyFn(arrayIndexId);
     } else if (type === 'import') {
-      // console.warn('should find out how to save all keys...');
-      // saveKeyFn('crdt');
       saveKeyFn('*');
     } else {
       debugger;
@@ -1037,7 +988,6 @@ export class DataClient extends EventTarget {
   }
 
   emitUpdate(messageEvent) {
-    // console.log('data client emit update', this, messageEvent.type);
     this.dispatchEvent(messageEvent);
   }
 
@@ -1126,14 +1076,6 @@ export class DataClient extends EventTarget {
     }
   }
 
-  /* clearUpdates() {
-    const updates = [];
-    for (const map of this.arrayMapListeners.values()) {
-      const update = map.clearUpdate();
-      updates.push(update);
-    }
-    return updates;
-  } */
 
   readBinding(arrayNames) {
     const arrays = {};
@@ -1213,7 +1155,6 @@ export class NetworkedDataClient extends EventTarget {
         this.ws.removeEventListener('error', reject);
       };
     });
-    // console.log('connect');
 
     const _waitForInitialImport = async () => {
       await new Promise((resolve, reject) => {
@@ -1300,7 +1241,6 @@ export class NetworkedDataClient extends EventTarget {
   }
 
   emitUpdate(update) {
-    // console.log('emit update on network', update, new Error().stack);
     this.send(this.dataClient.serializeMessage(update));
   }
 }
