@@ -838,12 +838,8 @@ class VirtualIrc {
   link(realm) {
     const {networkedIrcClient} = realm;
 
-    // note: this is not a good place for this, since it doesn't have to do with players
-    // it's here for convenience
     const onchat = e => {
-      this.parent.dispatchEvent(new MessageEvent('chat', {
-        data: e.data,
-      }));
+      this.parent.receivedChatMessage(e.data);
     };
     networkedIrcClient.addEventListener('chat', onchat);
 
@@ -1404,6 +1400,12 @@ export class NetworkRealms extends EventTarget {
   sendChatMessage(message) {
     const headRealm = this.localPlayer.headTracker.getHeadRealm();
     headRealm.sendChatMessage(message);
+  }
+
+  receivedChatMessage(message) {
+    this.dispatchEvent(new MessageEvent('chat', {
+      data: message,
+    }));
   }
 
   async updatePosition(position, realmSize, {
