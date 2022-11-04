@@ -497,6 +497,10 @@ class VirtualPlayer extends HeadTrackedEntity {
   unlink(realm) {
     this.cleanupMapFns.get(realm)();
     this.cleanupMapFns.delete(realm);
+
+    if (!this.headTracker.isLinked()) {
+      this.dispatchEvent(new MessageEvent('leave'));
+    }
   }
 
   getKey(key) {
@@ -586,6 +590,7 @@ class VirtualPlayersArray extends EventTarget {
           }
         }
       };
+
       const _unlinkPlayer = arrayIndexId => {
         const playerId = arrayIndexId;
 
@@ -601,7 +606,6 @@ class VirtualPlayersArray extends EventTarget {
             if (!virtualPlayer.headTracker.isLinked()) {
               this.virtualPlayers.delete(playerId);
 
-              virtualPlayer.dispatchEvent(new MessageEvent('leave'));
               this.dispatchEvent(new MessageEvent('leave', {
                 data: {
                   player: virtualPlayer,
