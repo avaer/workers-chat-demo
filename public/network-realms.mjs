@@ -1046,6 +1046,8 @@ export class NetworkRealm extends EventTarget {
   }
 
   async connect() {
+    this.dispatchEvent(new Event('connecting'));
+
     const ws1 = createWs('realm:' + this.key, this.parent.playerId);
     ws1.binaryType = 'arraybuffer';
     this.ws = ws1;
@@ -1065,6 +1067,8 @@ export class NetworkRealm extends EventTarget {
       }),
     ]);
     this.connected = true;
+
+    this.dispatchEvent(new Event('connect'));
   }
 
   * getClearUpdateFns() {
@@ -1447,7 +1451,6 @@ export class NetworkRealms extends EventTarget {
           }
 
           if (!foundRealm) {
-            realm.dispatchEvent(new Event('connecting'));
             this.dispatchEvent(new MessageEvent('realmconnecting', {
               data: {
                 realm,
@@ -1464,8 +1467,6 @@ export class NetworkRealms extends EventTarget {
 
               this.connectedRealms.add(realm);
 
-              // emit event
-              realm.dispatchEvent(new Event('connect'));
               this.dispatchEvent(new MessageEvent('realmjoin', {
                 data: {
                   realm,
