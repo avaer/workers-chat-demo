@@ -238,15 +238,4 @@ export class NetworkedAudioClient extends EventTarget {
       debugger;
     }
   }
-
-  sendChatMessage(message) {
-    const buffer = zbencode({
-      method: UPDATE_METHODS.CHAT,
-      args: [
-        this.playerId,
-        message,
-      ],
-    });
-    this.ws.send(buffer);
-  }
 }
