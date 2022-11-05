@@ -480,6 +480,9 @@ class VirtualPlayer extends HeadTrackedEntity {
     this.playerActions.link(realm);
 
     // link initial position
+    if (!this.headTracker.isLinked()) {
+      this.dispatchEvent(new MessageEvent('join'));
+    }
     this.headTracker.linkRealm(realm);
 
     // cleanup
