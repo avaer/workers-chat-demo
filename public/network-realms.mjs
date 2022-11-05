@@ -1119,8 +1119,12 @@ export class NetworkRealm extends EventTarget {
   }
 
   disconnect() {
+    this.dispatchEvent(new Event('disconnecting'));
+
     this.ws.close();
     this.connected = false;
+
+    this.dispatchEvent(new Event('disconnect'));
   }
 
   emitUpdate(update) {
