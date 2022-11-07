@@ -2,14 +2,6 @@ import {zbencode} from './encoding.mjs';
 import {UPDATE_METHODS} from './update-types.js';
 import {parseUpdateObject, makeId} from './util.mjs';
 
-export class IrcPlayer extends EventTarget {
-  /*
-  constructor() {
-    super();
-  }
-  */
-}
-
 export class NetworkedIrcClient extends EventTarget {
   constructor(playerId = makeId()) {
     super();
