@@ -1238,9 +1238,9 @@ export class NetworkRealms extends EventTarget {
       _importPlayer();
 
       // migrate networked audio client
-      realms.migrateAudioRealm(oldHeadRealm, newHeadRealm);
+      this.migrateAudioRealm(oldHeadRealm, newHeadRealm);
 
-      await realms.sync();
+      await this.sync();
 
       // delete old
       // delete apps
