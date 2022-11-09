@@ -1088,6 +1088,7 @@ export class NetworkRealms extends EventTarget {
     this.localPlayer = new VirtualPlayer('players', this.playerId, this, 'local', {
       appsEntityTracker: this.appsEntityTracker,
     });
+    globalThis.localPlayer = this.localPlayer
     this.world = new VirtualWorld('worldApps', this, {
       entityTracker: this.appsEntityTracker,
     });

@@ -371,6 +371,21 @@ p:last-of-type {
 <!--===================================================================================-->
 <!-- Client-side JavaScript code for the app. -->
 
+<script>
+  globalThis.logNum = function(n) {
+    const nStr = n.toFixed(2);
+    return (n < 0 ? '' : '+') + nStr;
+  }
+
+  globalThis.logVector3 = function(v) {
+    return globalThis.logNum(v[0]) + ' ' + globalThis.logNum(v[1]) + ' ' + globalThis.logNum(v[2]);
+  }
+
+  globalThis.logVector4 = function(v) {
+    return globalThis.logNum(v[0]) + ' ' + globalThis.logNum(v[1]) + ' ' + globalThis.logNum(v[2]) + ' ' + globalThis.logNum(v[3]);
+  }
+</script>
+
 <script type="module">
 import WSRTC from '/public/wsrtc/wsrtc.js';
 import {zbencode, zbdecode} from '/public/encoding.mjs';

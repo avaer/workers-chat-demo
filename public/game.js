@@ -750,6 +750,8 @@ export const startGame = async ({
 
         // update realms set
         const position = realms.localPlayer.getKey('position');
+        // console.log(logVector3(position))
+        // console.log(position)
         realms.updatePosition(position, realmSize, {
           // onConnect,
         });
