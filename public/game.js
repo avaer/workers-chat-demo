@@ -153,8 +153,8 @@ export const startGame = async ({
       virtualWorld.worldApps.addEventListener('needledentityremove', onentityremove3);
   
       cleanupFns.push(() => {
-        dataClient.removeEventListener('add', onadd);
-        dataClient.removeEventListener('remove', onremove);
+        playersArray.removeEventListener('add', onadd);
+        playersArray.removeEventListener('remove', onremove);
         virtualWorld.worldApps.removeEventListener('needledentityadd', onentityadd3);
         virtualWorld.worldApps.removeEventListener('needledentityremove', onentityremove3);
 
