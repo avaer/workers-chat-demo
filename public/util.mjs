@@ -1,3 +1,4 @@
+import {MULTIPLAYER_PORT} from './constants.js';
 import {zbencode, zbdecode} from './encoding.mjs';
 import {UPDATE_METHODS} from './update-types.js';
 
@@ -200,8 +201,17 @@ function serializeMessage(m) {
 }
 
 const createWs = (roomname, playerId) => {
-  const wss = document.location.protocol === 'http:' ? 'ws://' : 'wss://';
-  const ws = new WebSocket(wss + location.host + '/api/room/' + roomname + '/websocket?playerId=' + playerId);
+  let wss = document.location.protocol === 'http:' ? 'ws://' : 'wss://';
+  let hostname = location.hostname;
+
+  // The local development server's WebSocket is provided at ws://localhost.
+  const isDevelopment = location.hostname === 'local.webaverse.com';
+  if (isDevelopment) {
+    wss = 'ws://';
+    hostname = 'localhost'
+  }
+
+  const ws = new WebSocket(`${wss}${hostname}:${MULTIPLAYER_PORT}/api/room/${roomname}/websocket?playerId=${playerId}`);
   /* ws.waitForConnect = async () => {
     return new Promise((accept, reject) => {
       ws.onopen = () => {
