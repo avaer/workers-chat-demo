@@ -1155,7 +1155,26 @@ class VirtualWorld extends EventTarget {
 
 //
 
+// The set of network realms at and surrounding the player's current location.
+// Properties:
+// - localPlayer - The user's player object.
+// Events:
+// - realmconnecting - MessageEvent fired when a connection to a new realm is being established. Event data contains the
+//    NetworkRealm being connected to.
+// - realmjoin - MessageEvent fired when a connection to a new realm has been established. Event data contains the NetworkRealm
+//    that has been connected to.
+// - realmleave - MessageEvent fired when a connection to an old realm has been removed. Event data contains the NetworkRealm
+//    that has been disconnected from.
+// - networkreconfigure - MessageEvent fired when the set of realms connected to changes. Event data is empty.
+// - micenabled - MessageEvent fired when the player's microphone is enabled. Event data is empty.
+// - micdisabled - MessageEvent fired when the player's microphone is disabled. Event data is empty.
+// - chat - MessageEvent fired when a chat message is receive from a remote player in the realms. Event data contains the chat
+//    message.
 export class NetworkRealms extends EventTarget {
+  // The 'chat' event is dispatched within VirtualIrc.
+
+  // Constructs a NetworkRealms object and connects the local player to multiplayer.
+  // - playerId - A unique string identifying the local player.
   constructor(playerId) {
     super();
 
@@ -1281,14 +1300,18 @@ export class NetworkRealms extends EventTarget {
     this.tx = makeTransactionHandler();
   }
 
+  // Gets the other players also present in the local player's NetworkRealms.
   getVirtualPlayers() {
     return this.players;
   }
 
+  // Gets the world of apps present in the local player's NetworkRealms.
   getVirtualWorld() {
     return this.world;
   }
 
+  // Gets the realm connected to at the player's position.
+  // Returns: The NetworkRealm at the player's position if there is one connected to, null if there's none.
   getClosestRealm(position) {
     for (const realm of this.connectedRealms) {
       if (realm.connected) {
@@ -1308,6 +1331,7 @@ export class NetworkRealms extends EventTarget {
     return null;
   }
 
+  // Internal method.
   async sync() {
     // for all realms
     const promises = Array.from(this.connectedRealms.values()).map(async realm => {
@@ -1357,10 +1381,12 @@ export class NetworkRealms extends EventTarget {
     await Promise.all(promises);
   }
 
+  // Returns whether or not the player's microphone is enabled.
   isMicEnabled() {
     return !!this.microphoneSource;
   }
 
+  // Toggles the player's microphone on/off.
   toggleMic() {
     if (!this.isMicEnabled()) {
       this.enableMic();
@@ -1369,6 +1395,7 @@ export class NetworkRealms extends EventTarget {
     }
   }
 
+  // Enables the player's microphone.
   async enableMic() {
     if (!this.microphoneSource) {
       this.microphoneSource = await createMicrophoneSource();
@@ -1389,6 +1416,7 @@ export class NetworkRealms extends EventTarget {
     }
   }
 
+  // Disables the player's microphone.
   disableMic() {
     if (this.microphoneSource) {
       const headRealm = this.localPlayer.headTracker.getHeadRealm();
@@ -1407,6 +1435,7 @@ export class NetworkRealms extends EventTarget {
     }
   }
 
+  // Internal method.
   migrateAudioRealm(oldRealm, newRealm) {
     if (this.microphoneSource) {
       const {networkedAudioClient: oldNetworkedAudioClient} = oldRealm;
@@ -1416,11 +1445,16 @@ export class NetworkRealms extends EventTarget {
     }
   }
 
+  // Sends a chat message to the realm that the local player is in.
+  // - message - String to send.  
   sendChatMessage(message) {
     const headRealm = this.localPlayer.headTracker.getHeadRealm();
     headRealm.sendChatMessage(message);
   }
 
+  // Updates the set of realms connected to based on the local player's position.
+  // - position: The local player's position.
+  // - realmsize: The size of the x and z dimensions of realms.
   async updatePosition(position, realmSize, {
     onConnect,
   } = {}) {
