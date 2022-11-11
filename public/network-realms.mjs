@@ -1563,4 +1563,22 @@ export class NetworkRealms extends EventTarget {
       });
     }
   }
+
+  // Disconnects the local player from multiplayer.
+  disconnect() {
+    for (const connectedRealm of this.connectedRealms) {
+      connectedRealm.disconnect();
+      connectedRealm.flush();
+      this.players.unlink(connectedRealm);
+      this.localPlayer.unlink(connectedRealm);
+      this.world.unlink(connectedRealm);
+      this.irc.unlink(connectedRealm);
+      this.connectedRealms.delete(connectedRealm);
+      this.dispatchEvent(new MessageEvent('realmleave', {
+        data: {
+          realm: connectedRealm,
+        },
+      }));
+    }
+  }
 }
