@@ -1023,14 +1023,14 @@ class NeedledVirtualEntityMap extends HeadTrackedEntity {
 //
 
 export class NetworkRealm extends EventTarget {
-  constructor(min, size, parent) {
+  constructor(id, min, size, parent) {
     super();
 
     this.min = min;
     this.size = size;
     this.parent = parent;
 
-    this.key = min.join(':');
+    this.key = id + ':' + min.join(':');
     this.connected = false;
 
     const dc1 = new DataClient({
@@ -1155,7 +1155,7 @@ class VirtualWorld extends EventTarget {
 
 //
 
-// The set of network realms at and surrounding the player's current location.
+// The set of network realms at and surrounding the player's current location in the current scene.
 // Properties:
 // - localPlayer - The user's player object.
 // Events:
@@ -1174,10 +1174,12 @@ export class NetworkRealms extends EventTarget {
   // The 'chat' event is dispatched within VirtualIrc.
 
   // Constructs a NetworkRealms object and connects the local player to multiplayer.
-  // - playerId - A unique string identifying the local player.
-  constructor(playerId) {
+  // - sceneId - A unique alphanumeric string identifying the scene.
+  // - playerId - A unique alphanumeric string identifying the local player.
+  constructor(sceneId, playerId) {
     super();
 
+    this.sceneId = sceneId;
     this.playerId = playerId;
 
     this.lastPosition = [NaN, NaN, NaN];
@@ -1477,7 +1479,7 @@ export class NetworkRealms extends EventTarget {
               0,
               Math.floor((snappedPosition[2] + dz * realmSize) / realmSize) * realmSize,
             ];
-            const realm = new NetworkRealm(min, realmSize, this);
+            const realm = new NetworkRealm(this.sceneId, min, realmSize, this);
             candidateRealms.push(realm);
           }
         }
