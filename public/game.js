@@ -45,7 +45,7 @@ export const startGame = async ({
   let remotePlayerCanvases = new Map();
   
   // realms
-  const realms = new NetworkRealms(playerId);
+  const realms = new NetworkRealms('scene', playerId);
   const realmCleanupFns = new Map();
   realms.addEventListener('realmconnecting', e => {
     const {realm} = e.data;
