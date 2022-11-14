@@ -355,8 +355,8 @@ export const startGame = async ({
     // action methods
     const _pickupDrop = () => {
       // console.log('drop 1');
-      const position = localPlayerCanvas.virtualPlayer.getKey('position');
-      const direction = localPlayerCanvas.virtualPlayer.getKey('direction');
+      const position = localPlayerCanvas.virtualPlayer.getKeyValue('position');
+      const direction = localPlayerCanvas.virtualPlayer.getKeyValue('direction');
       const targetPosition = [
         position[0] + direction[0] * frameSize,
         0,
@@ -749,7 +749,7 @@ export const startGame = async ({
         _renderRealms();
 
         // update realms set
-        const position = realms.localPlayer.getKey('position');
+        const position = realms.localPlayer.getKeyValue('position');
         realms.updatePosition(position, realmSize, {
           // onConnect,
         });

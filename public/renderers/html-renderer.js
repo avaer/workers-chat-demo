@@ -392,8 +392,8 @@ export class GamePlayerCanvas {
     };
   }
   move() {
-    const oldPosition = this.virtualPlayer.getKey('position');
-    const oldDirection = this.virtualPlayer.getKey('direction');
+    const oldPosition = this.virtualPlayer.getKeyValue('position');
+    const oldDirection = this.virtualPlayer.getKeyValue('direction');
     
     const speed = 5;
 
@@ -445,7 +445,7 @@ export class GamePlayerCanvas {
   }
   draw() {
     if (GamePlayerCanvas.#spriteImg) {
-      const direction = this.virtualPlayer.getKey('direction');
+      const direction = this.virtualPlayer.getKeyValue('direction');
 
       let row;
       if (direction[0] === -1) {
@@ -465,8 +465,8 @@ export class GamePlayerCanvas {
       this.ctx.drawImage(GamePlayerCanvas.#spriteImg, col * frameSize, row * frameSize, frameSize, frameSize, 0, 0, frameSize, frameSize);
     
       if (!this.local) {
-        const remotePlayerPosition = this.virtualPlayer.getKey('position');
-        // const localPlayerPosition = realms.localPlayer.getKey('position');
+        const remotePlayerPosition = this.virtualPlayer.getKeyValue('position');
+        // const localPlayerPosition = realms.localPlayer.getKeyValue('position');
 
         this.element.style.transform = `translate3d(${remotePlayerPosition[0]}px, ${remotePlayerPosition[2]}px, 0)`;
       }

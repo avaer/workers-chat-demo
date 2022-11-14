@@ -506,7 +506,7 @@ class VirtualPlayer extends HeadTrackedEntity {
     }
   }
 
-  getKey(key) {
+  getKeyValue(key) {
     const headRealm = this.headTracker.getHeadRealm();
     const {dataClient} = headRealm;
     const valueMap = dataClient.getArrayMap(this.arrayId, this.arrayIndexId, {
