@@ -40,6 +40,11 @@ const stopMediaStream = mediaStream => {
   }
 };
 
+export async function initAudioContext() {
+  const audioContext = await ensureAudioContext();
+  audioContext.resume();
+}
+
 export async function createMicrophoneSource() {
   const audioContext = await ensureAudioContext();
   audioContext.resume();
