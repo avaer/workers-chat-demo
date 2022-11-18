@@ -1,6 +1,6 @@
 import {DataClient, NetworkedDataClient, DCMap, DCArray} from './data-client.mjs';
 import {NetworkedIrcClient} from './irc-client.mjs';
-import {NetworkedAudioClient, createMicrophoneSource} from './audio-client.mjs';
+import {NetworkedAudioClient, initAudioContext, createMicrophoneSource} from './audio-client.mjs';
 import {
   createWs,
   makePromise,
@@ -1381,6 +1381,11 @@ export class NetworkRealms extends EventTarget {
       }
     });
     await Promise.all(promises);
+  }
+
+  // Initializes the AudioContext.
+  initAudioContext() {
+    initAudioContext();
   }
 
   // Returns whether or not the player's microphone is enabled.
