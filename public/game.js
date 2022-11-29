@@ -73,44 +73,17 @@ export const startGame = async ({
   realms.addEventListener('realmjoin', e => {
     const {realm} = e.data;
     
-    const {dataClient, networkedDataClient} = realm;
+    const {dataClient} = realm;
 
     // console.log('realm join', realm.key);
     
-    const onsyn = e => {
-      const {synId} = e.data;
-      // console.log('response synAck', synId);
-      const synAckMessage = dataClient.getSynAckMessage(synId);
-      networkedDataClient.emitUpdate(synAckMessage);
-    };
-    dataClient.addEventListener('syn', onsyn);
-
-    const cleanupFns = [
-      () => {
-        dataClient.removeEventListener('syn', onsyn);
-      },
-    ];
+    const cleanupFns = [];
     
     const el = getRealmElement(realm);
     if (el) {
       el.classList.add('connected');
       el.classList.remove('connecting');
       
-      /* setInterval(() => {
-        console.log('send syn');
-        const synMessage = dataClient.getSynMessage();
-        networkedDataClient.emitUpdate(synMessage);
-      }, 2 * 1000); */
-
-      /* window.sync = synId => {
-        const synMessage = dataClient.getSynMessage(synId);
-        networkedDataClient.emitUpdate(synMessage);
-      }; */
-
-      /* this.addEventListener('synAck', e => {
-        console.log('got synack', e.data);
-      }); */
-
       el.updateText(dataClient);
 
       const playersArray = dataClient.getArray('players');

@@ -1300,6 +1300,38 @@ export class NetworkRealms extends EventTarget {
     this.irc = new VirtualIrc(this);
     this.connectedRealms = new Set();
     this.tx = makeTransactionHandler();
+
+    this.realmsCleanupFns = new Map();
+
+    this.addEventListener('realmjoin', e => {
+      const {realm} = e.data;
+      const {dataClient, networkedDataClient} = realm;
+
+      const onsyn = e => {
+        const {synId} = e.data;
+        const synAckMessage = dataClient.getSynAckMessage(synId);
+        networkedDataClient.emitUpdate(synAckMessage);
+      };
+      dataClient.addEventListener('syn', onsyn);
+
+      const cleanupFns = [
+        () => {
+          dataClient.removeEventListener('syn', onsyn);
+        },
+      ];
+
+      this.realmsCleanupFns.set(realm, () => {
+        for (const cleanupFn of cleanupFns) {
+          cleanupFn();
+        }
+      });
+    });
+
+    this.addEventListener('realmleave', e => {
+      const {realm} = e.data;
+      this.realmsCleanupFns.get(realm)();
+      this.realmsCleanupFns.delete(realm);
+    });
   }
 
   // Gets the other players also present in the local player's NetworkRealms.
