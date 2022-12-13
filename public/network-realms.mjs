@@ -1562,7 +1562,7 @@ export class NetworkRealms extends EventTarget {
 
         // if this is the first network configuration, initialize our local player
         if (oldNumConnectedRealms === 0 && connectPromises.length > 0) {
-          onConnect && onConnect(position);
+          onConnect && await onConnect(position);
         }
         // we are in the middle of a network configuration, so take the opportunity to migrate the local player if necessary
         await this.localPlayer.headTracker.tryMigrate(position);
