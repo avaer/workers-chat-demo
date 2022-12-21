@@ -767,6 +767,10 @@ class VirtualEntityArray extends VirtualPlayersArray {
     return map;
   }
 
+  removeEntityAt(arrayIndexId) {
+    this.getVirtualMap(arrayIndexId).remove();
+  }
+
   getSize() {
     return this.entityTracker.getSize();
   }
