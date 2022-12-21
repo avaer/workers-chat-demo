@@ -401,7 +401,8 @@ export const startGame = async ({
         const newActionMap = realms.localPlayer.playerActions.addEntity(action, targetRealm);
 
         // remove from the old location (world)
-        collidedVirtualMap.remove();
+        //collidedVirtualMap.remove();
+        virtualWorld.worldApps.removeEntityAt(collidedVirtualMap.entityMap.arrayIndexId);
 
         // livehand
         const liveHandUpdate = targetRealm.dataClient.liveHandArrayMaps(
@@ -465,8 +466,10 @@ export const startGame = async ({
             // newPlayerApp.headTracker.setHeadRealm(targetRealm);
 
             // remove from the old location (player)
-            firstApp.remove();
-            firstAction.remove();
+            //firstApp.remove();
+            //firstAction.remove();
+            realms.localPlayer.playerApps.removeEntityAt(appId);
+            realms.localPlayer.playerActions.removeEntityAt(firstAction.arrayIndexId);
 
             const liveHandUpdate = targetRealm.dataClient.liveHandArrayMap(
               'worldApps',
