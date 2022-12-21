@@ -372,6 +372,8 @@ export const startGame = async ({
       const collidedVirtualMap = _getCollision();
       if (collidedVirtualMap) {
         // deadhand
+        // Is emitted by addEntity().
+        /*
         const sourceRealm = collidedVirtualMap.headTracker.getHeadRealm();
         const deadHandUpdate = sourceRealm.dataClient.deadHandArrayMaps(
           realms.localPlayer.playerApps.arrayId,
@@ -379,6 +381,7 @@ export const startGame = async ({
           realms.playerId,
         );
         sourceRealm.emitUpdate(deadHandUpdate);
+        */
         
         // track
         // collidedVirtualMap.setHeadTracker(realms.localPlayer.playerApps.headTracker);
@@ -405,12 +408,15 @@ export const startGame = async ({
         virtualWorld.worldApps.removeEntityAt(collidedVirtualMap.entityMap.arrayIndexId);
 
         // livehand
+        // Is emitted by addEntity().
+        /*
         const liveHandUpdate = targetRealm.dataClient.liveHandArrayMaps(
           realms.localPlayer.playerApps.arrayId,
           [collidedVirtualMap.entityMap.arrayIndexId],
           realms.playerId,
         );
         sourceRealm.emitUpdate(liveHandUpdate);
+        */
       } else {
         // console.log('got player apps', realms.localPlayer.playerApps.getSize());
         if (realms.localPlayer.playerActions.getSize() > 0) {
@@ -447,12 +453,16 @@ export const startGame = async ({
             // );
             // firstApp.headRealm.emitUpdate(deadHandUpdate);
             // new location: world
+            // deadhand
+            // Is emitted by addEntityAt().
+            /*
             const deadHandUpdate = targetRealm.dataClient.deadHandArrayMaps(
               'worldApps',
               [firstApp.entityMap.arrayIndexId],
               realms.playerId,
             );
             targetRealm.emitUpdate(deadHandUpdate);
+            */
 
             // add at the new location (world)
             const firstAppJson = firstApp.toObject();
@@ -471,12 +481,16 @@ export const startGame = async ({
             realms.localPlayer.playerApps.removeEntityAt(appId);
             realms.localPlayer.playerActions.removeEntityAt(firstAction.arrayIndexId);
 
+            // livehand
+            // Is emitted by addEntity().
+            /*
             const liveHandUpdate = targetRealm.dataClient.liveHandArrayMap(
               'worldApps',
               [firstApp.entityMap.arrayIndexId],
               realms.playerId,
             );
             targetRealm.emitUpdate(liveHandUpdate);
+            */
 
           } else {
             console.warn('no containing realm to drop to');
