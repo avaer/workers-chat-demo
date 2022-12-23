@@ -278,6 +278,7 @@ class EntityTracker extends EventTarget {
 
           this.dispatchEvent(new MessageEvent('entityremove', {
             data: {
+              arrayId: map.arrayId,
               entityId: arrayIndexId,
               entity: virtualMap,
             },
@@ -297,6 +298,7 @@ class EntityTracker extends EventTarget {
     if (added) {
       this.dispatchEvent(new MessageEvent('entityadd', {
         data: {
+          arrayId: map.arrayId,
           entityId: map.arrayIndexId,
           entity: virtualMap,
         },
