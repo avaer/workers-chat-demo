@@ -1195,6 +1195,14 @@ export class NetworkRealms extends EventTarget {
       entityTracker: this.appsEntityTracker,
     });
 
+    // Provide entity add/remove events.
+    this.appsEntityTracker.addEventListener('entityadd', e => {
+      this.dispatchEvent(new MessageEvent('entityadd', {data: e.data}));
+    });
+    this.appsEntityTracker.addEventListener('entityremove', e => {
+      this.dispatchEvent(new MessageEvent('entityremove', {data: e.data}));
+    });
+
     this.players = new VirtualPlayersArray('players', this, {
       appsEntityTracker: this.appsEntityTracker,
     });
