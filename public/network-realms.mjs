@@ -1199,10 +1199,16 @@ export class NetworkRealms extends EventTarget {
 
     // Provide entity add/remove events.
     this.appsEntityTracker.addEventListener('entityadd', e => {
-      this.dispatchEvent(new MessageEvent('entityadd', {data: e.data}));
+      // Add to the event queue after allowing internal event handlers to have been called.
+      setTimeout(() => {
+        this.dispatchEvent(new MessageEvent('entityadd', {data: e.data}));
+      }, 0);
     });
     this.appsEntityTracker.addEventListener('entityremove', e => {
-      this.dispatchEvent(new MessageEvent('entityremove', {data: e.data}));
+      // Add to the event queue after allowing internal event handlers to have been called.
+      setTimeout(() => {
+        this.dispatchEvent(new MessageEvent('entityremove', {data: e.data}));
+      }, 0);
     });
 
     this.players = new VirtualPlayersArray('players', this, {
