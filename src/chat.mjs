@@ -274,6 +274,7 @@ const dataClientPromises = new Map();
 
 const schemaArrayNames = [
   'worldApps',
+  'partyApps'
 ];
 
 const _pauseWebSocket = (ws) => {

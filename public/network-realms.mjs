@@ -1142,20 +1142,24 @@ export class NetworkRealm extends EventTarget {
 //
 
 class VirtualWorld extends EventTarget {
-  constructor(arrayId, realms, opts) {
+  constructor(arrayIds, realms, opts) {
     super();
 
-    this.worldApps = new VirtualEntityArray(arrayId, realms, {
-      entityTracker: opts?.entityTracker,
-    });
+    for (const id of arrayIds) {
+      this[id] = new VirtualEntityArray(id, realms, {
+        entityTracker: opts?.entityTracker,
+      });
+    }
   }
 
   link(realm) {
     this.worldApps.link(realm);
+    this.partyApps.link(realm);
   }
 
   unlink(realm) {
     this.worldApps.unlink(realm);
+    this.partyApps.unlink(realm);
   }
 }
 
@@ -1193,7 +1197,7 @@ export class NetworkRealms extends EventTarget {
     this.localPlayer = new VirtualPlayer('players', this.playerId, this, 'local', {
       appsEntityTracker: this.appsEntityTracker,
     });
-    this.world = new VirtualWorld('worldApps', this, {
+    this.world = new VirtualWorld(['worldApps', 'partyApps'], this, {
       entityTracker: this.appsEntityTracker,
     });
 
