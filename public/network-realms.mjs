@@ -28,7 +28,7 @@ const boxContains = (box, point) => {
   const {min, max} = box;
   const [x, y, z] = point;
   return x >= min[0] && x < max[0] &&
-    y >= min[1] && y < max[1] &&
+    // y >= min[1] && y < max[1] &&
     z >= min[2] && z < max[2];
 };
 
@@ -73,7 +73,8 @@ const _getContainingHeadRealm = (position, realms) => {
         min: realm.min,
         max: [
           realm.min[0] + realm.size,
-          realm.min[1] + realm.size,
+          // realm.min[1] + realm.size,
+          0,
           realm.min[2] + realm.size,
         ],
       };
@@ -1377,7 +1378,8 @@ export class NetworkRealms extends EventTarget {
           min: realm.min,
           max: [
             realm.min[0] + realm.size,
-            realm.min[1] + realm.size,
+            // realm.min[1] + realm.size,
+            0,
             realm.min[2] + realm.size,
           ],
         };
