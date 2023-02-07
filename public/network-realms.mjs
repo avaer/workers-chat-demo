@@ -28,7 +28,7 @@ const boxContains = (box, point) => {
   const {min, max} = box;
   const [x, y, z] = point;
   return x >= min[0] && x < max[0] &&
-    y >= min[1] && y < max[1] &&
+    // y >= min[1] && y < max[1] &&
     z >= min[2] && z < max[2];
 };
 
@@ -73,7 +73,8 @@ const _getContainingHeadRealm = (position, realms) => {
         min: realm.min,
         max: [
           realm.min[0] + realm.size,
-          realm.min[1] + realm.size,
+          // realm.min[1] + realm.size,
+          0,
           realm.min[2] + realm.size,
         ],
       };
@@ -1142,20 +1143,24 @@ export class NetworkRealm extends EventTarget {
 //
 
 class VirtualWorld extends EventTarget {
-  constructor(arrayId, realms, opts) {
+  constructor(arrayIds, realms, opts) {
     super();
 
-    this.worldApps = new VirtualEntityArray(arrayId, realms, {
-      entityTracker: opts?.entityTracker,
-    });
+    for (const id of arrayIds) {
+      this[id] = new VirtualEntityArray(id, realms, {
+        entityTracker: opts?.entityTracker,
+      });
+    }
   }
 
   link(realm) {
     this.worldApps.link(realm);
+    this.partyApps.link(realm);
   }
 
   unlink(realm) {
     this.worldApps.unlink(realm);
+    this.partyApps.unlink(realm);
   }
 }
 
@@ -1193,7 +1198,7 @@ export class NetworkRealms extends EventTarget {
     this.localPlayer = new VirtualPlayer('players', this.playerId, this, 'local', {
       appsEntityTracker: this.appsEntityTracker,
     });
-    this.world = new VirtualWorld('worldApps', this, {
+    this.world = new VirtualWorld(['worldApps', 'partyApps'], this, {
       entityTracker: this.appsEntityTracker,
     });
 
@@ -1373,7 +1378,8 @@ export class NetworkRealms extends EventTarget {
           min: realm.min,
           max: [
             realm.min[0] + realm.size,
-            realm.min[1] + realm.size,
+            // realm.min[1] + realm.size,
+            0,
             realm.min[2] + realm.size,
           ],
         };
